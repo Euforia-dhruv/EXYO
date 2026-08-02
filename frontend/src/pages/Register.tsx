@@ -3,20 +3,36 @@ import { Link } from 'react-router-dom';
 
 export default function Register() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-exyo-dark px-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Cinematic background */}
+      <div className="absolute inset-0 bg-exyo-dark">
+        <img
+          src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&q=80"
+          alt=""
+          className="w-full h-full object-cover opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-exyo-dark via-exyo-dark/80 to-exyo-dark/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-exyo-dark via-transparent to-exyo-dark/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md px-4">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <img
             src="/Exyologo-Photoroom.png"
             alt="EXYO"
-            className="h-16 mx-auto"
+            className="h-16 mx-auto mb-4"
             draggable={false}
           />
+          <p className="text-gray-400 text-[15px]">Stream Everything</p>
         </div>
 
-        {/* Auth card */}
-        <div className="bg-exyo-secondary/80 backdrop-blur-sm border border-exyo-border rounded-netflix overflow-hidden shadow-2xl shadow-black/50">
+        {/* Glass panel */}
+        <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/50">
+          <h2 className="text-2xl font-bold text-white mb-1">Create an account</h2>
+          <p className="text-gray-400 text-sm mb-6">Start your streaming journey</p>
+
           <SignUp
             routing="path"
             path="/register"
@@ -25,27 +41,27 @@ export default function Register() {
               elements: {
                 rootBox: 'mx-auto',
                 card: 'bg-transparent border-none shadow-none',
-                headerTitle: 'text-white text-2xl font-bold',
-                headerSubtitle: 'text-exyo-muted',
-                socialButtonsBlockButton: 'bg-white/5 border border-exyo-border text-white hover:bg-white/10 rounded-netflix transition-colors',
+                headerTitle: 'text-white text-xl font-bold',
+                headerSubtitle: 'text-gray-400',
+                socialButtonsBlockButton: 'bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-2xl transition-colors',
                 socialButtonsBlockButtonText: 'text-white font-medium text-sm',
-                dividerLine: 'bg-exyo-border',
-                dividerText: 'text-exyo-muted',
-                formFieldLabel: 'text-exyo-muted text-sm',
-                formFieldInput: 'bg-exyo-secondary border border-exyo-border text-white placeholder-exyo-muted focus:border-white/30 rounded-netflix text-sm',
-                formButtonPrimary: 'bg-exyo-red hover:bg-exyo-red-dark text-white font-bold rounded-netflix transition-colors',
+                dividerLine: 'bg-white/10',
+                dividerText: 'text-gray-500',
+                formFieldLabel: 'text-gray-400 text-sm',
+                formFieldInput: 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-exyo-red/50 rounded-2xl text-sm h-12',
+                formButtonPrimary: 'bg-exyo-red hover:bg-exyo-red-dark text-white font-bold rounded-2xl transition-colors h-12',
                 footerActionLink: 'text-exyo-red hover:text-exyo-red-hover transition-colors',
                 identityPreviewEditButton: 'text-exyo-red',
-                formFieldInputShowPasswordButton: 'text-exyo-muted hover:text-white',
+                formFieldInputShowPasswordButton: 'text-gray-400 hover:text-white',
               },
             }}
           />
         </div>
 
-        {/* Footer text */}
-        <div className="mt-6 text-center text-sm text-exyo-muted">
+        {/* Footer */}
+        <div className="mt-6 text-center text-sm text-gray-500">
           Already have an account?{' '}
-          <Link to="/login" className="text-white hover:underline font-medium">
+          <Link to="/login" className="text-white hover:text-exyo-red transition-colors font-semibold">
             Sign in
           </Link>
         </div>

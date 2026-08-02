@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery, useMutation } from 'convex/react';
@@ -10,6 +10,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import type { CatalogItem } from '../types';
 
 const QUICK_SEARCHES = ['Stranger Things', 'Breaking Bad', 'The Witcher', 'Narcos', 'Dark'];
+const GENRE_TAGS = ['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Thriller', 'Romance', 'Animation'];
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,58 +36,78 @@ export default function Search() {
     enabled: !!query,
   });
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
       setSearchParams({ q: searchInput.trim() });
       saveSearchMutation({ query: searchInput.trim() });
     }
-  };
+  }, [searchInput, setSearchParams, saveSearchMutation]);
 
-  const handleQuickSearch = (term: string) => {
+  const handleQuickSearch = useCallback((term: string) => {
     setSearchInput(term);
     setSearchParams({ q: term });
     saveSearchMutation({ query: term });
-  };
+  }, [setSearchParams, saveSearchMutation]);
+
+  // Keyboard shortcut: / to focus search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '/' && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-exyo-dark pt-[80px] px-4 md:px-8 lg:px-12">
-      <form onSubmit={handleSearch} className="max-w-3xl mx-auto mb-10">
+    <div className="min-h-screen bg-exyo-dark pt-[100px] px-4 md:px-8 lg:px-12 pb-16">
+      {/* Search bar */}
+      <form onSubmit={handleSearch} className="max-w-4xl mx-auto mb-12">
         <div className="relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Titles, genres, people"
-            className="w-full bg-white/5 border border-exyo-border rounded-netflix px-12 py-3.5 text-white text-sm placeholder-exyo-muted focus:outline-none focus:border-white/30 focus:bg-white/10 transition-all"
+            placeholder="Search titles, genres, people..."
+            data-search-input
+            className="w-full bg-white/5 border border-white/10 rounded-2xl px-14 py-4 text-white text-[15px] placeholder-gray-500 focus:outline-none focus:border-exyo-red/40 focus:bg-white/8 transition-all"
             autoFocus
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => { setSearchInput(''); setSearchParams({}); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded transition-colors"
+              className="absolute right-5 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-xl transition-colors"
             >
-              <svg className="w-4 h-4 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           )}
+          {!searchInput && (
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 hidden sm:block">
+              <kbd className="text-[11px] font-mono text-gray-500 bg-white/5 border border-white/10 px-2 py-1 rounded-xl">/</kbd>
+            </div>
+          )}
         </div>
       </form>
 
+      {/* No query: show suggestions */}
       {!query && (
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {searchHistory && searchHistory.length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs font-bold text-exyo-muted uppercase tracking-wider">Recent</h2>
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Recent Searches</h2>
                 <button
                   onClick={() => clearHistoryMutation({})}
-                  className="text-xs text-exyo-muted hover:text-white transition-colors"
+                  className="text-xs text-gray-500 hover:text-white transition-colors"
                 >
                   Clear All
                 </button>
@@ -96,9 +117,9 @@ export default function Search() {
                   <button
                     key={item._id}
                     onClick={() => handleQuickSearch(item.query)}
-                    className="px-4 py-2 bg-white/5 rounded-netflix text-sm text-exyo-gray/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2 border border-exyo-border"
+                    className="px-4 py-2.5 bg-white/5 rounded-2xl text-sm text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2 border border-white/5"
                   >
-                    <svg className="w-3.5 h-3.5 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {item.query}
@@ -108,16 +129,31 @@ export default function Search() {
             </div>
           )}
 
-          <div>
-            <h2 className="text-xs font-bold text-exyo-muted uppercase tracking-wider mb-4">Popular Searches</h2>
+          <div className="mb-12">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-5">Popular Searches</h2>
             <div className="flex flex-wrap gap-2">
               {QUICK_SEARCHES.map((term) => (
                 <button
                   key={term}
                   onClick={() => handleQuickSearch(term)}
-                  className="px-4 py-2 bg-white/5 rounded-netflix text-sm text-exyo-gray/70 hover:bg-white/10 hover:text-white transition-colors border border-exyo-border"
+                  className="px-4 py-2.5 bg-white/5 rounded-2xl text-sm text-gray-400 hover:bg-white/10 hover:text-white transition-colors border border-white/5"
                 >
                   {term}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-5">Browse by Genre</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {GENRE_TAGS.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => handleQuickSearch(genre)}
+                  className="px-5 py-4 bg-white/[0.03] border border-white/[0.06] rounded-2xl text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+                >
+                  {genre}
                 </button>
               ))}
             </div>
@@ -125,6 +161,7 @@ export default function Search() {
         </div>
       )}
 
+      {/* Results */}
       <AnimatePresence mode="wait">
         {query && (
           <motion.div
@@ -132,33 +169,34 @@ export default function Search() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.25 }}
+            className="max-w-6xl mx-auto"
           >
-            <h2 className="text-lg font-bold mb-5">
+            <h2 className="text-2xl font-bold mb-8">
               {isLoading ? 'Searching...' : `Results for "${query}"`}
             </h2>
 
             {isLoading ? (
-              <SkeletonGrid count={10} />
+              <SkeletonGrid count={12} />
             ) : results.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {results.map((item, i) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.02 }}
+                    transition={{ delay: i * 0.025 }}
                     onClick={() => navigate(`/detail/${item.id}?type=${item.type}`)}
                     className="cursor-pointer group"
                   >
-                    <div className="aspect-[16/9] rounded-netflix overflow-hidden mb-1.5 relative bg-exyo-secondary">
+                    <div className="aspect-video rounded-2xl overflow-hidden mb-2 relative bg-white/[0.03]">
                       <img
                         src={item.poster || item.background || '/placeholder.svg'}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                         <div className="flex items-center gap-1.5">
                           {item.imdbRating && (
                             <span className="flex items-center gap-0.5 text-[11px] font-bold text-yellow-400">
@@ -166,21 +204,21 @@ export default function Search() {
                               {item.imdbRating}
                             </span>
                           )}
-                          {item.year && <span className="text-[11px] text-exyo-gray/60">{item.year}</span>}
+                          {item.year && <span className="text-[11px] text-gray-400">{item.year}</span>}
                         </div>
                       </div>
                     </div>
-                    <h3 className="font-medium text-[13px] truncate group-hover:text-white text-exyo-gray/80 transition-colors">{item.name}</h3>
+                    <h3 className="font-medium text-[13px] truncate group-hover:text-white text-gray-400 transition-colors">{item.name}</h3>
                   </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20">
-                <svg className="w-16 h-16 mx-auto text-exyo-muted/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-24">
+                <svg className="w-20 h-20 mx-auto text-gray-700 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <p className="text-exyo-gray text-lg mb-2 font-medium">No results found for &quot;{query}&quot;</p>
-                <p className="text-exyo-muted text-sm">Try different keywords or check your spelling</p>
+                <p className="text-gray-300 text-xl mb-2 font-medium">No results found</p>
+                <p className="text-gray-500 text-sm">Try different keywords or check your spelling</p>
               </div>
             )}
           </motion.div>

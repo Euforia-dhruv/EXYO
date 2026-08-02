@@ -2,17 +2,17 @@
 
 @layer base {
   @theme {
-    --color-exyo-black: #0A0A0A;
+    --color-exyo-black: #0B0B0B;
     --color-exyo-dark: #141414;
-    --color-exyo-darker: #0A0A0A;
-    --color-exyo-secondary: #1A1A1A;
+    --color-exyo-darker: #0B0B0B;
+    --color-exyo-surface: #1A1A1A;
+    --color-exyo-hover: #1F1F1F;
     --color-exyo-gray: #E5E5E5;
     --color-exyo-muted: #808080;
     --color-exyo-red: #E50914;
     --color-exyo-red-dark: #B20710;
     --color-exyo-red-hover: #F6121D;
-    --color-exyo-hover: #2A2A2A;
-    --color-exyo-border: #262626;
+    --color-exyo-border: rgba(255, 255, 255, 0.08);
     --font-sans: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
   }
 }
@@ -23,60 +23,38 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
-  background-color: #141414;
+  background-color: #0B0B0B;
   color: #ffffff;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  letter-spacing: 0.025em;
+  overflow-x: hidden;
 }
 
-/* Custom scrollbar - Netflix thin style */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-}
+::selection { background-color: rgba(229, 9, 20, 0.4); color: white; }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Hide scrollbar utility */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Selection */
-::selection {
-  background-color: rgba(229, 9, 20, 0.4);
-  color: white;
-}
-
-/* Focus visible - accessibility */
 :focus-visible {
   outline: 2px solid #E50914;
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* Skip to main content link - accessibility */
 .skip-link {
   position: absolute;
   top: -40px;
@@ -86,44 +64,31 @@ body {
   padding: 8px 16px;
   z-index: 100;
   transition: top 0.2s;
+  font-weight: 600;
 }
+.skip-link:focus { top: 0; }
 
-.skip-link:focus {
-  top: 0;
-}
-
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Shimmer loading effect */
+/* Shimmer */
 .shimmer {
-  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-/* Toast slide in */
+/* Toast */
 @keyframes slideInRight {
   0% { transform: translateX(100%); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
 }
+.toast-enter { animation: slideInRight 0.3s ease-out; }
 
-.toast-enter {
-  animation: slideInRight 0.3s ease-out;
-}
-
-/* Reduced motion preference */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -131,14 +96,12 @@ html {
   }
 }
 
-/* Responsive typography */
+/* Responsive */
 @media (max-width: 640px) {
-  html {
-    font-size: 14px;
-  }
+  html { font-size: 14px; }
 }
 
-/* High contrast mode support */
+/* High contrast */
 @media (prefers-contrast: high) {
   :focus-visible {
     outline: 3px solid white;
@@ -146,32 +109,10 @@ html {
   }
 }
 
-/* Safe area insets for notch devices */
+/* Safe area */
 @supports (padding: env(safe-area-inset-top)) {
   body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
-}
-
-/* Netflix-style line clamp utilities */
-.line-clamp-1 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
-
-.line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
