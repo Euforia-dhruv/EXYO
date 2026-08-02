@@ -98,9 +98,12 @@ export default function Navbar() {
           {/* Left: Logo + Nav links */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-              <span className="text-exyo-red font-black text-2xl tracking-wider italic">
-                EXYO
-              </span>
+              <img
+                src="/Exyologo-Photoroom.png"
+                alt="EXYO"
+                className="h-8 w-auto"
+                draggable={false}
+              />
             </Link>
 
             <div className="hidden lg:flex items-center gap-0.5">

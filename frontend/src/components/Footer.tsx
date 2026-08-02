@@ -2,9 +2,12 @@ export default function Footer() {
   return (
     <footer className="mt-16 pb-8 px-4 md:px-8 lg:px-12">
       <div className="max-w-6xl mx-auto">
-        <span className="text-exyo-red font-black text-xl tracking-wider italic opacity-40">
-          EXYO
-        </span>
+        <img
+          src="/logo-Photoroom.png"
+          alt="EXYO"
+          className="h-8 opacity-40"
+          draggable={false}
+        />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 mb-8">
           <div>

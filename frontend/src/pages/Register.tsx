@@ -7,9 +7,12 @@ export default function Register() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <span className="text-exyo-red font-black text-4xl tracking-wider italic">
-            EXYO
-          </span>
+          <img
+            src="/Exyologo-Photoroom.png"
+            alt="EXYO"
+            className="h-12 mx-auto"
+            draggable={false}
+          />
         </div>
 
         {/* Auth card */}
