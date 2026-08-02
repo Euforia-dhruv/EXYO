@@ -49,6 +49,9 @@ export class AddonController {
       if (error.message === 'Addon not found') {
         return res.status(404).json({ error: error.message });
       }
+      if (error.message === 'Cannot remove default addons') {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: 'Failed to remove addon' });
     }
   }
@@ -62,6 +65,9 @@ export class AddonController {
     } catch (error: any) {
       if (error.message === 'Addon not found') {
         return res.status(404).json({ error: error.message });
+      }
+      if (error.message === 'Cannot toggle default addons') {
+        return res.status(403).json({ error: error.message });
       }
       res.status(500).json({ error: 'Failed to toggle addon' });
     }

@@ -5,6 +5,7 @@ export interface UserAddon {
   url: string;
   name: string | null;
   manifest: any;
+  isDefault: boolean;
   active: boolean;
   createdAt: string;
 }

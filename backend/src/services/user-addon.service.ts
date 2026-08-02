@@ -6,7 +6,7 @@ export class UserAddonService {
     await ensureUserExists(userId);
     return prisma.userAddon.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }]
     });
   }
 
@@ -43,7 +43,8 @@ export class UserAddonService {
         userId,
         url,
         name,
-        manifest
+        manifest,
+        isDefault: false,
       }
     });
   }
@@ -57,6 +58,10 @@ export class UserAddonService {
       throw new Error('Addon not found');
     }
 
+    if (addon.isDefault) {
+      throw new Error('Cannot remove default addons');
+    }
+
     return prisma.userAddon.delete({ where: { id: addonId } });
   }
 
@@ -67,6 +72,10 @@ export class UserAddonService {
 
     if (!addon) {
       throw new Error('Addon not found');
+    }
+
+    if (addon.isDefault) {
+      throw new Error('Cannot toggle default addons');
     }
 
     return prisma.userAddon.update({

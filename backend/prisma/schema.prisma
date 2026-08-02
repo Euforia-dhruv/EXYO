@@ -75,6 +75,7 @@ model UserAddon {
   url       String
   name      String?
   manifest  Json?
+  isDefault Boolean  @default(false)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
