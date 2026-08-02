@@ -86,7 +86,7 @@ export default function Home() {
 
   if (isLoadingAll) {
     return (
-      <div className="min-h-screen bg-exyo-dark">
+      <div className="min-h-screen bg-[#0B0B0B]">
         <SkeletonHero />
         <div className="-mt-32 relative z-10 space-y-0">
           <SkeletonRow />
@@ -102,7 +102,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-exyo-dark">
+    <div className="min-h-screen bg-[#0B0B0B]">
       {trending.length > 0 && <HeroBanner items={trending.slice(0, 5)} />}
 
       <div className="-mt-32 relative z-10">

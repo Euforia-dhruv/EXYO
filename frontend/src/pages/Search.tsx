@@ -63,7 +63,7 @@ export default function Search() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-exyo-dark pt-[100px] px-4 md:px-8 lg:px-12 pb-16">
+    <div className="min-h-screen bg-[#0B0B0B] pt-[100px] px-6 md:px-12 lg:px-16 pb-16">
       {/* Search bar */}
       <form onSubmit={handleSearch} className="max-w-4xl mx-auto mb-12">
         <div className="relative">
@@ -76,7 +76,7 @@ export default function Search() {
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search titles, genres, people..."
             data-search-input
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-14 py-4 text-white text-[15px] placeholder-gray-500 focus:outline-none focus:border-exyo-red/40 focus:bg-white/8 transition-all"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl px-14 py-4 text-white text-[16px] placeholder-gray-500 focus:outline-none focus:border-exyo-red/40 focus:bg-white/[0.06] transition-all"
             autoFocus
           />
           {searchInput && (

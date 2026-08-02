@@ -67,7 +67,7 @@ export default function Addons() {
   const customAddons = addonList.filter(a => !a.isDefault);
 
   return (
-    <div className="min-h-screen bg-exyo-dark pt-[100px] px-5 md:px-10 lg:px-14 pb-16">
+    <div className="min-h-screen bg-[#0B0B0B] pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
       <div className="max-w-5xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           {/* Header */}
@@ -78,8 +78,8 @@ export default function Addons() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight">Addons</h1>
-              <p className="text-gray-400 text-sm mt-1.5">Manage your Stremio addons for content streaming</p>
+              <h1 className="text-[40px] md:text-[48px] font-black tracking-tight">Addons</h1>
+              <p className="text-gray-400 text-[15px] mt-1.5">Manage your Stremio addons for content streaming</p>
             </div>
           </div>
 

@@ -79,9 +79,9 @@ export default function Detail() {
   }
 
   return (
-    <div className="min-h-screen bg-exyo-dark">
+    <div className="min-h-screen bg-[#0B0B0B]">
       {/* Hero section */}
-      <div className="relative h-[85vh] min-h-[500px]">
+      <div className="relative h-[85vh] min-h-[520px]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${content.background || content.poster})` }}
@@ -101,7 +101,7 @@ export default function Detail() {
         </button>
 
         {/* Content info */}
-        <div className="absolute bottom-[10%] left-0 right-0 px-5 md:px-10 lg:px-14">
+        <div className="absolute bottom-[10%] left-0 right-0 px-6 md:px-12 lg:px-16">
           <div className="max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -184,7 +184,7 @@ export default function Detail() {
 
       {/* Cast section */}
       {content.cast && content.cast.length > 0 && (
-        <div className="px-5 md:px-10 lg:px-14 py-10">
+        <div className="px-6 md:px-12 lg:px-16 py-12">
           <h2 className="text-xl font-bold mb-6">Cast</h2>
           <div className="flex gap-5 overflow-x-auto hide-scrollbar pb-2">
             {content.cast.map((actor: { name: string; role: string; avatar?: string }, i: number) => (
@@ -214,7 +214,7 @@ export default function Detail() {
 
       {/* More Like This */}
       {similar.length > 0 && (
-        <div className="pt-6 pb-10">
+        <div className="pt-8 pb-12">
           <ContentRow title="More Like This" items={similar} />
         </div>
       )}

@@ -161,11 +161,21 @@ export default function Thumbnail({ item, showProgress, onAddToList }: Thumbnail
         )}
       </motion.div>
 
-      {/* Title below card */}
       <div className="mt-3 px-1">
-        <p className="text-[14px] md:text-[15px] font-medium text-gray-300 truncate group-hover:text-white transition-colors duration-200">
+        <p className="text-[14px] md:text-[15px] font-medium text-gray-400 truncate group-hover:text-white transition-colors duration-200">
           {title}
         </p>
+        {(year || imdbRating) && (
+          <div className="flex items-center gap-2 mt-1">
+            {imdbRating && (
+              <span className="flex items-center gap-0.5 text-[12px] font-bold text-yellow-400/80">
+                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                {imdbRating}
+              </span>
+            )}
+            {year && <span className="text-[12px] text-gray-600">{year}</span>}
+          </div>
+        )}
       </div>
     </div>
   );

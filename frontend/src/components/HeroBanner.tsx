@@ -40,7 +40,7 @@ export default function HeroBanner({ items }: HeroBannerProps) {
   };
 
   return (
-    <div className="relative h-[92vh] min-h-[640px] max-h-[960px] w-full overflow-hidden">
+    <div className="relative h-[88vh] min-h-[600px] max-h-[920px] w-full overflow-hidden">
       {/* Background with slow zoom */}
       <AnimatePresence custom={direction} mode="popLayout">
         <motion.div

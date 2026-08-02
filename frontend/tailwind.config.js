@@ -29,7 +29,7 @@ export default {
         '2xl': '24px',
       },
       spacing: {
-        'nav': '84px',
+        'nav': '80px',
         'section': '80px',
       },
       screens: {

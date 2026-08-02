@@ -26,7 +26,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -43,7 +42,6 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Hide on scroll down, show on scroll up
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -62,19 +60,16 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [showDropdown]);
 
-  // Close menus on route change
   useEffect(() => {
     setShowDropdown(false);
     setShowSearch(false);
     setShowMobileMenu(false);
   }, [location]);
 
-  // Focus search input
   useEffect(() => {
     if (showSearch) searchInputRef.current?.focus();
   }, [showSearch]);
 
-  // Click outside dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -119,7 +114,7 @@ export default function Navbar() {
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 h-[84px]">
+        <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 h-[80px]">
           {/* Left */}
           <div className="flex items-center gap-10">
             <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-300">
@@ -136,17 +131,17 @@ export default function Navbar() {
                 <Link
                   key={path}
                   to={path}
-                  className={`relative px-4 py-2 text-[15px] font-medium transition-colors duration-200 ${
+                  className={`relative px-4 py-2 text-[16px] font-medium transition-colors duration-200 ${
                     isActive(path)
                       ? 'text-white'
-                      : 'text-gray-300 hover:text-white'
+                      : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   {label}
                   {isActive(path) && (
                     <motion.div
                       layoutId="navIndicator"
-                      className="absolute bottom-0 left-4 right-4 h-[2px] bg-white rounded-full"
+                      className="absolute bottom-0 left-4 right-4 h-[2px] bg-exyo-red rounded-full"
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
@@ -156,14 +151,14 @@ export default function Navbar() {
           </div>
 
           {/* Right */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Search */}
             <button
               onClick={() => setShowSearch(!showSearch)}
               className="p-3 hover:bg-white/10 rounded-xl transition-colors duration-200"
               aria-label="Search"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
@@ -177,11 +172,11 @@ export default function Navbar() {
               aria-expanded={showMobileMenu}
             >
               {showMobileMenu ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -196,7 +191,7 @@ export default function Navbar() {
                 aria-expanded={showDropdown}
                 aria-haspopup="true"
               >
-                <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-exyo-red">
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-exyo-red">
                   {user?.imageUrl ? (
                     <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -225,31 +220,45 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-3 w-64 bg-exyo-dark/95 backdrop-blur-xl border border-exyo-border rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+                    className="absolute right-0 top-full mt-3 w-72 bg-[#181818]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
                   >
                     {/* User info */}
-                    <div className="px-5 py-4 border-b border-exyo-border">
-                      <p className="text-sm font-semibold text-white truncate">
-                        {user?.fullName || user?.username || 'User'}
-                      </p>
-                      <p className="text-xs text-exyo-muted truncate mt-1">
-                        {user?.primaryEmailAddress?.emailAddress}
-                      </p>
+                    <div className="px-6 py-5 border-b border-white/[0.06]">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-exyo-red">
+                          {user?.imageUrl ? (
+                            <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white font-bold text-base">
+                              {(user?.fullName || 'U')[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold text-white truncate">
+                            {user?.fullName || user?.username || 'User'}
+                          </p>
+                          <p className="text-[13px] text-gray-500 truncate mt-0.5">
+                            {user?.primaryEmailAddress?.emailAddress}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Links */}
-                    <div className="py-2">
+                    <div className="py-2.5">
                       {[
+                        { label: 'My List', path: '/my-list', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' },
                         { label: 'Settings', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
                         { label: 'Addons', path: '/settings/addons', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
-                        { label: 'My List', path: '/my-list', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' },
+                        { label: 'Watch History', path: '/settings', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
                       ].map(({ label, path, icon }) => (
                         <Link
-                          key={path}
+                          key={`${path}-${label}`}
                           to={path}
-                          className="flex items-center gap-3.5 px-5 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors duration-150"
+                          className="flex items-center gap-3.5 px-6 py-3 text-[14px] text-gray-400 hover:bg-white/[0.06] hover:text-white transition-colors duration-150"
                         >
-                          <svg className="w-5 h-5 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <svg className="w-[18px] h-[18px] text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
                           </svg>
                           {label}
@@ -258,12 +267,12 @@ export default function Navbar() {
                     </div>
 
                     {/* Sign out */}
-                    <div className="border-t border-exyo-border py-2">
+                    <div className="border-t border-white/[0.06] py-2.5">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3.5 px-5 py-3 text-sm text-exyo-muted hover:bg-white/5 hover:text-exyo-red transition-colors duration-150"
+                        className="w-full flex items-center gap-3.5 px-6 py-3 text-[14px] text-gray-500 hover:bg-white/[0.06] hover:text-exyo-red transition-colors duration-150"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         Sign Out
@@ -284,17 +293,17 @@ export default function Navbar() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:hidden overflow-hidden border-t border-exyo-border"
+              className="lg:hidden overflow-hidden border-t border-white/[0.06]"
             >
-              <div className="px-5 py-4 bg-black/80 backdrop-blur-xl">
+              <div className="px-6 py-5 bg-black/80 backdrop-blur-xl">
                 {NAV_LINKS.map(({ label, path }) => (
                   <Link
                     key={path}
                     to={path}
-                    className={`block px-4 py-3.5 text-[15px] font-medium rounded-xl transition-colors duration-150 ${
+                    className={`block px-4 py-3.5 text-[16px] font-medium rounded-xl transition-colors duration-150 ${
                       isActive(path)
-                        ? 'text-white bg-white/5'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-white bg-white/[0.06]'
+                        : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
                     }`}
                   >
                     {label}
@@ -313,11 +322,11 @@ export default function Navbar() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden border-t border-exyo-border"
+              className="overflow-hidden border-t border-white/[0.06]"
             >
-              <div className="px-5 md:px-10 lg:px-14 py-5 bg-black/60 backdrop-blur-xl">
+              <div className="px-6 md:px-12 lg:px-16 py-5 bg-black/60 backdrop-blur-xl">
                 <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
-                  <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <circle cx="11" cy="11" r="8" />
                     <path d="M21 21l-4.35-4.35" />
                   </svg>
@@ -327,10 +336,10 @@ export default function Navbar() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Titles, genres, people"
-                    className="w-full bg-white/5 border border-exyo-border rounded-2xl px-14 py-4 text-[15px] text-white placeholder-exyo-muted focus:outline-none focus:border-white/20 focus:bg-white/[0.07] transition-all duration-300"
+                    className="w-full bg-white/[0.06] border border-white/[0.08] rounded-2xl pl-14 pr-14 py-4 text-[16px] text-white placeholder-gray-500 focus:outline-none focus:border-exyo-red/40 focus:bg-white/[0.08] transition-all duration-300"
                     aria-label="Search"
                   />
-                  <kbd className="absolute right-16 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2 py-1 text-[11px] font-medium text-exyo-muted bg-white/5 border border-exyo-border rounded-lg">
+                  <kbd className="absolute right-16 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2.5 py-1 text-[11px] font-medium text-gray-500 bg-white/[0.06] border border-white/[0.08] rounded-lg">
                     ⌘K
                   </kbd>
                   {searchQuery && (
@@ -339,7 +348,7 @@ export default function Navbar() {
                       onClick={() => setSearchQuery('')}
                       className="absolute right-5 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
