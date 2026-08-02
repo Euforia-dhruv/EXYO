@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc && prisma generate",
-    "start": "prisma migrate deploy && node dist/server.js",
+    "build": "tsc && prisma generate && prisma migrate deploy",
+    "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts"
@@ -14,21 +14,17 @@
   "dependencies": {
     "@clerk/express": "^2.1.49",
     "@prisma/client": "^6.9.0",
-    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2",
     "node-cache": "^5.1.2",
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.13.14",
     "@types/nodemailer": "^6.4.17",
     "prisma": "^6.9.0",
@@ -38,7 +34,6 @@
   "allowScripts": {
     "@prisma/client@6.19.3": true,
     "prisma@6.19.3": true,
-    "bcrypt@5.1.1": true,
     "@prisma/engines@6.19.3": true
   }
 }
