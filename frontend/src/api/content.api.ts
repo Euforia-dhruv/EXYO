@@ -1,33 +1,37 @@
-import { api } from './axios';
+const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://calm-eagle-889.convex.site';
+
+const contentFetch = async (path: string, params?: Record<string, string>) => {
+  const url = new URL(`${SITE_URL}/api/content${path}`);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  }
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Content fetch failed: ${res.status}`);
+  return res.json();
+};
 
 export const contentApi = {
   getCatalogs: async (type = 'movie', catalogId = 'top') => {
-    const response = await api.get(`/content/catalogs?type=${type}&catalogId=${catalogId}`);
-    return response.data;
+    return contentFetch('/catalogs', { type, catalogId });
   },
 
   search: async (query: string, type = 'movie') => {
-    const response = await api.get(`/content/search?q=${encodeURIComponent(query)}&type=${type}`);
-    return response.data;
+    return contentFetch('/search', { q: query, type });
   },
 
   getDetails: async (id: string, type = 'movie') => {
-    const response = await api.get(`/content/${id}?type=${type}`);
-    return response.data;
+    return contentFetch(`/${id}`, { type });
   },
 
   getStreams: async (id: string, type = 'movie') => {
-    const response = await api.get(`/content/${id}/streams?type=${type}`);
-    return response.data;
+    return contentFetch(`/${id}/streams`, { type });
   },
 
   getSubtitles: async (id: string, type = 'movie') => {
-    const response = await api.get(`/content/${id}/subtitles?type=${type}`);
-    return response.data;
+    return contentFetch(`/${id}/subtitles`, { type });
   },
 
-  getManifest: async (addon = 'cinemeta') => {
-    const response = await api.get(`/content/manifest?addon=${addon}`);
-    return response.data;
-  }
+  getManifest: async (addon?: string) => {
+    return contentFetch('/manifest', addon ? { addon } : undefined);
+  },
 };

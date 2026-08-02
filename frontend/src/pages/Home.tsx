@@ -1,14 +1,14 @@
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { contentApi } from '../api/content.api';
-import { historyApi } from '../api/history.api';
-import { watchlistApi } from '../api/watchlist.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
 import Footer from '../components/Footer';
 import { SkeletonHero, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import type { CatalogItem, WatchHistory } from '../types';
+import type { CatalogItem } from '../types';
 
 const GENRES = [
   { title: 'Action', catalogId: 'action' },
@@ -50,17 +50,9 @@ export default function Home() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data: continueWatching = [], isLoading: loadingHistory } = useQuery<WatchHistory[]>({
-    queryKey: ['continueWatching'],
-    queryFn: historyApi.getContinueWatching,
-    retry: 2,
-  });
-
-  const { data: watchlist = [], isLoading: loadingWatchlist } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: watchlistApi.getWatchlist,
-    retry: 2,
-  });
+  const continueWatching = useConvexQuery(api.watchHistory.getContinueWatching);
+  const watchlist = useConvexQuery(api.watchlist.getWatchlist);
+  const addToWatchlist = useConvexMutation(api.watchlist.addToWatchlist);
 
   const { data: trending = [], isLoading: loadingTrending, isError: trendingError, refetch } = useQuery<CatalogItem[]>({
     queryKey: ['trending', type],
@@ -99,23 +91,14 @@ export default function Home() {
     },
   });
 
-  const addToWatchlist = useMutation({
-    mutationFn: watchlistApi.addToWatchlist,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      showToast('Added to My List', 'success');
-    },
-    onError: () => showToast('Failed to add to list', 'error'),
-  });
-
   const handleAddToList = (item: CatalogItem) => {
-    addToWatchlist.mutate({
+    addToWatchlist({
       contentId: item.id,
       title: item.name,
       posterUrl: item.poster,
       backdropUrl: item.background,
       contentType: item.type as 'movie' | 'series',
-    });
+    }).then(() => showToast('Added to My List', 'success'));
   };
 
   const isLoadingAll = loadingTrending && loadingPopular && loadingTop;
@@ -142,7 +125,7 @@ export default function Home() {
       {trending.length > 0 && <HeroBanner items={trending.slice(0, 5)} />}
 
       <div className="-mt-40 relative z-10">
-        {!loadingHistory && continueWatching.length > 0 && (
+        {continueWatching && continueWatching.length > 0 && (
           <ContentRow title="Continue Watching" items={continueWatching} showProgress />
         )}
 
@@ -150,7 +133,7 @@ export default function Home() {
 
         <ContentRow title="Popular on EXYO" items={popular} onAddToList={handleAddToList} />
 
-        {!loadingWatchlist && watchlist.length > 0 && (
+        {watchlist && watchlist.length > 0 && (
           <ContentRow title="My List" items={watchlist} onAddToList={handleAddToList} />
         )}
 

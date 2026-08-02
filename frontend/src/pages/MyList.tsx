@@ -1,29 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { watchlistApi } from '../api/watchlist.api';
-import { SkeletonGrid } from '../components/Skeleton';
+import { useMutation } from 'convex/react';
 import { useToast } from '../components/Toast';
-import type { WatchlistItem } from '../types';
+import { SkeletonGrid } from '../components/Skeleton';
 
 export default function MyList() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const watchlist = useQuery(api.watchlist.getWatchlist);
+  const removeFromWatchlist = useMutation(api.watchlist.removeFromWatchlist);
 
-  const { data: watchlist = [], isLoading } = useQuery<WatchlistItem[]>({
-    queryKey: ['watchlist'],
-    queryFn: watchlistApi.getWatchlist,
-  });
+  if (watchlist === undefined) {
+    return (
+      <div className="min-h-screen pt-24 px-6 md:px-12 pb-12">
+        <h1 className="text-3xl font-bold mb-8">My List</h1>
+        <SkeletonGrid count={10} />
+      </div>
+    );
+  }
 
-  const removeMutation = useMutation({
-    mutationFn: watchlistApi.removeFromWatchlist,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      showToast('Removed from My List', 'success');
-    },
-    onError: () => showToast('Failed to remove item', 'error'),
-  });
+  const items = watchlist || [];
 
   return (
     <div className="min-h-screen pt-24 px-6 md:px-12 pb-12">
@@ -31,17 +29,15 @@ export default function MyList() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">My List</h1>
           <span className="text-gray-500 text-sm">
-            {watchlist.length} {watchlist.length === 1 ? 'title' : 'titles'}
+            {items.length} {items.length === 1 ? 'title' : 'titles'}
           </span>
         </div>
 
-        {isLoading ? (
-          <SkeletonGrid count={10} />
-        ) : watchlist.length > 0 ? (
+        {items.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {watchlist.map((item, i) => (
+            {items.map((item, i) => (
               <motion.div
-                key={item.id}
+                key={item._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
@@ -72,7 +68,7 @@ export default function MyList() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm(`Remove "${item.title}" from My List?`)) removeMutation.mutate(item.id);
+                    removeFromWatchlist({ id: item._id }).then(() => showToast('Removed from My List', 'success'));
                   }}
                   className="absolute top-2 right-2 w-8 h-8 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 border border-white/10"
                 >

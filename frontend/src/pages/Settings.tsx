@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { userApi } from '../api/user.api';
+import { api } from '../../convex/_generated/api';
 import { useToast } from '../components/Toast';
 
 const SETTINGS_SECTIONS = [
@@ -19,33 +19,20 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState(user?.fullName || '');
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
 
-  const profileMutation = useMutation({
-    mutationFn: () => userApi.updateProfile({ displayName }),
-    onSuccess: () => {
-      showToast('Profile updated successfully', 'success');
-      setProfileErrors({});
-    },
-    onError: (err: any) => {
-      showToast(err.response?.data?.error || 'Failed to update profile', 'error');
-    },
-  });
+  const updateProfile = useMutation(api.users.updateProfile);
 
-  const deleteMutation = useMutation({
-    mutationFn: userApi.deleteAccount,
-    onSuccess: () => {
-      showToast('Account deleted', 'info');
-      window.location.href = '/login';
-    },
-    onError: () => showToast('Failed to delete account', 'error'),
-  });
-
-  const handleProfileSubmit = () => {
+  const handleProfileSubmit = async () => {
     setProfileErrors({});
     if (!displayName.trim()) {
       setProfileErrors({ displayName: 'Display name is required' });
       return;
     }
-    profileMutation.mutate();
+    try {
+      await updateProfile({ displayName });
+      showToast('Profile updated successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update profile', 'error');
+    }
   };
 
   const inputClass = (error?: string) =>
@@ -58,7 +45,6 @@ export default function Settings() {
           <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Sidebar */}
             <aside className="md:w-56 flex-shrink-0">
               <nav className="flex md:flex-col gap-1">
                 {SETTINGS_SECTIONS.map((section) => (
@@ -77,9 +63,7 @@ export default function Settings() {
               </nav>
             </aside>
 
-            {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Profile */}
               <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-5">Profile</h2>
                 <div className="space-y-4">
@@ -103,13 +87,12 @@ export default function Settings() {
                     />
                     {profileErrors.displayName && <p className="mt-1 text-sm text-red-400">{profileErrors.displayName}</p>}
                   </div>
-                  <button onClick={handleProfileSubmit} disabled={profileMutation.isPending} className="bg-[#E50914] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50">
-                    {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  <button onClick={handleProfileSubmit} className="bg-[#E50914] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors">
+                    Save Changes
                   </button>
                 </div>
               </section>
 
-              {/* Account Info */}
               <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-5">Account</h2>
                 <div className="space-y-3 text-sm">
@@ -128,7 +111,6 @@ export default function Settings() {
                 </div>
               </section>
 
-              {/* Addons */}
               <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -147,12 +129,11 @@ export default function Settings() {
                 </div>
               </section>
 
-              {/* Danger Zone */}
               <section className="bg-red-500/5 backdrop-blur-sm border border-red-500/20 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-2 text-red-400">Danger Zone</h2>
                 <p className="text-gray-500 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-                <button onClick={() => { if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) deleteMutation.mutate(); }} disabled={deleteMutation.isPending} className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50">
-                  {deleteMutation.isPending ? 'Deleting...' : 'Delete Account'}
+                <button className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors opacity-50 cursor-not-allowed">
+                  Delete Account
                 </button>
               </section>
             </div>

@@ -1,8 +1,9 @@
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useQuery as useConvexQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { motion } from 'framer-motion';
 import { contentApi } from '../api/content.api';
-import { watchlistApi } from '../api/watchlist.api';
 import ContentRow from '../components/ContentRow';
 import ShareButton from '../components/ShareButton';
 import { SkeletonDetail } from '../components/Skeleton';
@@ -14,7 +15,6 @@ export default function Detail() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'movie';
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const { data: content, isLoading } = useQuery({
@@ -23,12 +23,7 @@ export default function Detail() {
     enabled: !!id,
   });
 
-  const { data: watchlistData } = useQuery({
-    queryKey: ['watchlistCheck', id],
-    queryFn: () => watchlistApi.checkInWatchlist(id!),
-    enabled: !!id,
-  });
-
+  const watchlistData = useConvexQuery(api.watchlist.checkInWatchlist, { contentId: id || '' });
   const isInWatchlist = watchlistData?.isInWatchlist || false;
 
   const { data: similar = [] } = useQuery<CatalogItem[]>({
@@ -37,29 +32,30 @@ export default function Detail() {
     enabled: !!id,
   });
 
-  const watchlistMutation = useMutation({
-    mutationFn: async () => {
-      if (isInWatchlist) {
-        const list = await watchlistApi.getWatchlist();
-        const item = list.find((w: { contentId: string }) => w.contentId === id);
-        if (item) await watchlistApi.removeFromWatchlist(item.id);
-      } else {
-        await watchlistApi.addToWatchlist({
-          contentId: content.id,
-          title: content.name,
-          posterUrl: content.poster,
-          backdropUrl: content.background,
-          contentType: content.type,
+  const addToWatchlist = useMutation(api.watchlist.addToWatchlist);
+  const removeFromWatchlist = useMutation(api.watchlist.removeFromWatchlist);
+  const watchlistItems = useConvexQuery(api.watchlist.getWatchlist);
+
+  const handleWatchlistToggle = () => {
+    if (isInWatchlist && watchlistItems) {
+      const item = watchlistItems.find((w) => w.contentId === id);
+      if (item) {
+        removeFromWatchlist({ id: item._id }).then(() => {
+          showToast('Removed from My List', 'success');
         });
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistCheck', id] });
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      showToast(isInWatchlist ? 'Removed from My List' : 'Added to My List', 'success');
-    },
-    onError: () => showToast('Failed to update list', 'error'),
-  });
+    } else if (content) {
+      addToWatchlist({
+        contentId: content.id,
+        title: content.name,
+        posterUrl: content.poster,
+        backdropUrl: content.background,
+        contentType: content.type,
+      }).then(() => {
+        showToast('Added to My List', 'success');
+      });
+    }
+  };
 
   if (isLoading) return <SkeletonDetail />;
 
@@ -84,7 +80,6 @@ export default function Detail() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero backdrop */}
       <div className="relative h-[80vh]">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -93,7 +88,6 @@ export default function Detail() {
         <div className="absolute inset-0 bg-gradient-to-r from-exyo-dark via-exyo-dark/70 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-exyo-dark via-exyo-dark/30 to-transparent" />
 
-        {/* Back button */}
         <button
           onClick={() => navigate(-1)}
           className="absolute top-20 left-4 md:left-12 p-2 hover:bg-white/10 rounded-full transition-colors z-10"
@@ -103,7 +97,6 @@ export default function Detail() {
           </svg>
         </button>
 
-        {/* Content info */}
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16">
           <div className="max-w-3xl">
             <motion.div
@@ -111,7 +104,6 @@ export default function Detail() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              {/* Genre tags */}
               {content.genres && content.genres.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {content.genres.map((genre: string, i: number) => (
@@ -122,12 +114,10 @@ export default function Detail() {
                 </div>
               )}
 
-              {/* Title */}
               <h1 className="text-5xl md:text-7xl font-black mb-4 tracking-tight leading-[0.9]">
                 {content.name}
               </h1>
 
-              {/* Metadata */}
               <div className="flex items-center gap-4 mb-5 text-sm">
                 {content.imdbRating && (
                   <span className="flex items-center gap-1.5 text-yellow-400 font-semibold">
@@ -142,12 +132,10 @@ export default function Detail() {
                 </span>
               </div>
 
-              {/* Description */}
               <p className="text-lg text-gray-300 mb-8 leading-relaxed max-w-2xl line-clamp-4">
                 {content.description}
               </p>
 
-              {/* Buttons */}
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => navigate(`/watch/${id}?type=${type}`)}
@@ -158,8 +146,7 @@ export default function Detail() {
                 </button>
 
                 <button
-                  onClick={() => watchlistMutation.mutate()}
-                  disabled={watchlistMutation.isPending}
+                  onClick={handleWatchlistToggle}
                   className="flex items-center gap-3 bg-white/10 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-bold text-sm hover:bg-white/20 transition-all border border-white/10"
                 >
                   {isInWatchlist ? (
@@ -186,7 +173,6 @@ export default function Detail() {
         </div>
       </div>
 
-      {/* Cast */}
       {content.cast && content.cast.length > 0 && (
         <div className="px-6 md:px-12 py-10">
           <h2 className="text-xl font-bold mb-6">Cast</h2>
@@ -216,7 +202,6 @@ export default function Detail() {
         </div>
       )}
 
-      {/* Similar content */}
       {similar.length > 0 && (
         <div className="py-6">
           <ContentRow title="More Like This" items={similar} />

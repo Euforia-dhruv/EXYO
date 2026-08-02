@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import Hls from 'hls.js';
 import { contentApi } from '../api/content.api';
-import { historyApi } from '../api/history.api';
 import type { Stream } from '../types';
 import { formatTime, cn } from '../utils/helpers';
 import { SkeletonPlayer } from '../components/Skeleton';
@@ -31,6 +32,8 @@ export default function Watch() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
 
+  const addOrUpdateHistory = useMutation(api.watchHistory.addOrUpdate);
+
   const { data: streams = [], isLoading } = useQuery<Stream[]>({
     queryKey: ['streams', id, type],
     queryFn: () => contentApi.getStreams(id!, type),
@@ -46,9 +49,9 @@ export default function Watch() {
   const saveProgress = useCallback(
     (progress: number) => {
       const now = Date.now();
-      if (now - lastSaveTime.current < 10000) return; // Throttle to every 10s
+      if (now - lastSaveTime.current < 10000) return;
       lastSaveTime.current = now;
-      historyApi.addOrUpdate({
+      addOrUpdateHistory({
         contentId: id!,
         title: content?.name || 'Content',
         posterUrl: content?.poster,
@@ -57,7 +60,7 @@ export default function Watch() {
         progress: Math.min(progress, 100),
       }).catch(() => {});
     },
-    [id, type, content]
+    [id, type, content, addOrUpdateHistory]
   );
 
   useEffect(() => {
@@ -119,9 +122,8 @@ export default function Watch() {
       video.removeEventListener('pause', handlePause);
       if (hls) hls.destroy();
     };
-  }, [selectedStream, saveProgress]); // saveProgress is now stable via useCallback
+  }, [selectedStream, saveProgress]);
 
-  // Controls auto-hide
   useEffect(() => {
     const handleMouseMove = () => {
       setShowControls(true);
@@ -138,14 +140,12 @@ export default function Watch() {
     };
   }, [isPlaying]);
 
-  // Fullscreen change
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handler);
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
@@ -295,15 +295,12 @@ export default function Watch() {
     >
       <video ref={videoRef} className="w-full h-full object-contain" playsInline />
 
-      {/* Controls overlay */}
       <div
         className={cn('absolute inset-0 transition-opacity duration-300', showControls ? 'opacity-100' : 'opacity-0')}
         style={{ pointerEvents: showControls ? 'auto' : 'none' }}
       >
-        {/* Top gradient */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/80 to-transparent" />
 
-        {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,13 +314,10 @@ export default function Watch() {
           <div className="w-12" />
         </div>
 
-        {/* Bottom gradient */}
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
 
-        {/* Controls bar */}
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-6">
           <div className="max-w-5xl mx-auto">
-            {/* Stream selector */}
             {streams.length > 1 && (
               <div className="mb-3 flex gap-2 overflow-x-auto hide-scrollbar pb-2">
                 {streams.map((stream, i) => (
@@ -343,7 +337,6 @@ export default function Watch() {
               </div>
             )}
 
-            {/* Progress bar */}
             <div className="mb-3 relative group cursor-pointer">
               <div className="h-1 group-hover:h-1.5 bg-white/20 rounded-full transition-all relative">
                 <div className="absolute h-full bg-gray-400/50 rounded-full" style={{ width: `${buffered}%` }} />
@@ -364,7 +357,6 @@ export default function Watch() {
               />
             </div>
 
-            {/* Bottom controls */}
             <div className="flex items-center gap-2 md:gap-3">
               <button onClick={togglePlay} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                 {isPlaying ? (
@@ -382,7 +374,6 @@ export default function Watch() {
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" /></svg>
               </button>
 
-              {/* Volume */}
               <div className="flex items-center gap-1 group/vol">
                 <button onClick={toggleMute} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                   {isMuted || volume === 0 ? (
@@ -411,7 +402,6 @@ export default function Watch() {
 
               <div className="flex-1" />
 
-              {/* Settings */}
               <div className="relative">
                 <button
                   onClick={() => setShowSettings(!showSettings)}
@@ -442,14 +432,12 @@ export default function Watch() {
                 )}
               </div>
 
-              {/* PiP */}
               <button onClick={togglePiP} className="p-2 hover:bg-white/10 rounded-full transition-colors hidden md:block" title="Picture-in-Picture">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm10 7l5-3v6l-5-3v-2z" />
                 </svg>
               </button>
 
-              {/* Fullscreen */}
               <button onClick={toggleFullscreen} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Fullscreen (F)">
                 {isFullscreen ? (
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" /></svg>

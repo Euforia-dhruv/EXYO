@@ -1,36 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useQuery as useConvexQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { contentApi } from '../api/content.api';
-import { searchApi } from '../api/search.api';
 import { SkeletonGrid } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useDebounce } from '../hooks/useDebounce';
-import type { CatalogItem, SearchHistory } from '../types';
+import type { CatalogItem } from '../types';
 
 const QUICK_SEARCHES = ['Stranger Things', 'Breaking Bad', 'The Witcher', 'Narcos', 'Dark'];
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const query = searchParams.get('q') || '';
   const [searchInput, setSearchInput] = useState(query);
   const debouncedSearch = useDebounce(searchInput, 500);
 
+  const searchHistory = useConvexQuery(api.searchHistory.getSearchHistory);
+  const saveSearchMutation = useMutation(api.searchHistory.saveSearch);
+  const clearHistoryMutation = useMutation(api.searchHistory.clearSearchHistory);
+
   useEffect(() => {
     if (debouncedSearch && debouncedSearch !== query) {
       setSearchParams({ q: debouncedSearch });
-      saveSearchMutation.mutate(debouncedSearch);
+      saveSearchMutation({ query: debouncedSearch });
     }
-  }, [debouncedSearch, query, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const { data: searchHistory = [] } = useQuery<SearchHistory[]>({
-    queryKey: ['searchHistory'],
-    queryFn: searchApi.getSearchHistory,
-  });
+  }, [debouncedSearch, query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: results = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ['search', query],
@@ -38,36 +37,22 @@ export default function Search() {
     enabled: !!query,
   });
 
-  const saveSearchMutation = useMutation({
-    mutationFn: searchApi.saveSearch,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['searchHistory'] }),
-  });
-
-  const clearHistoryMutation = useMutation({
-    mutationFn: searchApi.clearSearchHistory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['searchHistory'] });
-      showToast('Search history cleared', 'success');
-    },
-  });
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
       setSearchParams({ q: searchInput.trim() });
-      saveSearchMutation.mutate(searchInput.trim());
+      saveSearchMutation({ query: searchInput.trim() });
     }
   };
 
   const handleQuickSearch = (term: string) => {
     setSearchInput(term);
     setSearchParams({ q: term });
-    saveSearchMutation.mutate(term);
+    saveSearchMutation({ query: term });
   };
 
   return (
     <div className="min-h-screen pt-24 px-6 md:px-12">
-      {/* Search input */}
       <form onSubmit={handleSearch} className="max-w-3xl mx-auto mb-12">
         <div className="relative">
           <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,17 +80,14 @@ export default function Search() {
         </div>
       </form>
 
-      {/* Empty state */}
       {!query && (
         <div className="max-w-3xl mx-auto">
-          {/* Recent searches */}
-          {searchHistory.length > 0 && (
+          {searchHistory && searchHistory.length > 0 && (
             <div className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Recent</h2>
                 <button
-                  onClick={() => clearHistoryMutation.mutate()}
-                  disabled={clearHistoryMutation.isPending}
+                  onClick={() => clearHistoryMutation({})}
                   className="text-xs text-gray-500 hover:text-white transition-colors"
                 >
                   Clear All
@@ -114,7 +96,7 @@ export default function Search() {
               <div className="flex flex-wrap gap-2">
                 {searchHistory.slice(0, 8).map((item) => (
                   <button
-                    key={item.id}
+                    key={item._id}
                     onClick={() => handleQuickSearch(item.query)}
                     className="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-2 border border-white/5"
                   >
@@ -128,7 +110,6 @@ export default function Search() {
             </div>
           )}
 
-          {/* Quick searches */}
           <div>
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Popular Searches</h2>
             <div className="flex flex-wrap gap-2">
@@ -146,7 +127,6 @@ export default function Search() {
         </div>
       )}
 
-      {/* Results */}
       <AnimatePresence mode="wait">
         {query && (
           <motion.div

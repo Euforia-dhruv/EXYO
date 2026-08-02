@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from 'convex/react';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/clerk-react';
-import { addonApi, type UserAddon } from '../api/addon.api';
+import { api } from '../../convex/_generated/api';
 import { useToast } from '../components/Toast';
 
 const POPULAR_ADDONS = [
@@ -16,67 +15,56 @@ const POPULAR_ADDONS = [
 ];
 
 export default function Addons() {
-  const { user } = useUser();
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const [newAddonUrl, setNewAddonUrl] = useState('');
 
-  const { data: addons = [], isLoading } = useQuery<UserAddon[]>({
-    queryKey: ['addons'],
-    queryFn: addonApi.getAddons,
-    enabled: !!user,
-  });
+  const addons = useQuery(api.addons.getAddons);
+  const addAddon = useMutation(api.addons.addAddon);
+  const removeAddon = useMutation(api.addons.removeAddon);
+  const toggleAddon = useMutation(api.addons.toggleAddon);
 
-  const addMutation = useMutation({
-    mutationFn: (url: string) => addonApi.addAddon(url),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['addons'] });
-      showToast('Addon added successfully', 'success');
-      setNewAddonUrl('');
-    },
-    onError: (err: any) => {
-      showToast(err.response?.data?.error || 'Failed to add addon', 'error');
-    },
-  });
+  const isLoading = addons === undefined;
+  const addonList = addons ?? [];
 
-  const removeMutation = useMutation({
-    mutationFn: (id: string) => addonApi.removeAddon(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['addons'] });
-      showToast('Addon removed', 'success');
-    },
-    onError: (err: any) => {
-      showToast(err.response?.data?.error || 'Failed to remove addon', 'error');
-    },
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: (id: string) => addonApi.toggleAddon(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['addons'] });
-    },
-    onError: (err: any) => {
-      showToast(err.response?.data?.error || 'Failed to toggle addon', 'error');
-    },
-  });
-
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddonUrl.trim()) return;
     try { new URL(newAddonUrl); } catch { showToast('Invalid URL', 'error'); return; }
-    addMutation.mutate(newAddonUrl.trim());
+    try {
+      await addAddon({ url: newAddonUrl.trim() });
+      showToast('Addon added successfully', 'success');
+      setNewAddonUrl('');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to add addon', 'error');
+    }
   };
 
-  const handleAddPopular = (url: string) => {
-    if (addons.some(a => a.url === url)) {
+  const handleAddPopular = async (url: string) => {
+    if (addonList.some(a => a.url === url)) {
       showToast('Addon already added', 'info');
       return;
     }
-    addMutation.mutate(url);
+    try {
+      await addAddon({ url });
+      showToast('Addon added', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to add addon', 'error');
+    }
   };
 
-  const defaultAddons = addons.filter(a => a.isDefault);
-  const customAddons = addons.filter(a => !a.isDefault);
+  const handleRemove = async (name: string, url: string) => {
+    if (window.confirm(`Remove "${name || url}"?`)) {
+      try {
+        await removeAddon({ url });
+        showToast('Addon removed', 'success');
+      } catch (err: any) {
+        showToast(err.message || 'Failed to remove addon', 'error');
+      }
+    }
+  };
+
+  const defaultAddons = addonList.filter(a => a.isDefault);
+  const customAddons = addonList.filter(a => !a.isDefault);
 
   return (
     <div className="min-h-screen pt-24 px-6 md:px-12 pb-12">
@@ -95,7 +83,6 @@ export default function Addons() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Sidebar */}
             <aside className="md:w-56 flex-shrink-0">
               <nav className="flex md:flex-col gap-1">
                 <Link to="/settings" className="px-4 py-2.5 text-sm font-medium rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
@@ -107,9 +94,7 @@ export default function Addons() {
               </nav>
             </aside>
 
-            {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Default Addons */}
               {defaultAddons.length > 0 && (
                 <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -121,7 +106,7 @@ export default function Addons() {
                   </div>
                   <div className="space-y-2">
                     {defaultAddons.map((addon) => (
-                      <div key={addon.id} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-xl p-4">
+                      <div key={addon._id} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-xl p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-[#E50914]/10 flex items-center justify-center flex-shrink-0">
                             <svg className="w-4 h-4 text-[#E50914]" fill="currentColor" viewBox="0 0 24 24">
@@ -142,7 +127,6 @@ export default function Addons() {
                 </section>
               )}
 
-              {/* Add Custom Addon */}
               <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-4">Add Custom Addon</h2>
                 <form onSubmit={handleAdd} className="flex gap-3">
@@ -156,15 +140,13 @@ export default function Addons() {
                   />
                   <button
                     type="submit"
-                    disabled={addMutation.isPending}
                     className="bg-[#E50914] text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0"
                   >
-                    {addMutation.isPending ? 'Adding...' : 'Add'}
+                    Add
                   </button>
                 </form>
               </section>
 
-              {/* Custom Addons */}
               <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-4">Your Custom Addons ({customAddons.length})</h2>
                 {isLoading ? (
@@ -177,14 +159,14 @@ export default function Addons() {
                   <div className="space-y-3">
                     {customAddons.map((addon) => (
                       <motion.div
-                        key={addon.id}
+                        key={addon._id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="flex items-center justify-between bg-white/5 border border-white/5 rounded-xl p-4"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <button
-                            onClick={() => toggleMutation.mutate(addon.id)}
+                            onClick={() => toggleAddon({ url: addon.url })}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                               addon.active ? 'bg-green-500/10' : 'bg-white/5'
                             }`}
@@ -205,9 +187,7 @@ export default function Addons() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Remove "${addon.name || addon.url}"?`)) removeMutation.mutate(addon.id);
-                          }}
+                          onClick={() => handleRemove(addon.name, addon.url)}
                           className="text-gray-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors ml-3 flex-shrink-0"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,17 +200,16 @@ export default function Addons() {
                 )}
               </section>
 
-              {/* Popular Addons */}
               <section className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-4">Popular Addons</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {POPULAR_ADDONS.map((addon) => {
-                    const isAdded = addons.some(a => a.url === addon.url);
+                    const isAdded = addonList.some(a => a.url === addon.url);
                     return (
                       <button
                         key={addon.url}
                         onClick={() => handleAddPopular(addon.url)}
-                        disabled={isAdded || addMutation.isPending}
+                        disabled={isAdded}
                         className={`text-left p-4 rounded-xl border transition-all ${
                           isAdded
                             ? 'bg-green-500/5 border-green-500/20 cursor-default'
