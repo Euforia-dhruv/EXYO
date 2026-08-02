@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { userApi } from '../api/user.api';
 import { useToast } from '../components/Toast';
@@ -96,6 +97,25 @@ export default function Settings() {
                 <span className="text-gray-500">Last sign in</span>
                 <span className="text-gray-300">{user?.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'N/A'}</span>
               </div>
+            </div>
+          </section>
+
+          {/* Addons */}
+          <section className="mb-8 bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">Addons</h2>
+                <p className="text-sm text-gray-500">Manage your Stremio addons for content streaming.</p>
+              </div>
+              <Link
+                to="/settings/addons"
+                className="bg-white/5 border border-white/10 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors flex items-center gap-2"
+              >
+                Manage
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </section>
 

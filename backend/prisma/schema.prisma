@@ -19,6 +19,7 @@ model User {
   watchHistory    WatchHistory[]
   watchlist       Watchlist[]
   searchHistory   SearchHistory[]
+  addons          UserAddon[]
 }
 
 model WatchHistory {
@@ -65,4 +66,19 @@ model SearchHistory {
 
   @@index([userId])
   @@index([searchedAt])
+}
+
+model UserAddon {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  name      String?
+  manifest  Json?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, url])
+  @@index([userId])
 }

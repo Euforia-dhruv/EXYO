@@ -9,6 +9,7 @@ import historyRoutes from './routes/history.routes';
 import watchlistRoutes from './routes/watchlist.routes';
 import searchRoutes from './routes/search.routes';
 import contentRoutes from './routes/content.routes';
+import addonRoutes from './routes/addon.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { securityHeaders, requestLogger, apiLimiter } from './middleware/security.middleware';
 import { corsConfig } from './config/cors';
@@ -37,6 +38,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/search-history', searchRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/addons', addonRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

@@ -14,6 +14,7 @@ const Search = lazy(() => import('./pages/Search'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MyList = lazy(() => import('./pages/MyList'));
 const Watch = lazy(() => import('./pages/Watch'));
+const Addons = lazy(() => import('./pages/Addons'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ function App() {
                   <Route path="/detail/:id" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Detail /></main></Suspense>} />
                   <Route path="/search" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Search /></main></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Settings /></main></Suspense>} />
+                  <Route path="/settings/addons" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Addons /></main></Suspense>} />
                   <Route path="/my-list" element={<Suspense fallback={<PageLoader />}><main id="main-content"><MyList /></main></Suspense>} />
                   <Route path="/watch/:id" element={<Suspense fallback={<PageLoader />}><Watch /></Suspense>} />
                 </Route>
