@@ -33,6 +33,7 @@ export interface CatalogItem {
   runtime?: string;
   genres?: string[];
   imdbRating?: string;
+  cast?: { name: string; role: string; avatar?: string }[];
 }
 
 export interface Stream {
