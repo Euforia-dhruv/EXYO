@@ -84,7 +84,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 
   return (
     <div
-      className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slideUp min-w-[300px]`}
+      className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slideInRight min-w-[300px]`}
     >
       {icon}
       <span className="flex-1">{toast.message}</span>

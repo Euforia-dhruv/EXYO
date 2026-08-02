@@ -5,6 +5,7 @@ import { historyApi } from '../api/history.api';
 import { watchlistApi } from '../api/watchlist.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
+import Footer from '../components/Footer';
 import { SkeletonHero, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import type { CatalogItem, WatchHistory } from '../types';
@@ -134,6 +135,8 @@ export default function Home() {
               />
             )
         )}
+
+        <Footer />
       </div>
     </div>
   );
