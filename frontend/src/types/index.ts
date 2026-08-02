@@ -1,23 +1,3 @@
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  displayName?: string;
-  avatarUrl?: string;
-}
-
-export interface AuthState {
-  user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
-}
-
 export interface WatchHistory {
   id: string;
   contentId: string;

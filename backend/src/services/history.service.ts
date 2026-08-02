@@ -1,4 +1,5 @@
 import { prisma } from '../server';
+import { ensureUserExists } from './clerk-sync.service';
 import { WatchHistoryInput } from '../types';
 
 export class HistoryService {
@@ -42,6 +43,7 @@ export class HistoryService {
   }
 
   static async addOrUpdateHistory(userId: string, input: WatchHistoryInput) {
+    await ensureUserExists(userId);
     const whereClause: any = {
       userId,
       contentId: input.contentId,

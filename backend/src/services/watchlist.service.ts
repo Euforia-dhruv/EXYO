@@ -1,4 +1,5 @@
 import { prisma } from '../server';
+import { ensureUserExists } from './clerk-sync.service';
 import { WatchlistInput } from '../types';
 
 export class WatchlistService {
@@ -10,6 +11,7 @@ export class WatchlistService {
   }
 
   static async addToWatchlist(userId: string, input: WatchlistInput) {
+    await ensureUserExists(userId);
     const existing = await prisma.watchlist.findFirst({
       where: {
         userId,

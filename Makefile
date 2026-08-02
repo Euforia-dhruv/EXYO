@@ -1,105 +1,65 @@
-.PHONY: help install build dev deploy health migrate clean
+.PHONY: build build-frontend build-backend dev dev-frontend dev-backend db-studio \
+       deploy deploy-pages deploy-edgeterm deploy-all update-dns check-deploy \
+       check-health lint lint-fix typecheck clean install
 
-# EXYO Makefile
-# Run 'make help' to see available commands
+# Build
+build: build-frontend build-backend
 
-help: ## Show this help
-	@echo "EXYO - Available Commands:"
-	@echo "=========================="
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
-
-install: ## Install all dependencies
-	cd backend && npm install
-	cd frontend && npm install
-	@echo "✅ Dependencies installed"
-
-build: ## Build frontend and backend
+build-frontend:
 	cd frontend && npm run build
+
+build-backend:
 	cd backend && npm run build
-	@echo "✅ Build complete"
 
-build-frontend: ## Build frontend only
-	cd frontend && npm run build
-	@echo "✅ Frontend built"
+# Development
+dev: dev-frontend & dev-backend
 
-build-backend: ## Build backend only
-	cd backend && npm run build
-	@echo "✅ Backend built"
-
-dev: ## Start development servers
-	@echo "Starting backend..."
-	cd backend && npm run dev &
-	@echo "Starting frontend..."
+dev-frontend:
 	cd frontend && npm run dev
-	@echo "✅ Development servers running"
 
-dev-backend: ## Start backend dev server only
+dev-backend:
 	cd backend && npm run dev
 
-dev-frontend: ## Start frontend dev server only
-	cd frontend && npm run dev
+db-studio:
+	cd backend && npx prisma studio
 
-db-setup: ## Setup database (development)
-	./scripts/migrate.sh dev
-	@echo "✅ Database ready"
+# Deployment
+deploy: deploy-all
 
-db-migrate: ## Run production migrations
-	./scripts/migrate.sh prod
-	@echo "✅ Migrations applied"
+deploy-pages:
+	@bash scripts/deploy-pages.sh
 
-db-seed: ## Seed database
-	./scripts/migrate.sh seed
-	@echo "✅ Database seeded"
+deploy-edgeterm:
+	@bash scripts/deploy-edgeterm.sh
 
-db-reset: ## Reset database (WARNING: destroys data)
-	./scripts/migrate.sh reset
+deploy-all:
+	@bash scripts/deploy-all.sh
 
-db-status: ## Check migration status
-	./scripts/migrate.sh status
+update-dns:
+	@bash scripts/update-dns.sh
 
-setup-env: ## Generate environment files
-	./scripts/setup-env.sh
-	@echo "✅ Environment files created"
+check-deploy:
+	@bash scripts/check-deploy.sh
 
-deploy: build ## Deploy to DigitalPlat
-	./scripts/deploy.sh all
-	@echo "✅ Deployment complete"
+# Health
+check-health:
+	@bash scripts/health-check.sh
 
-deploy-frontend: build-frontend ## Deploy frontend only
-	./scripts/deploy.sh frontend
+# Quality
+lint:
+	cd frontend && npm run lint 2>/dev/null; cd ../backend && npm run lint 2>/dev/null
 
-deploy-backend: build-backend ## Deploy backend only
-	./scripts/deploy.sh backend
+lint-fix:
+	cd frontend && npm run lint:fix 2>/dev/null; cd ../backend && npm run lint:fix 2>/dev/null
 
-health: ## Run health checks
-	./scripts/health-check.sh
-
-health-continuous: ## Run continuous health checks
-	./scripts/health-check.sh --continuous --interval 30
-
-typecheck: ## Run TypeScript checks
+typecheck:
 	cd frontend && npx tsc --noEmit
 	cd backend && npx tsc --noEmit
-	@echo "✅ TypeScript clean"
 
-lint: ## Run linters
-	cd frontend && npm run lint
-	@echo "✅ Linting complete"
+# Utilities
+install:
+	cd frontend && npm install
+	cd backend && npm install
 
-clean: ## Clean build artifacts
-	rm -rf frontend/dist backend/dist
-	rm -rf frontend/node_modules backend/node_modules
-	@echo "✅ Clean complete"
-
-docker-up: ## Start Docker services
-	docker-compose up -d
-
-docker-down: ## Stop Docker services
-	docker-compose down
-
-docker-logs: ## View Docker logs
-	docker-compose logs -f
-
-test: typecheck build ## Run all checks
-	./scripts/health-check.sh
-	@echo "✅ All checks passed"
+clean:
+	rm -rf frontend/dist backend/dist frontend/node_modules backend/node_modules

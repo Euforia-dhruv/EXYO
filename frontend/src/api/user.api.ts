@@ -6,13 +6,8 @@ export const userApi = {
     return response.data;
   },
 
-  updateProfile: async (data: { displayName?: string; email?: string }) => {
+  updateProfile: async (data: { displayName?: string }) => {
     const response = await api.put('/user/profile', data);
-    return response.data;
-  },
-
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    const response = await api.put('/user/password', { currentPassword, newPassword });
     return response.data;
   },
 

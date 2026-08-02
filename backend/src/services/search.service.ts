@@ -1,4 +1,5 @@
 import { prisma } from '../server';
+import { ensureUserExists } from './clerk-sync.service';
 
 export class SearchService {
   static async getSearchHistory(userId: string) {
@@ -10,6 +11,7 @@ export class SearchService {
   }
 
   static async saveSearch(userId: string, query: string) {
+    await ensureUserExists(userId);
     const existing = await prisma.searchHistory.findFirst({
       where: {
         userId,

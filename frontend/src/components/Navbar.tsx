@@ -1,28 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useUser, useClerk } from '@clerk/clerk-react';
+import Logo from './Logo';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, logout } = useAuthStore();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
     setShowDropdown(false);
+    setShowSearch(false);
   }, [location]);
+
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,116 +50,192 @@ export default function Navbar() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
-  const getInitial = () => {
-    if (user?.displayName) return user.displayName[0].toUpperCase();
-    if (user?.username) return user.username[0].toUpperCase();
-    return 'U';
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-black/95' : 'bg-gradient-to-b from-black/80 to-transparent'
-    }`}>
-      <div className="flex items-center justify-between px-4 md:px-12 h-16">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="text-exyo-red text-2xl font-bold tracking-wider">
-            EXYO
-          </Link>
+    <>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          isScrolled
+            ? 'bg-black/80 backdrop-blur-xl border-b border-white/5'
+            : 'bg-gradient-to-b from-black/60 via-black/30 to-transparent'
+        }`}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className="flex items-center justify-between px-6 md:px-12 h-16 md:h-[72px]">
+          {/* Left: Logo + Nav links */}
+          <div className="flex items-center gap-10">
+            <Link to="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
+              <Logo variant="full" className="h-8 md:h-9 w-auto" />
+            </Link>
 
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm hover:text-exyo-gray transition-colors">
-              Home
-            </Link>
-            <Link to="/?type=tv" className="text-sm hover:text-exyo-gray transition-colors">
-              TV Shows
-            </Link>
-            <Link to="/?type=movie" className="text-sm hover:text-exyo-gray transition-colors">
-              Movies
-            </Link>
-            <Link to="/my-list" className="text-sm hover:text-exyo-gray transition-colors">
-              My List
-            </Link>
+            <div className="hidden md:flex items-center gap-1">
+              {[
+                { label: 'Home', path: '/' },
+                { label: 'TV Shows', path: '/?type=tv' },
+                { label: 'Movies', path: '/?type=movie' },
+                { label: 'My List', path: '/my-list' },
+              ].map(({ label, path }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
+                    isActive(path)
+                      ? 'text-white bg-white/10'
+                      : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-2 hover:bg-white/10 rounded transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-
-          <div className="relative">
+          {/* Right: Search + Profile */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 p-1 hover:bg-white/10 rounded transition-colors"
+              onClick={() => setShowSearch(!showSearch)}
+              className="p-2.5 hover:bg-white/10 rounded-full transition-colors"
+              aria-label="Search"
             >
-              <div className="w-8 h-8 bg-exyo-red rounded flex items-center justify-center text-sm font-semibold">
-                {getInitial()}
-              </div>
-              <svg className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
 
-            {showDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-black/95 border border-white/10 rounded shadow-xl animate-fadeIn">
-                <div className="py-2">
-                  <div className="px-4 py-2 text-sm text-exyo-gray border-b border-white/10">
-                    {user?.username}
-                  </div>
-                  <Link
-                    to="/settings"
-                    className="block px-4 py-2 text-sm hover:bg-white/10 transition-colors"
-                  >
-                    Settings
-                  </Link>
-                  <Link
-                    to="/my-list"
-                    className="block px-4 py-2 text-sm hover:bg-white/10 transition-colors"
-                  >
-                    My List
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors"
-                  >
-                    Logout
-                  </button>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2 p-1 pr-2 hover:bg-white/10 rounded-full transition-colors"
+                aria-label="User menu"
+                aria-expanded={showDropdown}
+                aria-haspopup="true"
+              >
+                <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-white/10">
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Logo variant="mark" className="w-full h-full" />
+                  )}
                 </div>
-              </div>
-            )}
+                <motion.svg
+                  animate={{ rotate: showDropdown ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-4 h-4 hidden sm:block"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </motion.svg>
+              </button>
+
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-3 w-56 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-white/5">
+                      <p className="text-sm font-medium text-white truncate">
+                        {user?.fullName || user?.username || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {user?.primaryEmailAddress?.emailAddress}
+                      </p>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        to="/settings"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                      </Link>
+                      <Link
+                        to="/my-list"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                        My List
+                      </Link>
+                    </div>
+                    <div className="border-t border-white/5 py-1">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-white/5 hover:text-red-400 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
-      </div>
 
-      {showSearch && (
-        <div className="absolute top-full left-0 right-0 bg-black/95 p-4 animate-slideUp">
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search titles, genres..."
-                className="w-full bg-exyo-secondary border border-white/20 rounded px-4 py-3 pl-12 text-white placeholder-exyo-gray focus:outline-none focus:border-white/40"
-                autoFocus
-              />
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-exyo-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </form>
-        </div>
-      )}
-    </nav>
+        {/* Search overlay */}
+        <AnimatePresence>
+          {showSearch && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="overflow-hidden border-t border-white/5"
+            >
+              <div className="px-6 md:px-12 py-4 bg-black/50 backdrop-blur-xl">
+                <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
+                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search titles, genres, people..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-12 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all"
+                    aria-label="Search"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </form>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
+    </>
   );
 }

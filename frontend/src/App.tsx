@@ -1,49 +1,58 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuthStore } from './store/authStore';
+import { useAuth } from '@clerk/clerk-react';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Detail from './pages/Detail';
-import Search from './pages/Search';
-import Settings from './pages/Settings';
-import MyList from './pages/MyList';
-import Watch from './pages/Watch';
-import NotFound from './pages/NotFound';
 import Navbar from './components/Navbar';
+
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Detail = lazy(() => import('./pages/Detail'));
+const Search = lazy(() => import('./pages/Search'));
+const Settings = lazy(() => import('./pages/Settings'));
+const MyList = lazy(() => import('./pages/MyList'));
+const Watch = lazy(() => import('./pages/Watch'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: false
-    }
-  }
+      refetchOnWindowFocus: false,
+    },
+  },
 });
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
+function ProtectedRoute() {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return <PageLoader />;
+  if (!isSignedIn) return <Navigate to="/login" replace />;
+  return (
+    <>
+      <Navbar />
+      <Suspense>
+        <Outlet />
+      </Suspense>
+    </>
+  );
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return <PageLoader />;
+  if (isSignedIn) return <Navigate to="/" replace />;
   return <>{children}</>;
+}
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#E50914]" />
+    </div>
+  );
 }
 
 function App() {
@@ -52,21 +61,22 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <Router>
-            <div className="min-h-screen bg-exyo-dark">
+            <div className="min-h-screen bg-[#0a0a0a] text-white">
+              <a href="#main-content" className="skip-link">Skip to main content</a>
               <Routes>
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-                <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-                <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+                <Route path="/login" element={<PublicRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></PublicRoute>} />
 
-                <Route path="/" element={<ProtectedRoute><Navbar /><Home /></ProtectedRoute>} />
-                <Route path="/detail/:id" element={<ProtectedRoute><Navbar /><Detail /></ProtectedRoute>} />
-                <Route path="/search" element={<ProtectedRoute><Navbar /><Search /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Navbar /><Settings /></ProtectedRoute>} />
-                <Route path="/my-list" element={<ProtectedRoute><Navbar /><MyList /></ProtectedRoute>} />
-                <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Home /></main></Suspense>} />
+                  <Route path="/detail/:id" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Detail /></main></Suspense>} />
+                  <Route path="/search" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Search /></main></Suspense>} />
+                  <Route path="/settings" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Settings /></main></Suspense>} />
+                  <Route path="/my-list" element={<Suspense fallback={<PageLoader />}><main id="main-content"><MyList /></main></Suspense>} />
+                  <Route path="/watch/:id" element={<Suspense fallback={<PageLoader />}><Watch /></Suspense>} />
+                </Route>
 
-                <Route path="*" element={<NotFound />} />
+                <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
               </Routes>
             </div>
           </Router>

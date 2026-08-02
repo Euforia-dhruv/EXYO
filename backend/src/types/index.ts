@@ -4,32 +4,9 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
-export interface JwtPayload {
-  userId: string;
-  email: string;
-  username: string;
-}
-
-export interface RegisterInput {
-  username: string;
-  email: string;
-  password: string;
-}
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
 export interface UpdateProfileInput {
   displayName?: string;
-  email?: string;
   avatarUrl?: string;
-}
-
-export interface ChangePasswordInput {
-  currentPassword: string;
-  newPassword: string;
 }
 
 export interface WatchHistoryInput {

@@ -8,7 +8,6 @@ router.use(authenticate);
 
 router.get('/profile', UserController.getProfile);
 router.put('/profile', UserController.updateProfile);
-router.put('/password', UserController.changePassword);
 router.delete('/account', UserController.deleteAccount);
 
 export default router;

@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/auth.routes';
+import { clerkMiddleware } from '@clerk/express';
 import userRoutes from './routes/user.routes';
 import historyRoutes from './routes/history.routes';
 import watchlistRoutes from './routes/watchlist.routes';
@@ -26,12 +26,12 @@ app.use(helmet({
 }));
 app.use(cors(corsConfig));
 app.use(express.json({ limit: '10mb' }));
+app.use(clerkMiddleware());
 app.use(securityHeaders);
 app.use(requestLogger);
 
 app.use('/api', apiLimiter);
 
-app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/watchlist', watchlistRoutes);
