@@ -1,13 +1,10 @@
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { useQuery } from '@tanstack/react-query';
 import { contentApi } from '../api/content.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
 import Footer from '../components/Footer';
 import { SkeletonHero, SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
 import type { CatalogItem } from '../types';
 
 const GENRES = [
@@ -47,12 +44,6 @@ function ConnectionError({ onRetry }: { onRetry: () => void }) {
 export default function Home() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'movie';
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-
-  const continueWatching = useConvexQuery(api.watchHistory.getContinueWatching);
-  const watchlist = useConvexQuery(api.watchlist.getWatchlist);
-  const addToWatchlist = useConvexMutation(api.watchlist.addToWatchlist);
 
   const { data: trending = [], isLoading: loadingTrending, isError: trendingError, refetch } = useQuery<CatalogItem[]>({
     queryKey: ['trending', type],
@@ -91,16 +82,6 @@ export default function Home() {
     },
   });
 
-  const handleAddToList = (item: CatalogItem) => {
-    addToWatchlist({
-      contentId: item.id,
-      title: item.name,
-      posterUrl: item.poster,
-      backdropUrl: item.background,
-      contentType: item.type as 'movie' | 'series',
-    }).then(() => showToast('Added to My List', 'success'));
-  };
-
   const isLoadingAll = loadingTrending && loadingPopular && loadingTop;
 
   if (isLoadingAll) {
@@ -125,19 +106,11 @@ export default function Home() {
       {trending.length > 0 && <HeroBanner items={trending.slice(0, 5)} />}
 
       <div className="-mt-40 relative z-10">
-        {continueWatching && continueWatching.length > 0 && (
-          <ContentRow title="Continue Watching" items={continueWatching} showProgress />
-        )}
+        <ContentRow title="Trending Now" items={trending} />
 
-        <ContentRow title="Trending Now" items={trending} onAddToList={handleAddToList} />
+        <ContentRow title="Popular on EXYO" items={popular} />
 
-        <ContentRow title="Popular on EXYO" items={popular} onAddToList={handleAddToList} />
-
-        {watchlist && watchlist.length > 0 && (
-          <ContentRow title="My List" items={watchlist} onAddToList={handleAddToList} />
-        )}
-
-        <ContentRow title="Top Picks" items={top} onAddToList={handleAddToList} />
+        <ContentRow title="Top Picks" items={top} />
 
         {GENRES.map(
           (genre) =>
@@ -146,7 +119,6 @@ export default function Home() {
                 key={genre.catalogId}
                 title={genre.title}
                 items={genreData[genre.catalogId]}
-                onAddToList={handleAddToList}
               />
             )
         )}

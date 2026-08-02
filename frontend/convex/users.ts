@@ -29,19 +29,19 @@ export const syncUser = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        email: identity.email ?? existing.email,
-        displayName: identity.name ?? existing.displayName,
-        avatarUrl: identity.picture ?? existing.avatarUrl,
+        email: (identity.email as string) ?? existing.email,
+        displayName: (identity.name as string) ?? existing.displayName,
+        avatarUrl: (identity.picture as string) ?? existing.avatarUrl,
       });
       return existing._id;
     }
 
     const userId = await ctx.db.insert("users", {
       clerkId: identity.subject,
-      email: identity.email ?? "",
-      username: identity.username ?? undefined,
-      displayName: identity.name ?? undefined,
-      avatarUrl: identity.picture ?? undefined,
+      email: (identity.email as string) ?? "",
+      username: (identity.username as string) ?? undefined,
+      displayName: (identity.name as string) ?? undefined,
+      avatarUrl: (identity.picture as string) ?? undefined,
     });
 
     const defaultAddons = [

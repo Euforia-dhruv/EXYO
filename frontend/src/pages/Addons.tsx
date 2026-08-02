@@ -52,10 +52,10 @@ export default function Addons() {
     }
   };
 
-  const handleRemove = async (name: string, url: string) => {
-    if (window.confirm(`Remove "${name || url}"?`)) {
+  const handleRemove = async (name: string, id: string) => {
+    if (window.confirm(`Remove "${name || id}"?`)) {
       try {
-        await removeAddon({ url });
+        await removeAddon({ id: id as any });
         showToast('Addon removed', 'success');
       } catch (err: any) {
         showToast(err.message || 'Failed to remove addon', 'error');
@@ -166,7 +166,7 @@ export default function Addons() {
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <button
-                            onClick={() => toggleAddon({ url: addon.url })}
+                            onClick={() => toggleAddon({ id: addon._id })}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                               addon.active ? 'bg-green-500/10' : 'bg-white/5'
                             }`}
@@ -187,7 +187,7 @@ export default function Addons() {
                           </div>
                         </div>
                         <button
-                          onClick={() => handleRemove(addon.name, addon.url)}
+                          onClick={() => handleRemove(addon.name || 'Custom Addon', addon._id)}
                           className="text-gray-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors ml-3 flex-shrink-0"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

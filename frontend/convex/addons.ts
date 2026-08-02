@@ -31,7 +31,7 @@ export const addAddon = mutation({
     if (existing) throw new Error("Addon already added");
 
     let manifest: any = null;
-    let name: string | null = null;
+    let name: string | undefined = undefined;
 
     try {
       const controller = new AbortController();
@@ -41,7 +41,7 @@ export const addAddon = mutation({
 
       if (response.ok) {
         manifest = await response.json();
-        name = manifest.name || null;
+        name = manifest.name || undefined;
       }
     } catch {
       // Allow adding addon even if manifest fetch fails

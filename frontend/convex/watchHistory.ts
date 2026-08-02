@@ -16,19 +16,18 @@ export const getContinueWatching = query({
 });
 
 export const getHistory = query({
-  args: { page: v.optional(v.number()), limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
     const limit = args.limit ?? 20;
-    const page = args.page ?? 1;
 
     return await ctx.db
       .query("watchHistory")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .paginate(limit, (page - 1) * limit);
+      .take(limit);
   },
 });
 

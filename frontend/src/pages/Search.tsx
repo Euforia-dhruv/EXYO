@@ -6,7 +6,6 @@ import { api } from '../../convex/_generated/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { contentApi } from '../api/content.api';
 import { SkeletonGrid } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
 import { useDebounce } from '../hooks/useDebounce';
 import type { CatalogItem } from '../types';
 
@@ -15,7 +14,6 @@ const QUICK_SEARCHES = ['Stranger Things', 'Breaking Bad', 'The Witcher', 'Narco
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const query = searchParams.get('q') || '';
   const [searchInput, setSearchInput] = useState(query);
   const debouncedSearch = useDebounce(searchInput, 500);
