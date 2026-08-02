@@ -66,9 +66,15 @@ export default function Detail() {
   if (!content) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400 text-lg mb-4">Content not found</p>
-          <button onClick={() => navigate('/')} className="bg-exyo-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+            <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+            </svg>
+          </div>
+          <p className="text-gray-400 text-lg mb-2">Content not found</p>
+          <p className="text-gray-600 text-sm mb-6">This title may no longer be available.</p>
+          <button onClick={() => navigate('/')} className="bg-exyo-red text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-colors">
             Go Home
           </button>
         </div>

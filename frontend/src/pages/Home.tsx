@@ -20,6 +20,30 @@ const GENRES = [
   { title: 'Documentary', catalogId: 'documentary' },
 ];
 
+function ConnectionError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6">
+      <div className="max-w-md text-center">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-exyo-red/10 flex items-center justify-center">
+          <svg className="w-10 h-10 text-exyo-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636a9 9 0 010 12.728m-2.829-2.829a5 5 0 000-7.07m-4.243 2.122a1.5 1.5 0 112.121 2.121 1.5 1.5 0 01-2.121-2.121z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold mb-3">Unable to connect</h2>
+        <p className="text-gray-400 mb-8 leading-relaxed">
+          We&apos;re having trouble reaching our servers. Please check your connection and try again.
+        </p>
+        <button
+          onClick={onRetry}
+          className="bg-exyo-red hover:bg-exyo-red-dark text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'movie';
@@ -29,29 +53,33 @@ export default function Home() {
   const { data: continueWatching = [], isLoading: loadingHistory } = useQuery<WatchHistory[]>({
     queryKey: ['continueWatching'],
     queryFn: historyApi.getContinueWatching,
+    retry: 2,
   });
 
   const { data: watchlist = [], isLoading: loadingWatchlist } = useQuery({
     queryKey: ['watchlist'],
     queryFn: watchlistApi.getWatchlist,
+    retry: 2,
   });
 
-  const { data: trending = [], isLoading: loadingTrending } = useQuery<CatalogItem[]>({
+  const { data: trending = [], isLoading: loadingTrending, isError: trendingError, refetch } = useQuery<CatalogItem[]>({
     queryKey: ['trending', type],
     queryFn: () => contentApi.getCatalogs(type, 'trending'),
+    retry: 2,
   });
 
   const { data: popular = [], isLoading: loadingPopular } = useQuery<CatalogItem[]>({
     queryKey: ['popular', type],
     queryFn: () => contentApi.getCatalogs(type, 'popular'),
+    retry: 2,
   });
 
   const { data: top = [], isLoading: loadingTop } = useQuery<CatalogItem[]>({
     queryKey: ['top', type],
     queryFn: () => contentApi.getCatalogs(type, 'top'),
+    retry: 2,
   });
 
-  // Parallel genre fetching
   const { data: genreData = {} } = useQuery({
     queryKey: ['genres', type],
     queryFn: async () => {
@@ -103,6 +131,10 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  if (trendingError && !trending.length && !popular.length && !top.length) {
+    return <ConnectionError onRetry={() => refetch()} />;
   }
 
   return (

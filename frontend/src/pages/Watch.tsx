@@ -267,15 +267,22 @@ export default function Watch() {
 
   if (streams.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white">
-        <svg className="w-16 h-16 mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-        <p className="text-xl mb-4">No streams available</p>
-        <p className="text-gray-400 mb-6">Try a different addon or content</p>
-        <button onClick={() => navigate(-1)} className="px-6 py-2 bg-exyo-red rounded hover:bg-red-700 transition-colors">
-          Go Back
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white px-6">
+        <div className="w-20 h-20 mb-6 rounded-full bg-white/5 flex items-center justify-center">
+          <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <p className="text-xl font-semibold mb-2">No streams available</p>
+        <p className="text-gray-400 mb-8 text-center max-w-sm">No streams were found for this content. Try selecting a different addon in your settings.</p>
+        <div className="flex gap-3">
+          <button onClick={() => navigate(-1)} className="px-6 py-2.5 bg-white/10 rounded-lg hover:bg-white/20 transition-colors font-medium">
+            Go Back
+          </button>
+          <button onClick={() => navigate('/settings/addons')} className="px-6 py-2.5 bg-exyo-red rounded-lg hover:bg-red-700 transition-colors font-medium">
+            Manage Addons
+          </button>
+        </div>
       </div>
     );
   }

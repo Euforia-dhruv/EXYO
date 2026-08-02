@@ -144,7 +144,7 @@ export default function Addons() {
             <h2 className="text-lg font-semibold mb-4">Your Custom Addons ({customAddons.length})</h2>
             {isLoading ? (
               <div className="space-y-3">
-                {[1, 2].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}
+                {[1, 2].map(i => <div key={i} className="h-16 shimmer rounded-xl" />)}
               </div>
             ) : customAddons.length === 0 ? (
               <p className="text-gray-500 text-center py-6 text-sm">No custom addons yet. Add one above or pick from popular addons below.</p>
