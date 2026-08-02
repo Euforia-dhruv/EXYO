@@ -61,16 +61,16 @@ export default function Detail() {
 
   if (!content) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-exyo-dark">
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
         <div className="text-center max-w-md px-6">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-white/5 flex items-center justify-center">
-            <svg className="w-12 h-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+            <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
             </svg>
           </div>
-          <p className="text-gray-300 text-xl mb-3 font-medium">Content not found</p>
-          <p className="text-gray-500 text-sm mb-8">This title may no longer be available.</p>
-          <button onClick={() => navigate('/')} className="bg-exyo-red text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-exyo-red-dark transition-colors shadow-lg shadow-exyo-red/20">
+          <p className="text-gray-300 text-lg mb-2 font-medium">Content not found</p>
+          <p className="text-gray-500 text-sm mb-6">This title may no longer be available.</p>
+          <button onClick={() => navigate('/')} className="bg-exyo-red text-white px-7 py-3 rounded-full font-bold text-sm hover:bg-exyo-red-dark transition-colors shadow-lg shadow-exyo-red/20">
             Go Home
           </button>
         </div>
@@ -79,40 +79,41 @@ export default function Detail() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Hero section */}
-      <div className="relative h-[85vh] min-h-[520px]">
+      <div className="relative h-[80vh] min-h-[480px]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${content.background || content.poster})` }}
         />
         <div className="absolute inset-0 bg-hero-gradient-left" />
         <div className="absolute inset-0 bg-hero-gradient" />
-        <div className="absolute inset-0 bg-exyo-dark/30" />
+        <div className="absolute inset-0 bg-[#0A0A0A]/40" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent" />
 
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-24 left-5 md:left-10 p-2.5 hover:bg-white/10 rounded-2xl transition-colors z-10"
+          className="absolute top-24 left-5 md:left-10 p-2.5 hover:bg-white/10 rounded-full transition-colors z-10"
         >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
         {/* Content info */}
-        <div className="absolute bottom-[10%] left-0 right-0 px-6 md:px-12 lg:px-16">
+        <div className="absolute bottom-[12%] left-0 right-0 px-6 md:px-12 lg:px-16">
           <div className="max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              {/* Genre tags */}
+              {/* Genre pills */}
               {content.genres && content.genres.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {content.genres.slice(0, 3).map((genre: string, i: number) => (
-                    <span key={i} className="text-[13px] font-semibold text-exyo-red uppercase tracking-widest">
+                    <span key={i} className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-[12px] font-semibold text-white/90 border border-white/10">
                       {genre}
                     </span>
                   ))}
@@ -120,54 +121,54 @@ export default function Detail() {
               )}
 
               {/* Title */}
-              <h1 className="text-[3.5rem] md:text-[5rem] lg:text-[6rem] font-black mb-5 tracking-tight leading-[0.9]">
+              <h1 className="text-[3rem] md:text-[4rem] lg:text-[5rem] font-black mb-5 tracking-tight leading-[0.9]">
                 {content.name}
               </h1>
 
               {/* Metadata row */}
-              <div className="flex flex-wrap items-center gap-3 mb-6 text-[15px]">
+              <div className="flex flex-wrap items-center gap-3 mb-6 text-[14px]">
                 {content.imdbRating && (
                   <span className="flex items-center gap-1.5 text-yellow-400 font-bold">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
                     {content.imdbRating}
                   </span>
                 )}
                 {content.year && <span className="text-gray-300 font-medium">{content.year}</span>}
                 {content.runtime && <span className="text-gray-300 font-medium">{content.runtime}</span>}
-                <span className="px-2.5 py-1 text-[11px] font-bold border border-white/20 rounded-xl uppercase tracking-wider text-gray-300">
+                <span className="px-2 py-0.5 text-[10px] font-bold border border-white/20 rounded-full uppercase tracking-wider text-gray-300">
                   {type === 'movie' ? 'Movie' : 'Series'}
                 </span>
               </div>
 
               {/* Description */}
-              <p className="text-[17px] md:text-lg text-gray-300/90 mb-8 leading-relaxed max-w-2xl line-clamp-3">
+              <p className="text-[16px] md:text-[17px] text-gray-300/90 mb-7 leading-relaxed max-w-2xl line-clamp-3">
                 {content.description}
               </p>
 
-              {/* Action buttons */}
+              {/* Action buttons - pill shaped */}
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => navigate(`/watch/${id}?type=${type}`)}
-                  className="flex items-center gap-3 bg-white hover:bg-white/90 text-black px-8 md:px-10 py-3.5 md:py-4 rounded-2xl font-bold text-[15px] md:text-base transition-all duration-200 shadow-2xl shadow-black/30"
+                  className="flex items-center gap-2.5 bg-white hover:bg-white/90 text-black px-8 py-3 rounded-full font-bold text-[15px] transition-all duration-200 shadow-2xl shadow-black/30"
                 >
-                  <svg className="w-6 h-6 md:w-7 md:h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                   Play
                 </button>
 
                 <button
                   onClick={handleWatchlistToggle}
-                  className="flex items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-8 md:px-10 py-3.5 md:py-4 rounded-2xl font-bold text-[15px] md:text-base transition-all duration-200 border border-white/10"
+                  className="flex items-center gap-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-full font-bold text-[15px] transition-all duration-200 border border-white/20"
                 >
                   {isInWatchlist ? (
                     <>
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                       In My List
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
                       My List
@@ -184,28 +185,28 @@ export default function Detail() {
 
       {/* Cast section */}
       {content.cast && content.cast.length > 0 && (
-        <div className="px-6 md:px-12 lg:px-16 py-12">
-          <h2 className="text-xl font-bold mb-6">Cast</h2>
-          <div className="flex gap-5 overflow-x-auto hide-scrollbar pb-2">
+        <div className="px-6 md:px-12 lg:px-16 py-10">
+          <h2 className="text-[18px] font-bold mb-5">Cast</h2>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
             {content.cast.map((actor: { name: string; role: string; avatar?: string }, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="flex-shrink-0 w-28 text-center"
+                className="flex-shrink-0 w-24 text-center"
               >
-                <div className="w-20 h-20 mx-auto rounded-2xl bg-white/[0.03] overflow-hidden mb-3">
+                <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] overflow-hidden mb-2.5">
                   {actor.avatar ? (
                     <img src={actor.avatar} alt={actor.name} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xl font-bold text-gray-600">
+                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-gray-600">
                       {actor.name[0]}
                     </div>
                   )}
                 </div>
-                <p className="text-sm font-medium text-white truncate">{actor.name}</p>
-                <p className="text-[12px] text-gray-500 truncate">{actor.role}</p>
+                <p className="text-[13px] font-medium text-white truncate">{actor.name}</p>
+                <p className="text-[11px] text-gray-500 truncate">{actor.role}</p>
               </motion.div>
             ))}
           </div>
@@ -214,7 +215,7 @@ export default function Detail() {
 
       {/* More Like This */}
       {similar.length > 0 && (
-        <div className="pt-8 pb-12">
+        <div className="pt-6 pb-12">
           <ContentRow title="More Like This" items={similar} />
         </div>
       )}

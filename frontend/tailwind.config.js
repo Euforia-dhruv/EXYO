@@ -8,11 +8,11 @@ export default {
     extend: {
       colors: {
         exyo: {
-          black: '#0B0B0B',
+          black: '#0A0A0A',
           dark: '#141414',
-          darker: '#0B0B0B',
+          darker: '#0A0A0A',
           surface: '#1A1A1A',
-          hover: '#1F1F1F',
+          hover: '#2A2A2A',
           gray: '#E5E5E5',
           muted: '#808080',
           red: '#E50914',
@@ -25,12 +25,17 @@ export default {
         sans: ['"Helvetica Neue"', 'Arial', 'system-ui', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
-        'xl': '18px',
-        '2xl': '24px',
+        'xl': '12px',
+        '2xl': '18px',
+        '3xl': '24px',
       },
       spacing: {
-        'nav': '80px',
-        'section': '80px',
+        'nav': '72px',
+        'section': '64px',
+        '0.5': '0.5rem',
+        '1': '1rem',
+        '2': '2rem',
+        '4': '4rem',
       },
       screens: {
         '3xl': '1800px',
@@ -65,9 +70,9 @@ export default {
         slowZoom: 'slowZoom 20s ease-out forwards',
       },
       backgroundImage: {
-        'hero-gradient': 'linear-gradient(to top, #0B0B0B 0%, rgba(11,11,11,0.85) 20%, rgba(11,11,11,0.4) 45%, transparent 100%)',
-        'hero-gradient-left': 'linear-gradient(to right, rgba(11,11,11,0.95) 0%, rgba(11,11,11,0.6) 45%, transparent 100%)',
-        'hero-gradient-top': 'linear-gradient(to bottom, rgba(11,11,11,0.4) 0%, transparent 30%)',
+        'hero-gradient': 'linear-gradient(to top, #0A0A0A 0%, rgba(10,10,10,0.85) 20%, rgba(10,10,10,0.4) 45%, transparent 100%)',
+        'hero-gradient-left': 'linear-gradient(to right, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.6) 45%, transparent 100%)',
+        'hero-gradient-top': 'linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, transparent 30%)',
       },
       transitionTimingFunction: {
         'netflix': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',

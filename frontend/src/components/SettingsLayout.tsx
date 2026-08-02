@@ -102,7 +102,7 @@ export default function SettingsLayout({ children, title, subtitle }: SettingsLa
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Spacer for fixed navbar */}
       <div className="h-[80px]" />
 

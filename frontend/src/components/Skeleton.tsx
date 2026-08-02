@@ -27,8 +27,8 @@ export function SkeletonRow() {
 
 export function SkeletonHero() {
   return (
-    <div className="relative h-[88vh] min-h-[600px] max-h-[920px] w-full shimmer">
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0B0B0B] via-[#0B0B0B]/50 to-transparent" />
+    <div className="relative h-[85vh] min-h-[560px] max-h-[880px] w-full shimmer">
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/50 to-transparent" />
       <div className="absolute bottom-[10%] left-0 right-0 px-5 md:px-10 lg:px-14">
         <div className="max-w-3xl">
           <div className="h-4 shimmer rounded-lg w-24 mb-4" />

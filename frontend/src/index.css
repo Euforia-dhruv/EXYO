@@ -2,11 +2,11 @@
 
 @layer base {
   @theme {
-    --color-exyo-black: #0B0B0B;
+    --color-exyo-black: #0A0A0A;
     --color-exyo-dark: #141414;
-    --color-exyo-darker: #0B0B0B;
+    --color-exyo-darker: #0A0A0A;
     --color-exyo-surface: #1A1A1A;
-    --color-exyo-hover: #1F1F1F;
+    --color-exyo-hover: #2A2A2A;
     --color-exyo-gray: #E5E5E5;
     --color-exyo-muted: #808080;
     --color-exyo-red: #E50914;
@@ -29,7 +29,7 @@ html {
 
 body {
   font-family: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
-  background-color: #0B0B0B;
+  background-color: #0A0A0A;
   color: #ffffff;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
