@@ -56,7 +56,7 @@ export default function Thumbnail({ item, showProgress, onAddToList }: Thumbnail
 
   return (
     <div
-      className="relative flex-shrink-0 w-[160px] md:w-[200px] lg:w-[240px] cursor-pointer"
+      className="relative flex-shrink-0 w-[160px] md:w-[200px] lg:w-[240px] cursor-pointer group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -158,9 +158,12 @@ export default function Thumbnail({ item, showProgress, onAddToList }: Thumbnail
 
       {/* Title below card */}
       <div className="mt-2 px-1">
-        <p className="text-sm font-medium text-gray-300 truncate group-hover:text-white transition-colors">
+        <p className="text-sm font-medium text-gray-300 truncate group-hover:text-white transition-colors duration-200">
           {title}
         </p>
+        {year && (
+          <p className="text-xs text-gray-500 mt-0.5">{year}</p>
+        )}
       </div>
     </div>
   );

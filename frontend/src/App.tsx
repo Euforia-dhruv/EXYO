@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/clerk-react';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
+import ScrollToTop from './components/ScrollToTop';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -64,6 +65,7 @@ function App() {
           <Router>
             <div className="min-h-screen bg-[#0a0a0a] text-white">
               <a href="#main-content" className="skip-link">Skip to main content</a>
+              <ScrollToTop />
               <Routes>
                 <Route path="/login" element={<PublicRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></PublicRoute>} />
                 <Route path="/register" element={<PublicRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></PublicRoute>} />
