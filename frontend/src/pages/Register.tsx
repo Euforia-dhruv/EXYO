@@ -10,7 +10,7 @@ export default function Register() {
           <img
             src="/Exyologo-Photoroom.png"
             alt="EXYO"
-            className="h-12 mx-auto"
+            className="h-16 mx-auto"
             draggable={false}
           />
         </div>
