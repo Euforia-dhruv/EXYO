@@ -1,15 +1,19 @@
 import { SignUp } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
-import Logo from '../components/Logo';
 
 export default function Register() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-exyo-dark px-4">
       <div className="w-full max-w-md">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <Logo variant="full" className="h-12 mx-auto" />
+          <span className="text-exyo-red font-black text-4xl tracking-wider italic">
+            EXYO
+          </span>
         </div>
-        <div className="rounded-xl overflow-hidden shadow-2xl">
+
+        {/* Auth card */}
+        <div className="bg-exyo-secondary/80 backdrop-blur-sm border border-exyo-border rounded-netflix overflow-hidden shadow-2xl shadow-black/50">
           <SignUp
             routing="path"
             path="/register"
@@ -17,23 +21,26 @@ export default function Register() {
             appearance={{
               elements: {
                 rootBox: 'mx-auto',
-                card: 'bg-[#141414] border border-white/10 shadow-none',
-                headerTitle: 'text-white text-xl font-semibold',
-                headerSubtitle: 'text-gray-400',
-                socialButtonsBlockButton: 'bg-white/5 border border-white/10 text-white hover:bg-white/10',
-                socialButtonsBlockButtonText: 'text-white font-medium',
-                dividerLine: 'bg-white/10',
-                dividerText: 'text-gray-500',
-                formFieldLabel: 'text-gray-400',
-                formFieldInput: 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-white/20',
-                formButtonPrimary: 'bg-[#E50914] hover:bg-red-700 text-white font-semibold',
-                footerActionLink: 'text-[#E50914] hover:text-red-400',
-                identityPreviewEditButton: 'text-[#E50914]',
+                card: 'bg-transparent border-none shadow-none',
+                headerTitle: 'text-white text-2xl font-bold',
+                headerSubtitle: 'text-exyo-muted',
+                socialButtonsBlockButton: 'bg-white/5 border border-exyo-border text-white hover:bg-white/10 rounded-netflix transition-colors',
+                socialButtonsBlockButtonText: 'text-white font-medium text-sm',
+                dividerLine: 'bg-exyo-border',
+                dividerText: 'text-exyo-muted',
+                formFieldLabel: 'text-exyo-muted text-sm',
+                formFieldInput: 'bg-exyo-secondary border border-exyo-border text-white placeholder-exyo-muted focus:border-white/30 rounded-netflix text-sm',
+                formButtonPrimary: 'bg-exyo-red hover:bg-exyo-red-dark text-white font-bold rounded-netflix transition-colors',
+                footerActionLink: 'text-exyo-red hover:text-exyo-red-hover transition-colors',
+                identityPreviewEditButton: 'text-exyo-red',
+                formFieldInputShowPasswordButton: 'text-exyo-muted hover:text-white',
               },
             }}
           />
         </div>
-        <div className="mt-6 text-center text-sm text-gray-500">
+
+        {/* Footer text */}
+        <div className="mt-6 text-center text-sm text-exyo-muted">
           Already have an account?{' '}
           <Link to="/login" className="text-white hover:underline font-medium">
             Sign in

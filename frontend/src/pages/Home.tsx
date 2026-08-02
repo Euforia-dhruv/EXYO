@@ -19,7 +19,7 @@ const GENRES = [
 
 function ConnectionError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-exyo-dark px-6">
       <div className="max-w-md text-center">
         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-exyo-red/10 flex items-center justify-center">
           <svg className="w-10 h-10 text-exyo-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,12 +27,12 @@ function ConnectionError({ onRetry }: { onRetry: () => void }) {
           </svg>
         </div>
         <h2 className="text-2xl font-bold mb-3">Unable to connect</h2>
-        <p className="text-gray-400 mb-8 leading-relaxed">
+        <p className="text-exyo-muted mb-8 leading-relaxed">
           We&apos;re having trouble reaching our servers. Please check your connection and try again.
         </p>
         <button
           onClick={onRetry}
-          className="bg-exyo-red hover:bg-exyo-red-dark text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+          className="bg-exyo-red hover:bg-exyo-red-dark text-white px-8 py-3 rounded-netflix font-bold text-sm transition-colors"
         >
           Try Again
         </button>
@@ -86,9 +86,9 @@ export default function Home() {
 
   if (isLoadingAll) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-exyo-dark">
         <SkeletonHero />
-        <div className="-mt-32 relative z-10 space-y-2">
+        <div className="-mt-32 relative z-10 space-y-0">
           <SkeletonRow />
           <SkeletonRow />
           <SkeletonRow />
@@ -102,14 +102,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-exyo-dark">
       {trending.length > 0 && <HeroBanner items={trending.slice(0, 5)} />}
 
-      <div className="-mt-40 relative z-10">
+      <div className="-mt-32 relative z-10">
         <ContentRow title="Trending Now" items={trending} />
-
         <ContentRow title="Popular on EXYO" items={popular} />
-
         <ContentRow title="Top Picks" items={top} />
 
         {GENRES.map(

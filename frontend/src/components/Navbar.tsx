@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser, useClerk } from '@clerk/clerk-react';
-import Logo from './Logo';
 
 const NAV_LINKS = [
   { label: 'Home', path: '/' },
@@ -89,28 +88,30 @@ export default function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? 'bg-black/80 backdrop-blur-xl border-b border-white/5'
-            : 'bg-gradient-to-b from-black/60 via-black/30 to-transparent'
+            ? 'bg-exyo-dark/95 backdrop-blur-sm shadow-lg shadow-black/20'
+            : 'bg-gradient-to-b from-exyo-dark/80 via-exyo-dark/30 to-transparent'
         }`}
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="flex items-center justify-between px-6 md:px-12 h-16 md:h-[72px]">
+        <div className="flex items-center justify-between px-4 md:px-8 lg:px-12 h-[68px]">
           {/* Left: Logo + Nav links */}
-          <div className="flex items-center gap-10">
-            <Link to="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
-              <Logo variant="full" className="h-8 md:h-9 w-auto" />
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity">
+              <span className="text-exyo-red font-black text-2xl tracking-wider italic">
+                EXYO
+              </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-0.5">
               {NAV_LINKS.map(({ label, path }) => (
                 <Link
                   key={path}
                   to={path}
-                  className={`px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
+                  className={`px-3 py-1.5 text-[13px] font-medium rounded transition-colors duration-150 ${
                     isActive(path)
-                      ? 'text-white bg-white/10'
-                      : 'text-gray-300 hover:text-white hover:bg-white/5'
+                      ? 'text-white'
+                      : 'text-exyo-gray/70 hover:text-exyo-gray'
                   }`}
                 >
                   {label}
@@ -120,21 +121,21 @@ export default function Navbar() {
           </div>
 
           {/* Right: Search + Profile */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="p-2.5 hover:bg-white/10 rounded-full transition-colors"
+              className="p-2 hover:bg-white/10 rounded transition-colors"
               aria-label="Search"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
 
             {/* Mobile hamburger */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2.5 hover:bg-white/10 rounded-full transition-colors"
+              className="lg:hidden p-2 hover:bg-white/10 rounded transition-colors"
               aria-label="Menu"
               aria-expanded={showMobileMenu}
             >
@@ -149,19 +150,22 @@ export default function Navbar() {
               )}
             </button>
 
+            {/* Profile avatar */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 p-1 pr-2 hover:bg-white/10 rounded-full transition-colors"
+                className="flex items-center gap-2 p-0.5 hover:bg-white/10 rounded transition-colors"
                 aria-label="User menu"
                 aria-expanded={showDropdown}
                 aria-haspopup="true"
               >
-                <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-white/10">
+                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-exyo-red">
                   {user?.imageUrl ? (
                     <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <Logo variant="mark" className="w-full h-full" />
+                    <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                      {(user?.fullName || 'U')[0]}
+                    </div>
                   )}
                 </div>
                 <motion.svg
@@ -179,54 +183,42 @@ export default function Navbar() {
               <AnimatePresence>
                 {showDropdown && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="absolute right-0 top-full mt-3 w-56 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-56 bg-exyo-dark/95 backdrop-blur-sm border border-white/10 rounded shadow-xl shadow-black/40 overflow-hidden"
                   >
                     <div className="px-4 py-3 border-b border-white/5">
                       <p className="text-sm font-medium text-white truncate">
                         {user?.fullName || user?.username || 'User'}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-exyo-muted truncate mt-0.5">
                         {user?.primaryEmailAddress?.emailAddress}
                       </p>
                     </div>
                     <div className="py-1">
-                      <Link
-                        to="/settings"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Settings
-                      </Link>
-                      <Link
-                        to="/settings/addons"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                        </svg>
-                        Addons
-                      </Link>
-                      <Link
-                        to="/my-list"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                        </svg>
-                        My List
-                      </Link>
+                      {[
+                        { label: 'Settings', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+                        { label: 'Addons', path: '/settings/addons', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
+                        { label: 'My List', path: '/my-list', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' },
+                      ].map(({ label, path, icon }) => (
+                        <Link
+                          key={path}
+                          to={path}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-exyo-gray/70 hover:bg-white/5 hover:text-white transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
+                          </svg>
+                          {label}
+                        </Link>
+                      ))}
                     </div>
                     <div className="border-t border-white/5 py-1">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-white/5 hover:text-red-400 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-exyo-muted hover:bg-white/5 hover:text-exyo-red transition-colors"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -248,18 +240,18 @@ export default function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="md:hidden overflow-hidden border-t border-white/5"
+              transition={{ duration: 0.2 }}
+              className="lg:hidden overflow-hidden border-t border-white/5"
             >
-              <div className="px-6 py-3 bg-black/80 backdrop-blur-xl">
+              <div className="px-4 py-3 bg-exyo-dark/95 backdrop-blur-sm">
                 {NAV_LINKS.map(({ label, path }) => (
                   <Link
                     key={path}
                     to={path}
-                    className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    className={`block px-4 py-3 text-sm font-medium rounded transition-colors ${
                       isActive(path)
-                        ? 'text-white bg-white/10'
-                        : 'text-gray-300 hover:text-white hover:bg-white/5'
+                        ? 'text-white bg-white/5'
+                        : 'text-exyo-gray/70 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     {label}
@@ -277,33 +269,33 @@ export default function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.2 }}
               className="overflow-hidden border-t border-white/5"
             >
-              <div className="px-6 md:px-12 py-4 bg-black/50 backdrop-blur-xl">
+              <div className="px-4 md:px-8 lg:px-12 py-3 bg-exyo-dark/95 backdrop-blur-sm">
                 <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search titles, genres, people..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-12 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all"
+                    placeholder="Titles, genres, people"
+                    className="w-full bg-white/5 border border-white/10 rounded-netflix px-12 py-3 text-white text-sm placeholder-exyo-muted focus:outline-none focus:border-white/30 focus:bg-white/10 transition-all"
                     aria-label="Search"
                   />
-                  <kbd className="absolute right-14 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 bg-white/5 border border-white/10 rounded">
+                  <kbd className="absolute right-14 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-exyo-muted bg-white/5 border border-white/10 rounded">
                     ⌘K
                   </kbd>
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
                     >
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-exyo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>

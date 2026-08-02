@@ -24,7 +24,7 @@ export default function HeroBanner({ items }: HeroBannerProps) {
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const interval = setInterval(next, 8000);
+    const interval = setInterval(next, 7000);
     return () => clearInterval(interval);
   }, [items.length, next]);
 
@@ -36,12 +36,12 @@ export default function HeroBanner({ items }: HeroBannerProps) {
   const bgVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? '-30%' : '30%', opacity: 0 }),
+    exit: (dir: number) => ({ x: dir > 0 ? '-20%' : '20%', opacity: 0 }),
   };
 
   return (
-    <div className="relative h-[85vh] w-full overflow-hidden">
-      {/* Background images */}
+    <div className="relative h-[90vh] min-h-[600px] max-h-[900px] w-full overflow-hidden">
+      {/* Background images with Netflix-style slide */}
       <AnimatePresence custom={direction} mode="popLayout">
         <motion.div
           key={currentIndex}
@@ -50,73 +50,79 @@ export default function HeroBanner({ items }: HeroBannerProps) {
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
           className="absolute inset-0"
         >
           <div
-            className="absolute inset-0 bg-cover bg-center scale-105"
-            style={{ backgroundImage: `url(${item.background || item.poster})` }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${item.background || item.poster})`,
+              transform: 'scale(1.05)',
+            }}
           />
         </motion.div>
       </AnimatePresence>
 
-      {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-exyo-dark via-exyo-dark/20 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-exyo-dark/80" />
+      {/* Netflix-style gradient overlays */}
+      <div className="absolute inset-0 bg-hero-gradient-left pointer-events-none" />
+      <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-exyo-dark/90 via-exyo-dark/40 to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-exyo-dark to-transparent pointer-events-none" />
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 lg:p-20">
-        <div className="max-w-2xl">
+      <div className="absolute bottom-[12%] left-0 right-0 px-6 md:px-12 lg:px-[5vw]">
+        <div className="max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
             >
+              {/* Title - Netflix HUGE style */}
+              <h1 className="text-hero md:text-hero-md lg:text-hero-lg font-extrabold mb-3 tracking-tight leading-none">
+                {item.name}
+              </h1>
+
+              {/* Metadata row - clean, minimal */}
+              <div className="flex items-center gap-3 mb-4 text-sm">
+                {item.imdbRating && (
+                  <span className="flex items-center gap-1 text-yellow-400 font-bold">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                    {item.imdbRating}
+                  </span>
+                )}
+                {item.year && <span className="text-exyo-gray/70 font-medium">{item.year}</span>}
+                {item.runtime && <span className="text-exyo-gray/70 font-medium">{item.runtime}</span>}
+                <span className="px-1.5 py-0.5 text-[11px] font-bold border border-exyo-gray/30 rounded netflix uppercase tracking-wider text-exyo-gray/60">
+                  HD
+                </span>
+              </div>
+
+              {/* Description */}
+              <p className="text-[15px] md:text-base text-exyo-gray/80 line-clamp-3 mb-6 leading-relaxed max-w-xl">
+                {item.description}
+              </p>
+
               {/* Genre tags */}
               {item.genres && item.genres.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {item.genres.slice(0, 3).map((genre, i) => (
-                    <span key={i} className="px-3 py-1 text-xs font-medium bg-white/10 backdrop-blur-sm rounded-full text-gray-300 border border-white/5">
-                      {genre}
+                <div className="flex flex-wrap gap-1.5 mb-6">
+                  {item.genres!.slice(0, 4).map((genre, i) => (
+                    <span key={i} className="text-xs font-medium text-exyo-gray/60">
+                      {genre}{i < Math.min(item.genres!.length, 4) - 1 ? <span className="ml-1.5 text-exyo-gray/30">•</span> : ''}
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Title */}
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-4 tracking-tight leading-[0.9]">
-                {item.name}
-              </h1>
-
-              {/* Metadata */}
-              <div className="flex items-center gap-4 mb-5 text-sm">
-                {item.imdbRating && (
-                  <span className="flex items-center gap-1.5 text-yellow-400 font-semibold">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                    {item.imdbRating}
-                  </span>
-                )}
-                {item.year && <span className="text-gray-400">{item.year}</span>}
-                {item.runtime && <span className="text-gray-400">{item.runtime}</span>}
-                <span className="px-2 py-0.5 text-xs border border-white/20 rounded text-gray-400">HD</span>
-              </div>
-
-              {/* Description */}
-              <p className="text-lg text-gray-300 line-clamp-3 mb-8 leading-relaxed max-w-xl">
-                {item.description}
-              </p>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
+              {/* Netflix-style buttons */}
+              <div className="flex gap-2.5">
                 <button
                   onClick={() => navigate(`/watch/${item.id}?type=${item.type}`)}
-                  className="flex items-center gap-3 bg-white text-black px-8 py-3.5 rounded-lg font-bold text-sm hover:bg-white/90 transition-all shadow-lg shadow-white/10"
+                  className="flex items-center gap-2.5 bg-white hover:bg-white/90 text-black px-7 md:px-9 py-2.5 md:py-3 rounded-netflix font-bold text-sm md:text-base transition-all duration-200 shadow-lg shadow-black/30"
                 >
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                   Play
@@ -124,10 +130,12 @@ export default function HeroBanner({ items }: HeroBannerProps) {
 
                 <button
                   onClick={() => navigate(`/detail/${item.id}?type=${item.type}`)}
-                  className="flex items-center gap-3 bg-white/10 backdrop-blur-sm text-white px-8 py-3.5 rounded-lg font-bold text-sm hover:bg-white/20 transition-all border border-white/10"
+                  className="flex items-center gap-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-7 md:px-9 py-2.5 md:py-3 rounded-netflix font-bold text-sm md:text-base transition-all duration-200 border border-white/10"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
                   More Info
                 </button>
@@ -137,15 +145,15 @@ export default function HeroBanner({ items }: HeroBannerProps) {
         </div>
       </div>
 
-      {/* Slide indicators */}
+      {/* Netflix-style slide indicators */}
       {items.length > 1 && (
-        <div className="absolute bottom-8 right-8 flex gap-2">
+        <div className="absolute bottom-[5%] right-8 md:right-12 flex gap-1.5">
           {items.slice(0, 10).map((_, index) => (
             <button
               key={index}
               onClick={() => goTo(index)}
-              className={`h-1 rounded-full transition-all duration-500 ${
-                index === currentIndex ? 'bg-white w-8' : 'bg-white/30 w-3 hover:bg-white/50'
+              className={`h-[3px] rounded-sm transition-all duration-500 ${
+                index === currentIndex ? 'bg-white w-8' : 'bg-white/25 w-3 hover:bg-white/40'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />
@@ -153,15 +161,15 @@ export default function HeroBanner({ items }: HeroBannerProps) {
         </div>
       )}
 
-      {/* Progress bar for auto-rotate */}
+      {/* Auto-rotate progress bar */}
       {items.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5">
           <motion.div
             key={currentIndex}
             className="h-full bg-exyo-red"
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
-            transition={{ duration: 8, ease: 'linear' }}
+            transition={{ duration: 7, ease: 'linear' }}
           />
         </div>
       )}

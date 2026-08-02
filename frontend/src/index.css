@@ -6,12 +6,14 @@
     --color-exyo-dark: #141414;
     --color-exyo-darker: #0A0A0A;
     --color-exyo-secondary: #1A1A1A;
-    --color-exyo-gray: #B3B3B3;
-    --color-exyo-muted: #6B6B6B;
+    --color-exyo-gray: #E5E5E5;
+    --color-exyo-muted: #808080;
     --color-exyo-red: #E50914;
     --color-exyo-red-dark: #B20710;
+    --color-exyo-red-hover: #F6121D;
     --color-exyo-hover: #2A2A2A;
-    --color-exyo-border: #333333;
+    --color-exyo-border: #262626;
+    --font-sans: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -22,19 +24,20 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #0A0A0A;
+  font-family: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
+  background-color: #141414;
   color: #ffffff;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  letter-spacing: 0.025em;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Netflix thin style */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -42,12 +45,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Hide scrollbar utility */
@@ -62,13 +65,13 @@ body {
 
 /* Selection */
 ::selection {
-  background-color: rgba(229, 9, 20, 0.3);
+  background-color: rgba(229, 9, 20, 0.4);
   color: white;
 }
 
 /* Focus visible - accessibility */
 :focus-visible {
-  outline: 2px solid rgba(229, 9, 20, 0.5);
+  outline: 2px solid #E50914;
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -149,4 +152,26 @@ html {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* Netflix-style line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
