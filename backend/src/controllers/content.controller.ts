@@ -1,10 +1,11 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { getAuth } from '@clerk/express';
 import { AddonService } from '../services/addon.service';
+import { UserAddonService } from '../services/user-addon.service';
+import { AuthRequest } from '../types';
 
-const DEFAULT_ADDONS: Record<string, string> = {
-  cinemeta: 'https://v3-cinemeta.strem.io',
-  torrentio: 'https://torrentio.strem.fun'
-};
+const CINEMETA_URL = 'https://v3-cinemeta.strem.io';
+const TORRENTIO_URL = 'https://torrentio.strem.fun';
 
 const qs = (val: unknown, fallback: string): string => {
   if (val === undefined || val === null) return fallback;
@@ -12,11 +13,27 @@ const qs = (val: unknown, fallback: string): string => {
 };
 
 export class ContentController {
-  static async getCatalogs(req: Request, res: Response) {
+  static async getCatalogs(req: AuthRequest, res: Response) {
     try {
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'cinemeta')] || qs(req.query.addon, 'cinemeta');
       const type = qs(req.query.type, 'movie');
       const catalogId = qs(req.query.catalogId, 'top');
+      const auth = getAuth(req);
+
+      let addonUrl = CINEMETA_URL;
+
+      if (auth.userId) {
+        try {
+          const addons = await UserAddonService.getAddons(auth.userId);
+          const catalogAddon = addons.find(
+            (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
+          );
+          if (catalogAddon) {
+            addonUrl = catalogAddon.url.replace('/manifest.json', '');
+          }
+        } catch {
+          // Fall back to default
+        }
+      }
 
       const catalogs = await AddonService.getCatalogs(addonUrl, type, catalogId);
       res.json(catalogs);
@@ -25,7 +42,7 @@ export class ContentController {
     }
   }
 
-  static async searchContent(req: Request, res: Response) {
+  static async searchContent(req: AuthRequest, res: Response) {
     try {
       const q = req.query.q;
       if (!q) {
@@ -33,8 +50,25 @@ export class ContentController {
         return;
       }
 
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'cinemeta')] || qs(req.query.addon, 'cinemeta');
       const type = qs(req.query.type, 'movie');
+      const auth = getAuth(req);
+
+      let addonUrl = CINEMETA_URL;
+
+      if (auth.userId) {
+        try {
+          const addons = await UserAddonService.getAddons(auth.userId);
+          const catalogAddon = addons.find(
+            (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
+          );
+          if (catalogAddon) {
+            addonUrl = catalogAddon.url.replace('/manifest.json', '');
+          }
+        } catch {
+          // Fall back to default
+        }
+      }
+
       const results = await AddonService.search(addonUrl, type, String(q));
       res.json(results);
     } catch (error) {
@@ -42,13 +76,29 @@ export class ContentController {
     }
   }
 
-  static async getContentDetails(req: Request, res: Response) {
+  static async getContentDetails(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'cinemeta')] || qs(req.query.addon, 'cinemeta');
       const type = qs(req.query.type, 'movie');
-      const url = `${addonUrl}/${type}/${id}.json`;
+      const auth = getAuth(req);
 
+      let addonUrl = CINEMETA_URL;
+
+      if (auth.userId) {
+        try {
+          const addons = await UserAddonService.getAddons(auth.userId);
+          const catalogAddon = addons.find(
+            (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
+          );
+          if (catalogAddon) {
+            addonUrl = catalogAddon.url.replace('/manifest.json', '');
+          }
+        } catch {
+          // Fall back to default
+        }
+      }
+
+      const url = `${addonUrl}/${type}/${id}.json`;
       const response = await fetch(url);
       if (!response.ok) {
         res.status(404).json({ error: 'Content not found' });
@@ -62,11 +112,30 @@ export class ContentController {
     }
   }
 
-  static async getStreams(req: Request, res: Response) {
+  static async getStreams(req: AuthRequest, res: Response) {
     try {
       const id = String(req.params.id);
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'torrentio')] || qs(req.query.addon, 'torrentio');
       const type = qs(req.query.type, 'movie');
+      const auth = getAuth(req);
+
+      let addonUrl = TORRENTIO_URL;
+
+      if (auth.userId) {
+        try {
+          const addons = await UserAddonService.getAddons(auth.userId);
+          const streamAddon = addons.find(
+            (a) => a.active && a.manifest && (a.manifest as any).resources?.some((r: any) =>
+              typeof r === 'string' ? r === 'stream' : r.name === 'stream'
+            )
+          );
+          if (streamAddon) {
+            addonUrl = streamAddon.url.replace('/manifest.json', '');
+          }
+        } catch {
+          // Fall back to default
+        }
+      }
+
       const streams = await AddonService.getStreams(addonUrl, type, id);
       res.json(streams);
     } catch (error) {
@@ -74,11 +143,30 @@ export class ContentController {
     }
   }
 
-  static async getSubtitles(req: Request, res: Response) {
+  static async getSubtitles(req: AuthRequest, res: Response) {
     try {
       const id = String(req.params.id);
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'cinemeta')] || qs(req.query.addon, 'cinemeta');
       const type = qs(req.query.type, 'movie');
+      const auth = getAuth(req);
+
+      let addonUrl = CINEMETA_URL;
+
+      if (auth.userId) {
+        try {
+          const addons = await UserAddonService.getAddons(auth.userId);
+          const subtitleAddon = addons.find(
+            (a) => a.active && a.manifest && (a.manifest as any).resources?.some((r: any) =>
+              typeof r === 'string' ? r === 'subtitles' : r.name === 'subtitles'
+            )
+          );
+          if (subtitleAddon) {
+            addonUrl = subtitleAddon.url.replace('/manifest.json', '');
+          }
+        } catch {
+          // Fall back to default
+        }
+      }
+
       const subtitles = await AddonService.getSubtitles(addonUrl, type, id);
       res.json(subtitles);
     } catch (error) {
@@ -86,9 +174,9 @@ export class ContentController {
     }
   }
 
-  static async getManifest(req: Request, res: Response) {
+  static async getManifest(req: AuthRequest, res: Response) {
     try {
-      const addonUrl = DEFAULT_ADDONS[qs(req.query.addon, 'cinemeta')] || qs(req.query.addon, 'cinemeta');
+      const addonUrl = qs(req.query.addon, CINEMETA_URL);
       const manifest = await AddonService.getManifest(addonUrl);
       res.json(manifest);
     } catch (error) {

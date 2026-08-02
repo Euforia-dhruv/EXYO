@@ -1,8 +1,8 @@
 import { api } from './axios';
 
 export const contentApi = {
-  getCatalogs: async (type = 'movie', catalogId = 'top', addon = 'cinemeta') => {
-    const response = await api.get(`/content/catalogs?type=${type}&catalogId=${catalogId}&addon=${addon}`);
+  getCatalogs: async (type = 'movie', catalogId = 'top') => {
+    const response = await api.get(`/content/catalogs?type=${type}&catalogId=${catalogId}`);
     return response.data;
   },
 
@@ -16,8 +16,8 @@ export const contentApi = {
     return response.data;
   },
 
-  getStreams: async (id: string, type = 'movie', addon = 'torrentio') => {
-    const response = await api.get(`/content/${id}/streams?type=${type}&addon=${addon}`);
+  getStreams: async (id: string, type = 'movie') => {
+    const response = await api.get(`/content/${id}/streams?type=${type}`);
     return response.data;
   },
 
