@@ -120,16 +120,16 @@ export default function Streaming() {
 
   const handleRemove = async (id: string) => {
     try {
-      await removeAddon({ id });
+      await removeAddon({ id: id as any });
       showToast('Addon removed', 'success');
     } catch (err: any) {
       showToast(err.message || 'Failed to remove addon', 'error');
     }
   };
 
-  const handleToggle = async (id: string, active: boolean) => {
+  const handleToggle = async (id: string) => {
     try {
-      await toggleAddon({ id, active: !active });
+      await toggleAddon({ id: id as any });
     } catch (err: any) {
       showToast(err.message || 'Failed to toggle addon', 'error');
     }
@@ -195,7 +195,7 @@ export default function Streaming() {
                 <AddonCard
                   key={addon._id}
                   addon={addon}
-                  onToggle={() => handleToggle(addon._id, addon.active)}
+                  onToggle={() => handleToggle(addon._id)}
                   onRemove={addon.isDefault ? undefined : () => handleRemove(addon._id)}
                 />
               ))}

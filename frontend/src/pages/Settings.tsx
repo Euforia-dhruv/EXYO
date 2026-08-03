@@ -5,23 +5,6 @@ import { api } from '../../convex/_generated/api';
 import { useToast } from '../components/Toast';
 import SettingsLayout from '../components/SettingsLayout';
 
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
-        enabled ? 'bg-exyo-red' : 'bg-white/10'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${
-          enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
-  );
-}
-
 export default function Settings() {
   const { user } = useUser();
   const { showToast } = useToast();

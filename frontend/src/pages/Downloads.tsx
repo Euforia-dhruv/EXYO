@@ -147,13 +147,12 @@ export default function Downloads() {
     autoDownloadNext, prioritizeCurrent, highestQuality, autoSubtitles, downloadLocation,
     setMaxParallel, setWifiOnly, setPauseOnBattery, setDeleteAfterWatching,
     setAutoDownloadNext, setPrioritizeCurrent, setHighestQuality, setAutoSubtitles,
-    setDownloadLocation, getActiveDownloads, getQueuedDownloads,
+    getActiveDownloads, getQueuedDownloads,
   } = useDownloadStore();
 
   const active = getActiveDownloads();
   const queued = getQueuedDownloads();
   const completed = downloads.filter((d) => d.status === 'completed');
-  const failed = downloads.filter((d) => d.status === 'failed');
   const totalSpeed = downloads.filter((d) => d.status === 'downloading').reduce((s, d) => s + d.speed, 0);
 
   return (

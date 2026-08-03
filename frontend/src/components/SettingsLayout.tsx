@@ -146,7 +146,6 @@ export default function SettingsLayout({ children, title, subtitle }: SettingsLa
               <nav className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-2">
                 {SIDEBAR_ITEMS.map((item) => {
                   const active = isActive(item.path);
-                  const isExternal = item.path === '/my-list' || item.path === '/continue-watching';
                   return (
                     <Link
                       key={item.label}
