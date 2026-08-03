@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
+import DownloadIndicator from './components/DownloadIndicator';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -17,6 +18,12 @@ const MyList = lazy(() => import('./pages/MyList'));
 const Watch = lazy(() => import('./pages/Watch'));
 const Addons = lazy(() => import('./pages/Addons'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Streaming = lazy(() => import('./pages/Streaming'));
+const Downloads = lazy(() => import('./pages/Downloads'));
+const ContinueWatching = lazy(() => import('./pages/ContinueWatching'));
+const Appearance = lazy(() => import('./pages/Appearance'));
+const Performance = lazy(() => import('./pages/Performance'));
+const About = lazy(() => import('./pages/About'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +45,7 @@ function ProtectedRoute() {
       <Suspense>
         <Outlet />
       </Suspense>
+      <DownloadIndicator />
     </>
   );
 }
@@ -51,7 +59,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#E50914]" />
     </div>
   );
@@ -63,7 +71,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <Router>
-            <div className="min-h-screen bg-[#0a0a0a] text-white">
+            <div className="min-h-screen bg-[#0A0A0A] text-white">
               <a href="#main-content" className="skip-link">Skip to main content</a>
               <ScrollToTop />
               <Routes>
@@ -75,8 +83,15 @@ function App() {
                   <Route path="/detail/:id" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Detail /></main></Suspense>} />
                   <Route path="/search" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Search /></main></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Settings /></main></Suspense>} />
+                  <Route path="/settings/streaming" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Streaming /></main></Suspense>} />
+                  <Route path="/settings/extensions" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Streaming /></main></Suspense>} />
+                  <Route path="/settings/downloads" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Downloads /></main></Suspense>} />
                   <Route path="/settings/addons" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Addons /></main></Suspense>} />
+                  <Route path="/settings/appearance" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Appearance /></main></Suspense>} />
+                  <Route path="/settings/performance" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Performance /></main></Suspense>} />
+                  <Route path="/settings/about" element={<Suspense fallback={<PageLoader />}><main id="main-content"><About /></main></Suspense>} />
                   <Route path="/my-list" element={<Suspense fallback={<PageLoader />}><main id="main-content"><MyList /></main></Suspense>} />
+                  <Route path="/continue-watching" element={<Suspense fallback={<PageLoader />}><main id="main-content"><ContinueWatching /></main></Suspense>} />
                   <Route path="/watch/:id" element={<Suspense fallback={<PageLoader />}><Watch /></Suspense>} />
                 </Route>
 
