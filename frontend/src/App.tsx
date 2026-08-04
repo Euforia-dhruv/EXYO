@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import DownloadIndicator from './components/DownloadIndicator';
+import { useUserSync } from './hooks/useUserSync';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -16,7 +17,6 @@ const Search = lazy(() => import('./pages/Search'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MyList = lazy(() => import('./pages/MyList'));
 const Watch = lazy(() => import('./pages/Watch'));
-const Addons = lazy(() => import('./pages/Addons'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Streaming = lazy(() => import('./pages/Streaming'));
 const Downloads = lazy(() => import('./pages/Downloads'));
@@ -37,6 +37,8 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute() {
   const { isSignedIn, isLoaded } = useAuth();
+  useUserSync();
+
   if (!isLoaded) return <PageLoader />;
   if (!isSignedIn) return <Navigate to="/login" replace />;
   return (
@@ -75,8 +77,8 @@ function App() {
               <a href="#main-content" className="skip-link">Skip to main content</a>
               <ScrollToTop />
               <Routes>
-                <Route path="/login" element={<PublicRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></PublicRoute>} />
-                <Route path="/register" element={<PublicRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></PublicRoute>} />
+                <Route path="/login/*" element={<PublicRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></PublicRoute>} />
+                <Route path="/register/*" element={<PublicRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></PublicRoute>} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Home /></main></Suspense>} />
@@ -84,9 +86,9 @@ function App() {
                   <Route path="/search" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Search /></main></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Settings /></main></Suspense>} />
                   <Route path="/settings/streaming" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Streaming /></main></Suspense>} />
-                  <Route path="/settings/extensions" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Streaming /></main></Suspense>} />
+                  <Route path="/settings/extensions" element={<Navigate to="/settings/streaming" replace />} />
+                  <Route path="/settings/addons" element={<Navigate to="/settings/streaming" replace />} />
                   <Route path="/settings/downloads" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Downloads /></main></Suspense>} />
-                  <Route path="/settings/addons" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Addons /></main></Suspense>} />
                   <Route path="/settings/appearance" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Appearance /></main></Suspense>} />
                   <Route path="/settings/performance" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Performance /></main></Suspense>} />
                   <Route path="/settings/about" element={<Suspense fallback={<PageLoader />}><main id="main-content"><About /></main></Suspense>} />

@@ -42,6 +42,10 @@ export interface Stream {
   infoHash?: string;
   quality?: string;
   behaviorHints?: Record<string, unknown>;
+  addonName?: string;
+  addonUrl?: string;
+  name?: string;
+  description?: string;
 }
 
 export interface AddonManifest {

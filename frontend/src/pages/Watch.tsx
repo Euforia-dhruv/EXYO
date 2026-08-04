@@ -1,13 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import Hls from 'hls.js';
 import { contentApi } from '../api/content.api';
+import { useDownloadStore } from '../store/downloadStore';
 import type { Stream } from '../types';
 import { formatTime, cn } from '../utils/helpers';
 import { SkeletonPlayer } from '../components/Skeleton';
+
+interface StreamWithSource extends Stream {
+  addonName: string;
+  addonUrl: string;
+  sourceLabel: string;
+}
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
@@ -26,14 +33,18 @@ export default function Watch() {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [selectedStream, setSelectedStream] = useState<Stream | null>(null);
+  const [selectedStream, setSelectedStream] = useState<StreamWithSource | null>(null);
   const [buffered, setBuffered] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [showServerPanel, setShowServerPanel] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(true);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const addOrUpdateHistory = useMutation(api.watchHistory.addOrUpdate);
+  const addDownload = useDownloadStore((s) => s.addDownload);
 
-  const { data: streams = [], isLoading } = useQuery<Stream[]>({
+  const { data: rawStreams = [], isLoading } = useQuery<Stream[]>({
     queryKey: ['streams', id, type],
     queryFn: () => contentApi.getStreams(id!, type),
     enabled: !!id,
@@ -44,6 +55,29 @@ export default function Watch() {
     queryFn: () => contentApi.getDetails(id!, type),
     enabled: !!id,
   });
+
+  // Enrich streams with addon source info
+  const streams = useMemo<StreamWithSource[]>(() => {
+    return rawStreams.map((s, i) => ({
+      ...s,
+      addonName: s.addonName || 'Unknown',
+      addonUrl: s.addonUrl || '',
+      sourceLabel: s.name || s.title || s.quality || `Source ${i + 1}`,
+    }));
+  }, [rawStreams]);
+
+  // Group streams by addon
+  const streamsByAddon = useMemo(() => {
+    const groups: Record<string, StreamWithSource[]> = {};
+    for (const stream of streams) {
+      const key = stream.addonName || 'Unknown';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(stream);
+    }
+    return groups;
+  }, [streams]);
+
+  const addonNames = Object.keys(streamsByAddon);
 
   const saveProgress = useCallback(
     (progress: number) => {
@@ -71,22 +105,23 @@ export default function Watch() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !selectedStream) return;
+    if (!selectedStream.url) return;
 
     let hls: Hls | null = null;
+    setVideoError(null);
+    setIsBuffering(true);
 
-    if (selectedStream.url.includes('.m3u8') && Hls.isSupported()) {
-      hls = new Hls({ enableWorker: true, lowLatencyMode: true });
-      hls.loadSource(selectedStream.url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
-    } else {
-      video.src = selectedStream.url;
-      video.addEventListener('loadedmetadata', () => {
-        video.play().catch(() => {});
-      }, { once: true });
-    }
+    const cleanup = () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('progress', handleProgress);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('playing', handlePlaying);
+      video.removeEventListener('error', handleError);
+      if (hls) hls.destroy();
+    };
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
@@ -106,21 +141,53 @@ export default function Watch() {
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => setIsBuffering(false);
+
+    const handleError = () => {
+      const err = video.error;
+      if (err) {
+        setVideoError(`Playback error: ${err.message || 'Unknown error'}`);
+      }
+      setIsBuffering(false);
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('progress', handleProgress);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('playing', handlePlaying);
+    video.addEventListener('error', handleError);
 
-    return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('progress', handleProgress);
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      if (hls) hls.destroy();
-    };
+    const url = selectedStream.url;
+
+    if (url.includes('.m3u8') && Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+      });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setIsBuffering(false);
+        video.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          setVideoError(`Stream error: ${data.details}`);
+        }
+      });
+    } else if (url.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+    } else {
+      video.src = url;
+    }
+
+    return cleanup;
   }, [selectedStream, saveProgress]);
 
   useEffect(() => {
@@ -148,7 +215,6 @@ export default function Watch() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
-
       switch (e.key) {
         case ' ':
         case 'k':
@@ -180,15 +246,20 @@ export default function Watch() {
           toggleMute();
           break;
         case 'Escape':
-          if (document.fullscreenElement) document.exitFullscreen();
-          else navigate(-1);
+          if (showServerPanel) {
+            setShowServerPanel(false);
+          } else if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else {
+            navigate(-1);
+          }
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlaying, showServerPanel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
@@ -262,6 +333,29 @@ export default function Watch() {
     setShowSettings(false);
   }, []);
 
+  const handleDownloadStream = useCallback((stream: StreamWithSource) => {
+    if (!content) return;
+    const downloadUrl = stream.url;
+    const qualityLabel = stream.quality || stream.sourceLabel || 'Unknown';
+    addDownload({
+      contentId: id!,
+      title: content.name || 'Content',
+      posterUrl: content.poster,
+      type: type as 'movie' | 'series',
+      size: qualityLabel,
+      downloaded: '0 MB',
+    });
+    // Trigger browser download
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `${content.name || id}_${qualityLabel}.mp4`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, [content, id, type, addDownload]);
+
   if (isLoading) return <SkeletonPlayer />;
 
   if (streams.length === 0) {
@@ -273,12 +367,12 @@ export default function Watch() {
           </svg>
         </div>
         <p className="text-2xl font-bold mb-3">No streams available</p>
-        <p className="text-gray-400 mb-10 text-center max-w-sm">No streams were found for this content. Try selecting a different addon in your settings.</p>
+        <p className="text-gray-400 mb-10 text-center max-w-sm">No streams were found. Your addons may not have sources for this content, or they may require a debrid service.</p>
         <div className="flex gap-3">
           <button onClick={() => navigate(-1)} className="px-8 py-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-colors font-bold text-sm">
             Go Back
           </button>
-          <button onClick={() => navigate('/settings/addons')} className="px-8 py-3 bg-exyo-red rounded-2xl hover:bg-exyo-red-dark transition-colors font-bold text-sm">
+          <button onClick={() => navigate('/settings/streaming')} className="px-8 py-3 bg-exyo-red rounded-2xl hover:bg-exyo-red-dark transition-colors font-bold text-sm">
             Manage Addons
           </button>
         </div>
@@ -304,12 +398,44 @@ export default function Watch() {
     >
       <video ref={videoRef} className="w-full h-full object-contain" playsInline onClick={togglePlay} />
 
+      {/* Buffering spinner */}
+      {isBuffering && !videoError && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Error overlay */}
+      {videoError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="text-white font-bold text-lg mb-2">Playback Error</p>
+            <p className="text-gray-400 text-sm mb-6 max-w-md">{videoError}</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => { setVideoError(null); setShowServerPanel(true); }}
+                className="px-6 py-2.5 bg-white/10 rounded-xl hover:bg-white/20 transition-colors font-bold text-sm"
+              >
+                Try Another Source
+              </button>
+              <button onClick={() => navigate(-1)} className="px-6 py-2.5 bg-exyo-red rounded-xl hover:bg-exyo-red-dark transition-colors font-bold text-sm">
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controls overlay */}
       <div
         className={cn('absolute inset-0 transition-opacity duration-300', showControls ? 'opacity-100' : 'opacity-0')}
         style={{ pointerEvents: showControls ? 'auto' : 'none' }}
       >
-        {/* Top gradient */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/80 to-transparent" />
 
         {/* Top bar */}
@@ -323,31 +449,28 @@ export default function Watch() {
           <div className="w-11" />
         </div>
 
-        {/* Bottom gradient */}
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
         {/* Bottom controls */}
         <div className="absolute bottom-0 left-0 right-0 p-5 pb-6">
           <div className="max-w-5xl mx-auto">
-            {/* Stream selector */}
-            {streams.length > 1 && (
-              <div className="mb-3 flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                {streams.map((stream, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedStream(stream)}
-                    className={cn(
-                      'flex-shrink-0 px-4 py-1.5 rounded-xl text-xs font-bold transition-all',
-                      selectedStream === stream
-                        ? 'bg-white text-black'
-                        : 'bg-white/10 hover:bg-white/20 text-white'
-                    )}
-                  >
-                    {stream.quality || `Stream ${i + 1}`}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Current source indicator + server selector button */}
+            <div className="mb-3 flex items-center gap-2">
+              <button
+                onClick={() => setShowServerPanel(!showServerPanel)}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 transition-all text-white"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+                </svg>
+                {selectedStream?.addonName || 'Select Source'}
+                <span className="text-white/50">•</span>
+                {selectedStream?.quality || 'HD'}
+                <svg className="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
 
             {/* Progress bar */}
             <div className="mb-3 relative group cursor-pointer">
@@ -380,11 +503,11 @@ export default function Watch() {
                 )}
               </button>
 
-              <button onClick={() => skip(-10)} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block" title="Rewind 10s (←)">
+              <button onClick={() => skip(-10)} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block" title="Rewind 10s">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" /></svg>
               </button>
 
-              <button onClick={() => skip(10)} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block" title="Forward 10s (→)">
+              <button onClick={() => skip(10)} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block" title="Forward 10s">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" /></svg>
               </button>
 
@@ -416,6 +539,20 @@ export default function Watch() {
 
               <div className="flex-1" />
 
+              {/* Download button */}
+              {selectedStream && (
+                <button
+                  onClick={() => handleDownloadStream(selectedStream)}
+                  className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block"
+                  title="Download"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Settings */}
               <div className="relative">
                 <button
                   onClick={() => setShowSettings(!showSettings)}
@@ -463,6 +600,129 @@ export default function Watch() {
           </div>
         </div>
       </div>
+
+      {/* ─── SERVER / SOURCE SELECTOR PANEL ─── */}
+      <div
+        className={cn(
+          'absolute top-0 right-0 bottom-0 w-full sm:w-[380px] bg-[#0A0A0A]/95 backdrop-blur-xl border-l border-white/[0.06] z-50 transition-transform duration-300 ease-out overflow-y-auto',
+          showServerPanel ? 'translate-x-0' : 'translate-x-full'
+        )}
+        style={{ pointerEvents: showServerPanel ? 'auto' : 'none' }}
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-[18px] font-bold text-white">Sources</h2>
+              <p className="text-[13px] text-gray-500 mt-0.5">{streams.length} stream{streams.length !== 1 ? 's' : ''} from {addonNames.length} addon{addonNames.length !== 1 ? 's' : ''}</p>
+            </div>
+            <button
+              onClick={() => setShowServerPanel(false)}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Stream groups */}
+          {addonNames.map((addonName) => {
+            const addonStreams = streamsByAddon[addonName];
+            return (
+              <div key={addonName} className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-exyo-red" />
+                  <h3 className="text-[13px] font-bold text-gray-300 uppercase tracking-wider">{addonName}</h3>
+                  <span className="text-[11px] text-gray-600 bg-white/[0.04] px-1.5 py-0.5 rounded">{addonStreams.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {addonStreams.map((stream, i) => {
+                    const isSelected = selectedStream === stream;
+                    const isPlayable = stream.url && !stream.infoHash;
+                    return (
+                      <button
+                        key={`${addonName}-${i}`}
+                        onClick={() => {
+                          setSelectedStream(stream);
+                          setShowServerPanel(false);
+                          setVideoError(null);
+                        }}
+                        className={cn(
+                          'w-full text-left p-4 rounded-xl border transition-all duration-200',
+                          isSelected
+                            ? 'bg-exyo-red/10 border-exyo-red/30'
+                            : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1]'
+                        )}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {stream.quality && (
+                              <span className={cn(
+                                'text-[11px] font-bold px-2 py-0.5 rounded-md',
+                                isSelected ? 'bg-exyo-red text-white' : 'bg-white/[0.08] text-gray-300'
+                              )}>
+                                {stream.quality}
+                              </span>
+                            )}
+                            {!isPlayable && stream.infoHash && (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-400">
+                                Torrent
+                              </span>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-exyo-red flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        {stream.name && (
+                          <p className="text-[13px] text-white font-medium truncate">{stream.name}</p>
+                        )}
+                        {stream.description && (
+                          <p className="text-[12px] text-gray-500 truncate mt-1">{stream.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2">
+                          {stream.title && (
+                            <span className="text-[11px] text-gray-600 truncate">{stream.title}</span>
+                          )}
+                          <div className="flex-1" />
+                          {!isPlayable && stream.infoHash && (
+                            <span className="text-[11px] text-yellow-500/70">Requires debrid service</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Addon management link */}
+          <button
+            onClick={() => { navigate('/settings/streaming'); }}
+            className="w-full p-4 rounded-xl border border-dashed border-white/[0.1] text-gray-500 hover:text-white hover:border-exyo-red/30 hover:bg-white/[0.03] transition-all text-[13px] font-medium flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Manage Addons
+          </button>
+        </div>
+      </div>
+
+      {/* Click-away overlay for server panel */}
+      {showServerPanel && (
+        <div
+          className="absolute inset-0 z-40"
+          onClick={() => setShowServerPanel(false)}
+          style={{ pointerEvents: 'auto' }}
+        />
+      )}
     </div>
   );
 }

@@ -20,7 +20,9 @@ export const syncUser = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) {
+      return { ok: false as const, error: "Authentication required" };
+    }
 
     const existing = await ctx.db
       .query("users")
@@ -28,12 +30,16 @@ export const syncUser = mutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        email: (identity.email as string) ?? existing.email,
-        displayName: (identity.name as string) ?? existing.displayName,
-        avatarUrl: (identity.picture as string) ?? existing.avatarUrl,
-      });
-      return existing._id;
+      // Update profile data if changed
+      const updates: { email?: string; displayName?: string; avatarUrl?: string } = {};
+      if (identity.email && String(identity.email) !== existing.email) updates.email = String(identity.email);
+      if (identity.name && String(identity.name) !== existing.displayName) updates.displayName = String(identity.name);
+      if (identity.picture && String(identity.picture) !== existing.avatarUrl) updates.avatarUrl = String(identity.picture);
+
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(existing._id, updates);
+      }
+      return { ok: true as const, userId: existing._id, created: false };
     }
 
     const userId = await ctx.db.insert("users", {
@@ -65,7 +71,7 @@ export const syncUser = mutation({
       });
     }
 
-    return userId;
+    return { ok: true as const, userId, created: true };
   },
 });
 
@@ -73,15 +79,20 @@ export const updateProfile = mutation({
   args: { displayName: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) {
+      return { ok: false as const, error: "Authentication required" };
+    }
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      return { ok: false as const, error: "User not found" };
+    }
 
     await ctx.db.patch(user._id, { displayName: args.displayName });
+    return { ok: true as const };
   },
 });

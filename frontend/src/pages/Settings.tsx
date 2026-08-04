@@ -23,10 +23,14 @@ export default function Settings() {
       return;
     }
     try {
-      await updateProfile({ displayName });
-      showToast('Profile updated successfully', 'success');
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update profile', 'error');
+      const result = await updateProfile({ displayName });
+      if (result.ok) {
+        showToast('Profile updated successfully', 'success');
+      } else {
+        showToast(result.error || 'Failed to update profile', 'error');
+      }
+    } catch (err) {
+      showToast('Something went wrong. Please try again.', 'error');
     }
   };
 

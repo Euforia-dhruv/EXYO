@@ -5,11 +5,12 @@ const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TORRENTIO_URL = "https://torrentio.strem.fun";
+const CONVENIO_URL = "https://convenio.wiki";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 function json(data: unknown, status = 200) {
@@ -19,7 +20,6 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// OPTIONS preflight
 http.route({
   path: "/api/content/:path*",
   method: "OPTIONS",
@@ -80,6 +80,7 @@ http.route({
   }),
 });
 
+// ── Streams: fetch from multiple addons in parallel ──
 http.route({
   path: "/api/content/:id/streams",
   method: "GET",
@@ -88,14 +89,96 @@ http.route({
     const pathParts = url.pathname.split("/");
     const id = pathParts[pathParts.length - 2];
     const type = url.searchParams.get("type") || "movie";
+    const addonsParam = url.searchParams.get("addons");
+
+    // If specific addon URLs are provided, fetch from those
+    if (addonsParam) {
+      const addonUrls = addonsParam.split(",").filter(Boolean);
+      if (addonUrls.length > 0) {
+        const results = await Promise.allSettled(
+          addonUrls.map(async (addonUrl) => {
+            const base = addonUrl.replace(/\/$/, "");
+            const res = await fetch(`${base}/stream/${type}/${id}.json`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data.streams || []).map((s: Record<string, unknown>) => ({
+              ...s,
+              addonName: addonUrl.split("/")[2] || addonUrl,
+              addonUrl: base,
+            }));
+          })
+        );
+        const allStreams = results
+          .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+          .flatMap((r) => r.value);
+        return json(allStreams);
+      }
+    }
+
+    // Default: fetch from Torrentio + Convenio in parallel
+    const [torrentioRes, convenioRes] = await Promise.allSettled([
+      fetch(`${TORRENTIO_URL}/stream/${type}/${id}.json`),
+      fetch(`${CONVENIO_URL}/stream/${type}/${id}.json`),
+    ]);
+
+    const allStreams: unknown[] = [];
+
+    for (const result of [torrentioRes, convenioRes]) {
+      if (result.status === "fulfilled" && result.value.ok) {
+        try {
+          const data = await result.value.json();
+          const source = result.value.url.includes("torrentio") ? "Torrentio" : "Convenio";
+          const baseUrl = (result.value.url as string).replace(/\/stream\/.*/, "");
+          for (const s of data.streams || []) {
+            allStreams.push({
+              ...s,
+              addonName: source,
+              addonUrl: baseUrl,
+            });
+          }
+        } catch {}
+      }
+    }
+
+    // Deduplicate by URL
+    const seen = new Set<string>();
+    const deduped = allStreams.filter((s: unknown) => {
+      const stream = s as Record<string, unknown>;
+      const url = stream.url as string;
+      if (!url || seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
+
+    return json(deduped);
+  }),
+});
+
+// ── Stream single addon (for custom addon URLs) ──
+http.route({
+  path: "/api/content/:id/stream",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/");
+    const id = pathParts[pathParts.length - 2];
+    const type = url.searchParams.get("type") || "movie";
+    const addon = url.searchParams.get("addon");
+    if (!addon) return json({ error: "Addon URL required" }, 400);
 
     try {
-      const res = await fetch(`${TORRENTIO_URL}/stream/${type}/${id}.json`);
-      if (!res.ok) return json({ error: "No streams" }, res.status);
+      const res = await fetch(`${addon.replace(/\/$/, "")}/stream/${type}/${id}.json`);
+      if (!res.ok) return json({ streams: [] });
       const data = await res.json();
-      return json(data.streams || []);
+      const baseName = new URL(addon).hostname;
+      const streams = (data.streams || []).map((s: Record<string, unknown>) => ({
+        ...s,
+        addonName: baseName,
+        addonUrl: addon.replace(/\/$/, ""),
+      }));
+      return json(streams);
     } catch {
-      return json({ error: "Addon unreachable" }, 502);
+      return json({ streams: [] });
     }
   }),
 });

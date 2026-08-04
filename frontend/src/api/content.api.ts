@@ -23,8 +23,15 @@ export const contentApi = {
     return contentFetch(`/${id}`, { type });
   },
 
-  getStreams: async (id: string, type = 'movie') => {
+  getStreams: async (id: string, type = 'movie', addonUrls?: string[]) => {
+    if (addonUrls && addonUrls.length > 0) {
+      return contentFetch(`/${id}/streams`, { type, addons: addonUrls.join(',') });
+    }
     return contentFetch(`/${id}/streams`, { type });
+  },
+
+  getStreamFromAddon: async (id: string, type = 'movie', addonUrl: string) => {
+    return contentFetch(`/${id}/stream`, { type, addon: addonUrl });
   },
 
   getSubtitles: async (id: string, type = 'movie') => {
