@@ -1,4 +1,4 @@
-const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://calm-eagle-889.convex.site';
+const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
 const contentFetch = async (path: string, params?: Record<string, string>) => {
   const url = new URL(`${SITE_URL}/api/content${path}`);
@@ -40,5 +40,14 @@ export const contentApi = {
 
   getManifest: async (addon?: string) => {
     return contentFetch('/manifest', addon ? { addon } : undefined);
+  },
+
+  proxyStream: async (streamUrl: string, proxyHeaders?: Record<string, string>) => {
+    const url = new URL(`${SITE_URL}/api/content/proxy-stream`);
+    url.searchParams.set("url", streamUrl);
+    if (proxyHeaders && Object.keys(proxyHeaders).length > 0) {
+      url.searchParams.set("proxyHeaders", JSON.stringify(proxyHeaders));
+    }
+    return url.toString();
   },
 };

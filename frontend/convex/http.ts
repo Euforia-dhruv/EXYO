@@ -214,14 +214,21 @@ http.route({
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
     const streamUrl = url.searchParams.get("url");
+    const proxyHeadersParam = url.searchParams.get("proxyHeaders");
     if (!streamUrl) return json({ error: "url required" }, 400);
+
+    let proxyHeaders: Record<string, string> = {};
+    if (proxyHeadersParam) {
+      try {
+        proxyHeaders = JSON.parse(proxyHeadersParam);
+      } catch {}
+    }
 
     try {
       const res = await fetch(streamUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-          "Referer": "https://exyo.vercel.app/",
-          "Origin": "https://exyo.vercel.app",
+          ...proxyHeaders,
         },
         redirect: "follow",
       });

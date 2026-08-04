@@ -19,6 +19,7 @@ export interface PlayerStream {
   language?: string;
   fileSize?: string;
   bitrate?: number;
+  behaviorHints?: { notWebReady?: boolean; proxyHeaders?: { request?: Record<string, string> } };
 }
 
 export interface SubtitleTrack {
@@ -189,14 +190,31 @@ export function usePlayer({
     const isMkv = lower.includes('.mkv') || lower.includes('matroska');
     const isHls = lower.includes('.m3u8');
 
+    function buildProxyUrl(streamUrl: string) {
+      const base = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
+      const proxyHeaders = selectedStream?.behaviorHints?.proxyHeaders?.request || {};
+      const params = new URLSearchParams({ url: streamUrl });
+      if (Object.keys(proxyHeaders).length > 0) {
+        params.set('proxyHeaders', JSON.stringify(proxyHeaders));
+      }
+      return `${base}/api/content/proxy-stream?${params.toString()}`;
+    }
+
     async function startPlayback(playUrl: string) {
       if (cancelled || !video) return;
+      const proxyHeaders = selectedStream?.behaviorHints?.proxyHeaders?.request || {};
+
       if (playUrl.includes('.m3u8') && Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
+          xhrSetup: (xhr) => {
+            for (const [key, value] of Object.entries(proxyHeaders)) {
+              xhr.setRequestHeader(key, value);
+            }
+          },
         });
         hls.loadSource(playUrl);
         hls.attachMedia(video);
@@ -236,14 +254,12 @@ export function usePlayer({
             onRemuxProgress?.('done', 1);
             startPlayback(blobUrl);
           } else if (!cancelled) {
-            const proxyUrl = `${import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site'}/api/content/proxy-stream?url=${encodeURIComponent(url)}`;
-            startPlayback(proxyUrl);
+            startPlayback(buildProxyUrl(url));
           }
         })
         .catch(() => {
           if (!cancelled) {
-            const proxyUrl = `${import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site'}/api/content/proxy-stream?url=${encodeURIComponent(url)}`;
-            startPlayback(proxyUrl);
+            startPlayback(buildProxyUrl(url));
           }
         });
     } else if (isHls) {
