@@ -204,6 +204,128 @@ export default function Streaming() {
           </div>
         </section>
 
+        {/* ─── DISCOVER 4K ADDONS ─── */}
+        <section className="bg-gradient-to-br from-exyo-red/5 to-transparent border border-exyo-red/10 rounded-[24px] p-8 md:p-9">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-exyo-red/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">4K</span>
+            </div>
+            <div>
+              <h2 className="text-[18px] font-bold text-white">Discover 4K Addons</h2>
+              <p className="text-[13px] text-gray-500">Free self-hosted addons for 4K streaming</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Torrent to Weblink */}
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-[15px] text-white">Torrent to Weblink</h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">Free</span>
+                    <span className="text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-md font-medium">4K HDR</span>
+                    <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md font-medium">Self-host</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[13px] text-gray-400 mb-3">40+ torrent sources, 4K HDR content. Self-host on Hugging Face Spaces (16GB RAM free).</p>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://github.com/Aswinajay/stremio-addon"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded-lg transition-colors"
+                >
+                  GitHub &rarr;
+                </a>
+                <span className="text-[10px] text-gray-600">|</span>
+                <span className="text-[10px] text-gray-500">Deploy to HF Spaces, then add URL</span>
+              </div>
+            </div>
+
+            {/* MediaFusion */}
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-[15px] text-white">MediaFusion</h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">Free</span>
+                    <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">Multi-source</span>
+                    <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md font-medium">Public</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[13px] text-gray-400 mb-3">Multi-source streaming with regional content. Free public instance, no setup needed.</p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-500 bg-white/[0.04] px-2 py-1 rounded-lg font-mono">mediafusion.elfhosted.com</span>
+              </div>
+            </div>
+
+            {/* PenguPlay */}
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-[15px] text-white">PenguPlay</h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">Free</span>
+                    <span className="text-[10px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-md font-medium">HTTP</span>
+                    <span className="text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-md font-medium">4K</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[13px] text-gray-400 mb-3">Free HTTP streams, no debrid needed. 4K, anime, regional content. Requires account setup.</p>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://pengu.uk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded-lg transition-colors"
+                >
+                  Configure &rarr;
+                </a>
+              </div>
+            </div>
+
+            {/* Flix-Streams */}
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-[15px] text-white">Flix-Streams</h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">Free</span>
+                    <span className="text-[10px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-md font-medium">HTTP</span>
+                    <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded-md font-medium">Live TV</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[13px] text-gray-400 mb-3">HTTP-based streaming with anime, live TV, sports. Free tier available. Requires account.</p>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://flixnest.app/flix-streams"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded-lg transition-colors"
+                >
+                  Configure &rarr;
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Self-host guide */}
+          <div className="mt-6 bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-[13px] text-gray-400">
+              <span className="text-white font-semibold">Self-host Torrent to Weblink:</span>{' '}
+              Deploy to{' '}
+              <a href="https://huggingface.co/new-space" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Hugging Face Spaces</a>{' '}
+              (16GB RAM free) or{' '}
+              <a href="https://render.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Render.com</a>{' '}
+              (512MB free). Use Docker with <code className="text-[11px] bg-white/[0.06] px-1.5 py-0.5 rounded">node:20-alpine</code>, clone the repo, run <code className="text-[11px] bg-white/[0.06] px-1.5 py-0.5 rounded">npm install && npm start</code>. Add the generated URL in EXYO.
+            </p>
+          </div>
+        </section>
+
         {/* ─── SEARCH & FILTER ─── */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
