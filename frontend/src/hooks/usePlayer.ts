@@ -127,6 +127,12 @@ export function usePlayer({
     const video = videoRef.current;
     if (!video || !selectedStream) return;
 
+    const url = selectedStream.url;
+    if (!url) {
+      setIsBuffering(false);
+      return;
+    }
+
     let hls: Hls | null = null;
     setVideoError(null);
     setIsBuffering(true);
@@ -163,9 +169,6 @@ export function usePlayer({
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('error', handleError);
-
-    const url = selectedStream.url;
-    if (!url) return;
 
     if (url.includes('.m3u8') && Hls.isSupported()) {
       hls = new Hls({

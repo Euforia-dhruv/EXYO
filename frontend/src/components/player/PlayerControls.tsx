@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { cn, formatTime } from '../../utils/helpers';
 import type { PlayerStream } from '../../hooks/usePlayer';
 
@@ -28,6 +28,9 @@ interface PlayerControlsProps {
   onBack: () => void;
   onToggleSubtitles: () => void;
   showSubtitles: boolean;
+  subtitleTracks?: { url: string; lang: string; label: string }[];
+  activeSubtitleUrl?: string;
+  onSelectSubtitle?: (url: string) => void;
 }
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -58,8 +61,12 @@ export default function PlayerControls({
   onBack,
   onToggleSubtitles,
   showSubtitles,
+  subtitleTracks = [],
+  activeSubtitleUrl,
+  onSelectSubtitle,
 }: PlayerControlsProps) {
   const seekRef = useRef<HTMLInputElement>(null);
+  const [showSubtitlePanel, setShowSubtitlePanel] = useState(false);
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
@@ -279,18 +286,64 @@ export default function PlayerControls({
             </div>
 
             {/* Subtitles */}
-            <button
-              onClick={onToggleSubtitles}
-              className={cn(
-                'p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block',
-                showSubtitles && 'bg-white/10'
+            <div className="relative">
+              <button
+                onClick={() => {
+                  if (subtitleTracks.length > 0) {
+                    setShowSubtitlePanel(!showSubtitlePanel);
+                  } else {
+                    onToggleSubtitles();
+                  }
+                }}
+                className={cn(
+                  'p-2.5 hover:bg-white/10 rounded-2xl transition-colors hidden md:block',
+                  showSubtitles && 'bg-white/10'
+                )}
+                title="Subtitles (C)"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z" />
+                </svg>
+              </button>
+              {showSubtitlePanel && subtitleTracks.length > 0 && (
+                <div className="absolute bottom-full right-0 mb-3 bg-black/90 backdrop-blur-xl rounded-2xl p-3 min-w-[200px] border border-white/10 shadow-2xl shadow-black/50">
+                  <div className="text-[11px] text-gray-500 px-3 py-1 uppercase tracking-wider font-bold mb-1">
+                    Subtitles
+                  </div>
+                  <button
+                    onClick={() => {
+                      onSelectSubtitle?.('');
+                      setShowSubtitlePanel(false);
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-sm rounded-xl transition-colors font-medium',
+                      !activeSubtitleUrl
+                        ? 'bg-white text-black'
+                        : 'text-gray-300 hover:bg-white/10'
+                    )}
+                  >
+                    Off
+                  </button>
+                  {subtitleTracks.map((track) => (
+                    <button
+                      key={track.url}
+                      onClick={() => {
+                        onSelectSubtitle?.(track.url);
+                        setShowSubtitlePanel(false);
+                      }}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-sm rounded-xl transition-colors font-medium',
+                        activeSubtitleUrl === track.url
+                          ? 'bg-white text-black'
+                          : 'text-gray-300 hover:bg-white/10'
+                      )}
+                    >
+                      {track.label}
+                    </button>
+                  ))}
+                </div>
               )}
-              title="Subtitles (C)"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z" />
-              </svg>
-            </button>
+            </div>
 
             {/* PiP */}
             <button

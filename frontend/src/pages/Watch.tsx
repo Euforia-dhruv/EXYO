@@ -1,13 +1,16 @@
+import { useRef, useCallback, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { contentApi } from '../api/content.api';
-import { usePlayer } from '../hooks/usePlayer';
+import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
+import { useTorrentPlayer } from '../hooks/useTorrentPlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import StreamSelector from '../components/player/StreamSelector';
 import { useDownloadStore } from '../store/downloadStore';
+import { useToast } from '../components/Toast';
 import { SkeletonPlayer } from '../components/Skeleton';
 import type { Stream } from '../types';
 
@@ -18,6 +21,7 @@ export default function Watch() {
   const season = searchParams.get('season');
   const episode = searchParams.get('episode');
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const addOrUpdateHistory = useMutation(api.watchHistory.addOrUpdate);
   const addDownload = useDownloadStore((s) => s.addDownload);
@@ -75,7 +79,36 @@ export default function Watch() {
         addonSource: player.selectedStream?.addonName,
       }).catch(() => {});
     },
+    onStreamError: (error) => {
+      showToast(`Stream error: ${error}`, 'error');
+    },
   });
+
+  const torrent = useTorrentPlayer();
+  const lastTorrentHash = useRef<string | null>(null);
+
+  const isTorrentStream = useCallback((stream: PlayerStream | null) => {
+    return stream && stream.infoHash && (!stream.url || stream.url === '');
+  }, []);
+
+  useEffect(() => {
+    const stream = player.selectedStream;
+    if (!stream || !player.videoRef.current) return;
+
+    if (isTorrentStream(stream) && stream.infoHash) {
+      if (lastTorrentHash.current !== stream.infoHash) {
+        lastTorrentHash.current = stream.infoHash;
+        torrent.resolveTorrent(stream.infoHash, player.videoRef.current);
+      }
+    }
+  }, [player.selectedStream, isTorrentStream, torrent, player.videoRef]);
+
+  useEffect(() => {
+    return () => {
+      torrent.cleanup();
+      lastTorrentHash.current = null;
+    };
+  }, [torrent]);
 
   const handleDownload = () => {
     if (!player.selectedStream || !content) return;
@@ -160,9 +193,27 @@ export default function Watch() {
         onClick={player.togglePlay}
       />
 
-      {player.isBuffering && !player.videoError && (
+      {(player.isBuffering || (isTorrentStream(player.selectedStream) && torrent.status !== 'streaming')) && !player.videoError && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-3 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+            {torrent.status === 'loading' && (
+              <p className="text-white/70 text-sm font-medium">Connecting to peers...</p>
+            )}
+            {torrent.status === 'streaming' && torrent.peers > 0 && (
+              <p className="text-white/70 text-xs">
+                {torrent.peers} peers · {(torrent.downloadSpeed / 1024 / 1024).toFixed(1)} MB/s
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {torrent.status === 'streaming' && torrent.peers > 0 && !player.isBuffering && (
+        <div className="absolute top-20 left-4 z-20 pointer-events-none">
+          <div className="bg-black/60 backdrop-blur-sm rounded-xl px-3 py-1.5 text-[11px] text-white/70 font-mono">
+            P2P · {torrent.peers} peers · {(torrent.downloadSpeed / 1024 / 1024).toFixed(1)} MB/s · {torrent.progress}%
+          </div>
         </div>
       )}
 
@@ -242,6 +293,9 @@ export default function Watch() {
           onBack={() => navigate(-1)}
           onToggleSubtitles={player.toggleSubtitles}
           showSubtitles={player.showSubtitles}
+          subtitleTracks={player.subtitleTracks}
+          activeSubtitleUrl={player.activeSubtitleUrl || undefined}
+          onSelectSubtitle={(url) => player.setActiveSubtitleUrl(url || null)}
         />
       </div>
 

@@ -9,15 +9,15 @@ import type { Id } from '../../convex/_generated/dataModel';
 const CATEGORIES = ['All', 'Streaming', 'Metadata', 'Subtitles', 'Catalog'] as const;
 type Category = typeof CATEGORIES[number];
 
-const POPULAR_ADDONS = [
-  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Free public instance available.', category: 'Streaming' as Category, tags: ['Free', 'Multi-source'] },
-  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight torrent addon. Free public instance, no account needed.', category: 'Streaming' as Category, tags: ['Free', 'Fast'] },
-  { name: 'PenguPlay', url: 'https://pengu.uk', description: 'Free HTTP streams — no debrid needed. 4K, anime, regional content.', category: 'Streaming' as Category, tags: ['Free', 'HTTP'], configureUrl: 'https://pengu.uk' },
-  { name: 'Flix-Streams', url: 'https://flixnest.app/flix-streams', description: 'HTTP-based streaming with anime, live TV, sports. Free tier available.', category: 'Streaming' as Category, tags: ['Free', 'HTTP'], configureUrl: 'https://flixnest.app/flix-streams' },
-  { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata. Required for content discovery.', category: 'Metadata' as Category, tags: ['Required'] },
-  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles' as Category, tags: ['Free'] },
-  { name: 'YouTube', url: 'https://youtube.strem.fun/manifest.json', description: 'YouTube content integration', category: 'Catalog' as Category, tags: ['Free'] },
-  { name: 'WatchHub', url: 'https://watchhub.strem.io/manifest.json', description: 'Streaming availability checker across services', category: 'Catalog' as Category, tags: ['Free'] },
+const POPULAR_ADDONS: { name: string; url: string; description: string; category: Category; tags: string[]; configureUrl?: string }[] = [
+  { name: 'HDHub', url: 'https://hdhub.thevolecitor.qzz.io', description: 'Free HTTP streams — instant playback, no debrid needed. Multiple providers, 480p-1080p.', category: 'Streaming', tags: ['Free', 'HTTP', 'Instant'] },
+  { name: 'Flix-Streams Free', url: 'https://free.flixnest.app', description: 'Free HTTP streams — HDHub, DLStreams providers. Movies and TV shows.', category: 'Streaming', tags: ['Free', 'HTTP', 'Instant'] },
+  { name: 'Torrentio', url: 'https://torrentio.strem.fun', description: 'Most popular Stremio addon. Torrent-based — works with debrid or P2P.', category: 'Streaming', tags: ['Popular', 'Torrent'] },
+  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Free public instance available.', category: 'Streaming', tags: ['Free', 'Multi-source'] },
+  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight torrent addon. Free public instance, no account needed.', category: 'Streaming', tags: ['Free', 'Fast'] },
+  { name: 'PenguPlay', url: 'https://pengu.uk', description: 'Free HTTP streams — no debrid needed. 4K, anime, regional content.', category: 'Streaming', tags: ['Free', 'HTTP'] },
+  { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata. Required for content discovery.', category: 'Metadata', tags: ['Required'] },
+  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles', tags: ['Free'] },
 ];
 
 function SkeletonRow() {
@@ -406,38 +406,6 @@ export default function Streaming() {
           </section>
         )}
 
-        {/* ─── PRE-INSTALLED ─── */}
-        <section className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-8 md:p-9">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-[22px] font-bold text-white">Pre-installed</h2>
-            <span className="text-[12px] text-green-400 bg-green-500/10 px-2.5 py-1 rounded-lg font-semibold">
-              Always on
-            </span>
-          </div>
-          <div className="space-y-3">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4 min-w-0 flex-1">
-                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-[15px] text-white">Torrentio</h3>
-                  <p className="text-[13px] text-gray-500 truncate max-w-md mt-0.5">Torrent-based streaming — works for all users automatically</p>
-                </div>
-              </div>
-              <span className="text-[13px] text-green-400 bg-green-500/10 px-3 py-1.5 rounded-xl flex-shrink-0 font-semibold ml-4">
-                Active
-              </span>
-            </motion.div>
-          </div>
-        </section>
-
         {/* ─── INSTALLED: CUSTOM ─── */}
         <section className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-8 md:p-9">
           <div className="flex items-center gap-3 mb-6">
@@ -582,7 +550,7 @@ export default function Streaming() {
                     <p className="text-[14px] text-gray-400 leading-relaxed">{addon.description}</p>
 
                     <div className="flex items-center gap-2 mt-3">
-                      {'configureUrl' in addon && addon.configureUrl && (
+                      {addon.configureUrl && (
                         <a
                           href={addon.configureUrl}
                           target="_blank"

@@ -58,6 +58,12 @@ export const addOrUpdate = mutation({
       await ctx.db.patch(existing._id, {
         progress: args.progress,
         watchedAt: Date.now(),
+        ...(args.season !== undefined && { season: args.season }),
+        ...(args.episode !== undefined && { episode: args.episode }),
+        ...(args.title && { title: args.title }),
+        ...(args.posterUrl && { posterUrl: args.posterUrl }),
+        ...(args.backdropUrl && { backdropUrl: args.backdropUrl }),
+        ...(args.addonSource !== undefined && { addonSource: args.addonSource }),
       });
       return existing._id;
     }

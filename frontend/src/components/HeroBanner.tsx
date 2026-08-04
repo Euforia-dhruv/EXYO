@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useDownloadStore } from '../store/downloadStore';
 import { useToast } from './Toast';
 import type { CatalogItem } from '../types';
@@ -15,6 +17,7 @@ export default function HeroBanner({ items }: HeroBannerProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const addDownload = useDownloadStore((s) => s.addDownload);
+  const addToWatchlist = useMutation(api.watchlist.addToWatchlist);
 
   const goTo = useCallback((index: number) => {
     setDirection(index > currentIndex ? 1 : -1);
@@ -157,7 +160,20 @@ export default function HeroBanner({ items }: HeroBannerProps) {
                 </button>
 
                 <button
-                  onClick={() => {/* Would add to list */}}
+                  onClick={async () => {
+                    try {
+                      await addToWatchlist({
+                        contentId: item.id,
+                        title: item.name,
+                        posterUrl: item.poster,
+                        backdropUrl: item.background,
+                        contentType: (item.type as 'movie' | 'series') || 'movie',
+                      });
+                      showToast('Added to My List', 'success');
+                    } catch {
+                      showToast('Failed to add to list', 'error');
+                    }
+                  }}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-6 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 border border-white/20"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

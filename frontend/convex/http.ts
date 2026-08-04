@@ -6,6 +6,8 @@ const http = httpRouter();
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 
 const DEFAULT_STREAM_ADDONS = [
+  "https://hdhub.thevolecitor.qzz.io",
+  "https://free.flixnest.app",
   "https://torrentio.strem.fun",
 ];
 
@@ -127,6 +129,34 @@ http.route({
     });
 
     return json(deduped);
+  }),
+});
+
+http.route({
+  path: "/api/content/stream",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    const type = url.searchParams.get("type") || "movie";
+    const addon = url.searchParams.get("addon");
+    if (!id || !addon) return json({ error: "id and addon required" }, 400);
+
+    try {
+      const base = addon.replace(/\/$/, "");
+      const streamUrl = `${base}/stream/${type}/${id}.json`;
+      const res = await fetch(streamUrl);
+      if (!res.ok) return json({ error: "Addon returned error" }, res.status);
+      const data = await res.json();
+      const streams = (data.streams || []).map((s: Record<string, unknown>) => ({
+        ...s,
+        addonName: addon.split("/")[2] || addon,
+        addonUrl: base,
+      }));
+      return json(streams);
+    } catch {
+      return json({ error: "Addon unreachable" }, 502);
+    }
   }),
 });
 
