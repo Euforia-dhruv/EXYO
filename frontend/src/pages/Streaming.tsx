@@ -244,21 +244,21 @@ export default function Streaming() {
               </div>
             </div>
 
-            {/* MediaFusion */}
+            {/* Torrentio */}
             <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-bold text-[15px] text-white">MediaFusion</h3>
+                  <h3 className="font-bold text-[15px] text-white">Torrentio</h3>
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">Free</span>
-                    <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">Multi-source</span>
-                    <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md font-medium">Public</span>
+                    <span className="text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-md font-medium">4K</span>
+                    <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">Popular</span>
                   </div>
                 </div>
               </div>
-              <p className="text-[13px] text-gray-400 mb-3">Multi-source streaming with regional content. Free public instance, no setup needed.</p>
+              <p className="text-[13px] text-gray-400 mb-3">Most popular Stremio addon. Torrent-based, works in P2P mode or with debrid for instant streams.</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-500 bg-white/[0.04] px-2 py-1 rounded-lg font-mono">mediafusion.elfhosted.com</span>
+                <span className="text-[10px] text-gray-500 bg-white/[0.04] px-2 py-1 rounded-lg font-mono">torrentio.strem.fun</span>
               </div>
             </div>
 
@@ -405,45 +405,6 @@ export default function Streaming() {
             </div>
           </section>
         )}
-
-        {/* ─── INSTALLED: DEFAULT ─── */}
-        <section className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-8 md:p-9">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-[22px] font-bold text-white">Active for All Users</h2>
-            <span className="text-[12px] text-green-400 bg-green-500/10 px-2.5 py-1 rounded-lg font-semibold">
-              Always on
-            </span>
-          </div>
-          <div className="space-y-3">
-            {[
-              { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com', description: 'Multi-source streaming with regional content' },
-              { name: 'Comet', url: 'https://comet.elfhosted.com', description: 'Lightweight torrent addon, fast public instance' },
-            ].map((addon, i) => (
-              <motion.div
-                key={addon.url}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-[15px] text-white">{addon.name}</h3>
-                    <p className="text-[13px] text-gray-500 truncate max-w-md mt-0.5">{addon.description}</p>
-                  </div>
-                </div>
-                <span className="text-[13px] text-green-400 bg-green-500/10 px-3 py-1.5 rounded-xl flex-shrink-0 font-semibold ml-4">
-                  Active
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </section>
 
         {/* ─── INSTALLED: CUSTOM ─── */}
         <section className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-8 md:p-9">
