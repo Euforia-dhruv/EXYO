@@ -249,6 +249,9 @@ export default function Detail() {
 
               {/* Metadata */}
               <div className="flex flex-wrap items-center gap-2.5 mb-5 text-[13px]">
+                <span className="flex items-center gap-1 text-green-400 font-bold">
+                  {content.imdbRating ? `${Math.round(Number(content.imdbRating) * 10)}% Match` : '95% Match'}
+                </span>
                 {content.imdbRating && (
                   <span className="flex items-center gap-1 text-yellow-400 font-bold">
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -428,7 +431,7 @@ export default function Detail() {
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {currentSeasonEpisodes.map((ep) => (
               <motion.button
                 key={ep.number}
@@ -440,17 +443,17 @@ export default function Detail() {
                     `/watch/${id}?type=series&season=${ep.season || selectedSeason}&episode=${ep.number}`
                   )
                 }
-                className="w-full text-left p-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.1] rounded-xl transition-all duration-200 group"
+                className="w-full text-left p-3 bg-white/[0.02] hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] rounded-xl transition-all duration-200 group"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                    <span className="text-[14px] font-bold text-gray-400 group-hover:text-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-8 text-center">
+                    <span className="text-[15px] font-bold text-gray-500 group-hover:text-white transition-colors">
                       {ep.number}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-[14px] font-semibold text-white truncate">{ep.name}</p>
+                      <p className="text-[14px] font-semibold text-gray-200 group-hover:text-white truncate transition-colors">{ep.name}</p>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {ep.runtime && (
                           <span className="text-[12px] text-gray-500">{ep.runtime}</span>
