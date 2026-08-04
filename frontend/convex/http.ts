@@ -208,4 +208,53 @@ http.route({
   }),
 });
 
+http.route({
+  path: "/api/content/proxy-stream",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const streamUrl = url.searchParams.get("url");
+    if (!streamUrl) return json({ error: "url required" }, 400);
+
+    try {
+      const res = await fetch(streamUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "Referer": "https://exyo.vercel.app/",
+          "Origin": "https://exyo.vercel.app",
+        },
+        redirect: "follow",
+      });
+
+      if (!res.ok) {
+        return json({ error: `Upstream returned ${res.status}` }, res.status);
+      }
+
+      const contentType = res.headers.get("content-type") || "application/octet-stream";
+
+      const headers = new Headers({
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Content-Type": contentType,
+      });
+
+      const contentLength = res.headers.get("content-length");
+      if (contentLength) headers.set("Content-Length", contentLength);
+
+      const range = request.headers.get("range");
+      if (range) {
+        headers.set("Content-Range", res.headers.get("content-range") || "");
+      }
+
+      return new Response(res.body, {
+        status: res.status,
+        headers,
+      });
+    } catch {
+      return json({ error: "Proxy fetch failed" }, 502);
+    }
+  }),
+});
+
 export default http;

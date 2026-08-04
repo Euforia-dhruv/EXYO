@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery, useMutation } from 'convex/react';
@@ -6,6 +6,7 @@ import { api } from '../../convex/_generated/api';
 import { contentApi } from '../api/content.api';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
 import { useTorrentPlayer } from '../hooks/useTorrentPlayer';
+import { useFFmpegDecoder } from '../hooks/useFFmpegDecoder';
 import PlayerControls from '../components/player/PlayerControls';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import StreamSelector from '../components/player/StreamSelector';
@@ -62,9 +63,20 @@ export default function Watch() {
     type: 'vtt',
   }));
 
+  const { remuxToMp4 } = useFFmpegDecoder();
+  const [remuxStatus, setRemuxStatus] = useState<string | null>(null);
+
   const player = usePlayer({
     streams: enrichedStreams,
     subtitles,
+    remuxMkv: remuxToMp4,
+    onRemuxProgress: (stage, p) => {
+      if (stage === 'done') {
+        setRemuxStatus(null);
+        return;
+      }
+      setRemuxStatus(`Preparing stream... ${(p * 100).toFixed(0)}%`);
+    },
     onProgress: (progress) => {
       if (!id) return;
       addOrUpdateHistory({
@@ -193,7 +205,16 @@ export default function Watch() {
         onClick={player.togglePlay}
       />
 
-      {(player.isBuffering || (isTorrentStream(player.selectedStream) && torrent.status !== 'streaming')) && !player.videoError && (
+      {remuxStatus && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-3 border-4 border-white/20 border-t-exyo-red rounded-full animate-spin" />
+            <p className="text-white/70 text-sm font-medium">{remuxStatus}</p>
+          </div>
+        </div>
+      )}
+
+      {(player.isBuffering || (isTorrentStream(player.selectedStream) && torrent.status !== 'streaming')) && !player.videoError && !remuxStatus && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-3 border-4 border-white/20 border-t-white rounded-full animate-spin" />

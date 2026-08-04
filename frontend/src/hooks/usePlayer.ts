@@ -34,6 +34,8 @@ interface UsePlayerOptions {
   onProgress?: (progress: number) => void;
   onStreamError?: (error: string, stream: PlayerStream) => void;
   autoSelectBest?: boolean;
+  remuxMkv?: (url: string) => Promise<string | null>;
+  onRemuxProgress?: (stage: string, progress: number) => void;
 }
 
 const QUALITY_RANK: Record<string, number> = {
@@ -60,6 +62,8 @@ export function usePlayer({
   onProgress,
   onStreamError,
   autoSelectBest = true,
+  remuxMkv,
+  onRemuxProgress,
 }: UsePlayerOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +141,7 @@ export function usePlayer({
     }
 
     let hls: Hls | null = null;
+    let cancelled = false;
     setVideoError(null);
     setIsBuffering(true);
 
@@ -180,41 +185,75 @@ export function usePlayer({
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('error', handleError);
 
-    if (url.includes('.m3u8') && Hls.isSupported()) {
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsBuffering(false);
-        video.play().catch(() => {});
-      });
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          const currentIdx = streams.findIndex((s) => s === selectedStream);
-          const nextIdx = currentIdx + 1;
-          if (nextIdx < streams.length) {
-            setSelectedStream(streams[nextIdx]);
-            setVideoError(null);
-          } else {
-            setVideoError(`Stream error: ${data.details}`);
+    const lower = url.toLowerCase();
+    const isMkv = lower.includes('.mkv') || lower.includes('matroska');
+    const isHls = lower.includes('.m3u8');
+
+    async function startPlayback(playUrl: string) {
+      if (cancelled || !video) return;
+      if (playUrl.includes('.m3u8') && Hls.isSupported()) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+        });
+        hls.loadSource(playUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (!cancelled) {
             setIsBuffering(false);
+            video?.play().catch(() => {});
           }
-        }
-      });
-    } else if (url.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
-      video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal && !cancelled) {
+            const currentIdx = streams.findIndex((s) => s === selectedStream);
+            const nextIdx = currentIdx + 1;
+            if (nextIdx < streams.length) {
+              setSelectedStream(streams[nextIdx]);
+              setVideoError(null);
+            } else {
+              setVideoError(`Stream error: ${data.details}`);
+              setIsBuffering(false);
+            }
+          }
+        });
+      } else if (playUrl.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = playUrl;
+        video.play().catch(() => {});
+      } else {
+        video.src = playUrl;
+        video.play().catch(() => {});
+      }
+    }
+
+    if (isMkv && remuxMkv) {
+      onRemuxProgress?.('remuxing', 0);
+      remuxMkv(url)
+        .then((blobUrl) => {
+          if (!cancelled && blobUrl) {
+            onRemuxProgress?.('done', 1);
+            startPlayback(blobUrl);
+          } else if (!cancelled) {
+            const proxyUrl = `${import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site'}/api/content/proxy-stream?url=${encodeURIComponent(url)}`;
+            startPlayback(proxyUrl);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            const proxyUrl = `${import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site'}/api/content/proxy-stream?url=${encodeURIComponent(url)}`;
+            startPlayback(proxyUrl);
+          }
+        });
+    } else if (isHls) {
+      startPlayback(url);
     } else {
-      video.src = url;
-      video.play().catch(() => {});
+      startPlayback(url);
     }
 
     return () => {
+      cancelled = true;
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('progress', handleProgress);
@@ -225,7 +264,7 @@ export function usePlayer({
       video.removeEventListener('error', handleError);
       if (hls) hls.destroy();
     };
-  }, [selectedStream, saveProgress, onStreamError, tryNextStream]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedStream, saveProgress, onStreamError, tryNextStream, remuxMkv, onRemuxProgress]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleMouseMove = () => {

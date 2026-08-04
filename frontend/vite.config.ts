@@ -23,6 +23,7 @@ export default defineConfig({
           if (id.includes('node_modules/react')) return 'vendor';
           if (id.includes('node_modules/@tanstack')) return 'query';
           if (id.includes('node_modules/hls.js')) return 'video';
+          if (id.includes('node_modules/@ffmpeg')) return 'ffmpeg';
         }
       }
     }
