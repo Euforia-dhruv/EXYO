@@ -1,6 +1,6 @@
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useMutation } from 'convex/react';
+import { useQuery as useConvexQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { contentApi } from '../api/content.api';
 import { usePlayer } from '../hooks/usePlayer';
@@ -10,18 +10,6 @@ import StreamSelector from '../components/player/StreamSelector';
 import { useDownloadStore } from '../store/downloadStore';
 import { SkeletonPlayer } from '../components/Skeleton';
 import type { Stream } from '../types';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function formatSpeed(bytesPerSec: number): string {
-  return `${formatBytes(bytesPerSec)}/s`;
-}
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
@@ -34,9 +22,14 @@ export default function Watch() {
   const addOrUpdateHistory = useMutation(api.watchHistory.addOrUpdate);
   const addDownload = useDownloadStore((s) => s.addDownload);
 
+  const userAddons = useConvexQuery(api.addons.getAddons);
+  const activeAddonUrls = (userAddons ?? [])
+    .filter((a: { active: boolean }) => a.active)
+    .map((a: { url: string }) => a.url);
+
   const { data: rawStreams = [], isLoading } = useQuery<Stream[]>({
-    queryKey: ['streams', id, type, season, episode],
-    queryFn: () => contentApi.getStreams(id!, type),
+    queryKey: ['streams', id, type, season, episode, activeAddonUrls.join(',')],
+    queryFn: () => contentApi.getStreams(id!, type, activeAddonUrls.length > 0 ? activeAddonUrls : undefined),
     enabled: !!id,
   });
 
@@ -124,9 +117,9 @@ export default function Watch() {
           </svg>
         </div>
         <p className="text-2xl font-bold mb-3">No streams available</p>
-        <p className="text-gray-400 mb-10 text-center max-w-sm">
-          No streams were found. Your addons may not have sources for this content, or they may
-          require a debrid service.
+        <p className="text-gray-400 mb-10 text-center max-w-md">
+          Install streaming addons to watch content. Addons like Torrentio or MediaFusion provide
+          direct HTTP stream URLs from torrents.
         </p>
         <div className="flex gap-3">
           <button
@@ -152,10 +145,6 @@ export default function Watch() {
       ? ` — S${season} E${episode}`
       : '';
 
-  const torrent = player.torrentState;
-  const isTorrentLoading = torrent && (torrent.status === 'loading' || torrent.status === 'ready');
-  const isTorrentError = torrent && torrent.status === 'error';
-
   return (
     <div
       ref={player.containerRef}
@@ -171,89 +160,9 @@ export default function Watch() {
         onClick={player.togglePlay}
       />
 
-      {player.isBuffering && !player.videoError && !isTorrentLoading && (
+      {player.isBuffering && !player.videoError && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-        </div>
-      )}
-
-      {isTorrentLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-          <div className="text-center max-w-md px-6">
-            <div className="w-16 h-16 mx-auto mb-5 rounded-full border-4 border-white/10 border-t-exyo-red rounded-full animate-spin" />
-            <p className="text-white font-bold text-xl mb-2">
-              {torrent.status === 'loading' ? 'Resolving torrent...' : 'Connecting to peers...'}
-            </p>
-            {torrent.status === 'loading' && (
-              <p className="text-gray-400 text-sm mb-6">
-                Finding peers and downloading metadata
-              </p>
-            )}
-            <div className="space-y-3">
-              {torrent.peers > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Peers</span>
-                  <span className="text-white font-mono">{torrent.peers}</span>
-                </div>
-              )}
-              {torrent.downloadSpeed > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Speed</span>
-                    <span className="text-white font-mono">{formatSpeed(torrent.downloadSpeed)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Downloaded</span>
-                    <span className="text-white font-mono">{formatBytes(torrent.downloaded)}</span>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-1.5 mt-2">
-                    <div
-                      className="bg-exyo-red h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${torrent.progress}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isTorrentError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-30">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-red-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                />
-              </svg>
-            </div>
-            <p className="text-white font-bold text-lg mb-2">Torrent Error</p>
-            <p className="text-gray-400 text-sm mb-6 max-w-md">{torrent.error}</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={player.clearErrorAndOpenSelector}
-                className="px-6 py-2.5 bg-white/10 rounded-xl hover:bg-white/20 transition-colors font-bold text-sm"
-              >
-                Try Another Source
-              </button>
-              <button
-                onClick={() => navigate(-1)}
-                className="px-6 py-2.5 bg-exyo-red rounded-xl hover:bg-exyo-red-dark transition-colors font-bold text-sm"
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

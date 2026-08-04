@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
-import { useTorrentPlayer, type TorrentState } from './useTorrentPlayer';
 
 export interface PlayerStream {
   url: string;
@@ -65,7 +64,6 @@ export function usePlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const torrent = useTorrentPlayer();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -165,20 +163,6 @@ export function usePlayer({
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('error', handleError);
-
-    if (selectedStream.infoHash && !selectedStream.url) {
-      torrent.resolveTorrent(selectedStream.infoHash, video);
-      return () => {
-        video.removeEventListener('timeupdate', handleTimeUpdate);
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('progress', handleProgress);
-        video.removeEventListener('play', handlePlay);
-        video.removeEventListener('pause', handlePause);
-        video.removeEventListener('waiting', handleWaiting);
-        video.removeEventListener('playing', handlePlaying);
-        video.removeEventListener('error', handleError);
-      };
-    }
 
     const url = selectedStream.url;
     if (!url) return;
@@ -345,8 +329,7 @@ export function usePlayer({
     setSelectedStream(stream);
     setShowStreamSelector(false);
     setVideoError(null);
-    torrent.cleanup();
-  }, [torrent]);
+  }, []);
 
   const clearErrorAndOpenSelector = useCallback(() => {
     setVideoError(null);
@@ -364,20 +347,6 @@ export function usePlayer({
     a.click();
     document.body.removeChild(a);
   }, []);
-
-  const torrentState: TorrentState | null = useMemo(() => {
-    if (!selectedStream?.infoHash || torrent.status === 'idle') return null;
-    return {
-      status: torrent.status,
-      progress: torrent.progress,
-      downloadSpeed: torrent.downloadSpeed,
-      uploadSpeed: torrent.uploadSpeed,
-      peers: torrent.peers,
-      downloaded: torrent.downloaded,
-      uploaded: torrent.uploaded,
-      error: torrent.error,
-    };
-  }, [selectedStream?.infoHash, torrent.status, torrent.progress, torrent.downloadSpeed, torrent.uploadSpeed, torrent.peers, torrent.downloaded, torrent.uploaded, torrent.error]);
 
   return {
     videoRef,
@@ -419,6 +388,5 @@ export function usePlayer({
     tryNextStream,
     clearErrorAndOpenSelector,
     downloadStream,
-    torrentState,
   };
 }

@@ -4,7 +4,6 @@ import { httpAction } from "./_generated/server";
 const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
-const TORRENTIO_URL = "https://torrentio.strem.fun";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -89,50 +88,32 @@ http.route({
     const addonsParam = url.searchParams.get("addons");
     if (!id) return json({ error: "id required" }, 400);
 
-    if (addonsParam) {
-      const addonUrls = addonsParam.split(",").filter(Boolean);
-      if (addonUrls.length > 0) {
-        const results = await Promise.allSettled(
-          addonUrls.map(async (addonUrl) => {
-            const base = addonUrl.replace(/\/$/, "");
-            const res = await fetch(`${base}/stream/${type}/${id}.json`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            return (data.streams || []).map((s: Record<string, unknown>) => ({
-              ...s,
-              addonName: addonUrl.split("/")[2] || addonUrl,
-              addonUrl: base,
-            }));
-          })
-        );
-        const allStreams = results
-          .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-          .flatMap((r) => r.value);
-        return json(allStreams);
-      }
+    const addonUrls = addonsParam
+      ? addonsParam.split(",").filter(Boolean)
+      : [];
+
+    if (addonUrls.length === 0) {
+      return json([]);
     }
 
-    const torrentioRes = await Promise.allSettled([
-      fetch(`${TORRENTIO_URL}/stream/${type}/${id}.json`),
-    ]);
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const streamUrl = `${base}/stream/${type}/${id}.json`;
+        const res = await fetch(streamUrl);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.streams || []).map((s: Record<string, unknown>) => ({
+          ...s,
+          addonName: addonUrl.split("/")[2] || addonUrl,
+          addonUrl: base,
+        }));
+      })
+    );
 
-    const allStreams: unknown[] = [];
-
-    for (const result of torrentioRes) {
-      if (result.status === "fulfilled" && result.value.ok) {
-        try {
-          const data = await result.value.json();
-          const baseUrl = (result.value.url as string).replace(/\/stream\/.*/, "");
-          for (const s of data.streams || []) {
-            allStreams.push({
-              ...s,
-              addonName: "Torrentio",
-              addonUrl: baseUrl,
-            });
-          }
-        } catch {}
-      }
-    }
+    const allStreams = results
+      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+      .flatMap((r) => r.value);
 
     const seen = new Set<string>();
     const deduped = allStreams.filter((s: unknown) => {

@@ -10,13 +10,12 @@ const CATEGORIES = ['All', 'Streaming', 'Metadata', 'Subtitles', 'Catalog'] as c
 type Category = typeof CATEGORIES[number];
 
 const POPULAR_ADDONS = [
-  { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata', category: 'Metadata' as Category },
-  { name: 'Torrentio', url: 'https://torrentio.strem.fun/manifest.json', description: 'Torrent-based streaming with RD support', category: 'Streaming' as Category },
-  { name: 'NoTorrent', url: 'https://addon.notorrent2.workers.dev/manifest.json', description: 'Alternative streaming catalogs', category: 'Streaming' as Category },
-  { name: 'WatchHub', url: 'https://watchhub.strem.io/manifest.json', description: 'Streaming availability checker', category: 'Catalog' as Category },
-  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages', category: 'Subtitles' as Category },
-  { name: 'OpenSubtitles', url: 'https://opensubtitles.strem.io/stremio/v1', description: 'Classic subtitle addon', category: 'Subtitles' as Category },
-  { name: 'YouTube', url: 'https://youtube.strem.fun/manifest.json', description: 'YouTube content integration', category: 'Catalog' as Category },
+  { name: 'Torrentio', url: 'https://torrentio.strem.fun/manifest.json', description: 'Torrent-based streaming with RD/PM support. Best for 4K HDR content.', category: 'Streaming' as Category, tags: ['Popular', '4K'] },
+  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with debrid support. Auto quality selection.', category: 'Streaming' as Category, tags: ['Multi-source'] },
+  { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata. Required for content discovery.', category: 'Metadata' as Category, tags: ['Required'] },
+  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles' as Category, tags: ['Subtitles'] },
+  { name: 'YouTube', url: 'https://youtube.strem.fun/manifest.json', description: 'YouTube content integration', category: 'Catalog' as Category, tags: ['Free'] },
+  { name: 'WatchHub', url: 'https://watchhub.strem.io/manifest.json', description: 'Streaming availability checker across services', category: 'Catalog' as Category, tags: ['Catalog'] },
 ];
 
 function SkeletonRow() {
@@ -173,6 +172,32 @@ export default function Streaming() {
                 <p className="text-[28px] font-black text-green-400 leading-none">{activeCount}</p>
                 <p className="text-[12px] text-gray-500 mt-1.5 font-medium">Active</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── HOW IT WORKS ─── */}
+        <section className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-8 md:p-9">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-exyo-red/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-exyo-red" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </div>
+            <h2 className="text-[18px] font-bold text-white">How Streaming Works</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[13px] text-gray-400">
+            <div className="bg-white/[0.03] rounded-xl p-4">
+              <p className="text-white font-semibold mb-1">1. Install Addons</p>
+              <p>Add streaming addons like Torrentio or MediaFusion below. These provide direct HTTP stream URLs.</p>
+            </div>
+            <div className="bg-white/[0.03] rounded-xl p-4">
+              <p className="text-white font-semibold mb-1">2. Browse & Play</p>
+              <p>Find content on the home page or search. When you click play, EXYO fetches streams from all your active addons.</p>
+            </div>
+            <div className="bg-white/[0.03] rounded-xl p-4">
+              <p className="text-white font-semibold mb-1">3. Choose Source</p>
+              <p>Pick the best stream from multiple addons. Quality options appear in the player's source selector.</p>
             </div>
           </div>
         </section>
@@ -372,9 +397,16 @@ export default function Streaming() {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h3 className="font-bold text-[16px] text-white">{addon.name}</h3>
-                        <span className="text-[12px] text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-lg mt-1 inline-block">
-                          {addon.category}
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <span className="text-[11px] text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-lg">
+                            {addon.category}
+                          </span>
+                          {addon.tags?.map((tag) => (
+                            <span key={tag} className="text-[10px] text-exyo-red bg-exyo-red/10 px-1.5 py-0.5 rounded-md font-medium">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                       {isInstalled ? (
                         <span className="text-[13px] text-green-400 font-semibold bg-green-500/10 px-3 py-1 rounded-xl">
