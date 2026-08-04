@@ -37,18 +37,56 @@ interface WTClient {
   destroy(cb?: () => void): void;
 }
 
-let WTConstructor: (new (opts?: Record<string, unknown>) => WTClient) | null = null;
-
-async function loadWebTorrent(): Promise<new (opts?: Record<string, unknown>) => WTClient> {
-  if (!WTConstructor) {
-    const mod = await import('webtorrent');
-    WTConstructor = mod.default as unknown as new (opts?: Record<string, unknown>) => WTClient;
-  }
-  return WTConstructor;
-}
-
 let sharedClient: WTClient | null = null;
 let swRegistered = false;
+let loadPromise: Promise<WTClient> | null = null;
+
+function loadWebTorrentFromCDN(): Promise<WTClient> {
+  if (loadPromise) return loadPromise;
+
+  loadPromise = new Promise((resolve, reject) => {
+    if ((window as unknown as Record<string, unknown>).WebTorrent) {
+      const WT = (window as unknown as Record<string, new (opts?: Record<string, unknown>) => WTClient>).WebTorrent;
+      resolve(new WT({
+        tracker: {
+          rtcConfig: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+          },
+        },
+      }));
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@3.0.21/dist/webtorrent.min.js';
+    script.async = true;
+    script.onload = () => {
+      const WT = (window as unknown as Record<string, new (opts?: Record<string, unknown>) => WTClient>).WebTorrent;
+      if (!WT) {
+        reject(new Error('WebTorrent failed to load'));
+        return;
+      }
+      sharedClient = new WT({
+        tracker: {
+          rtcConfig: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+          },
+        },
+      });
+      resolve(sharedClient);
+    };
+    script.onerror = () => reject(new Error('Failed to load WebTorrent from CDN'));
+    document.head.appendChild(script);
+  });
+
+  return loadPromise;
+}
 
 async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (swRegistered || !('serviceWorker' in navigator)) return null;
@@ -65,24 +103,6 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> 
     console.warn('[Torrent] Service worker registration failed:', err);
     return null;
   }
-}
-
-async function getOrCreateClient(): Promise<WTClient> {
-  if (sharedClient && !sharedClient.destroyed) return sharedClient;
-
-  const WebTorrent = await loadWebTorrent();
-  sharedClient = new WebTorrent({
-    tracker: {
-      rtcConfig: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ],
-      },
-    },
-  });
-
-  return sharedClient;
 }
 
 export interface TorrentState {
@@ -132,7 +152,7 @@ export function useTorrentPlayer() {
     try {
       await ensureServiceWorker();
 
-      const client = await getOrCreateClient();
+      const client = await loadWebTorrentFromCDN();
 
       let torrent: WTTorrentInstance | null = client.get(infoHash);
 
