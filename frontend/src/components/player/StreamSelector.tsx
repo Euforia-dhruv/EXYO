@@ -202,7 +202,7 @@ export default function StreamSelector({
                                 )}
                                 {!isPlayable && stream.infoHash && (
                                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-400">
-                                    Torrent (needs debrid)
+                                    Torrent (P2P)
                                   </span>
                                 )}
                                 {stream.codec && (
@@ -277,7 +277,7 @@ export default function StreamSelector({
                               <div className="flex-1" />
                               {!isPlayable && stream.infoHash && (
                                 <span className="text-[10px] text-yellow-500/70">
-                                  Needs Real-Debrid or TorBox to play
+                                  Torrent stream — may be slow without seeders
                                 </span>
                               )}
                             </div>

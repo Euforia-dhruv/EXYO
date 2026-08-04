@@ -10,16 +10,14 @@ const CATEGORIES = ['All', 'Streaming', 'Metadata', 'Subtitles', 'Catalog'] as c
 type Category = typeof CATEGORIES[number];
 
 const POPULAR_ADDONS = [
-  { name: 'Torrentio', url: 'https://torrentio.strem.fun/manifest.json', description: 'Most popular torrent addon. 4K HDR, multi-provider. Needs debrid for instant playback.', category: 'Streaming' as Category, tags: ['Top Pick', '4K'], needsDebrid: true },
-  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Works with or without debrid.', category: 'Streaming' as Category, tags: ['Multi-source', 'Regional'], needsDebrid: false },
-  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight Torrentio alternative. Fast, free public instance available.', category: 'Streaming' as Category, tags: ['Fast', 'Backup'], needsDebrid: false },
-  { name: 'PenguPlay', url: 'https://pengu.uk', description: 'Free HTTP streams — no debrid needed. 4K, anime, regional. Requires setup.', category: 'Streaming' as Category, tags: ['Free', 'HTTP'], needsDebrid: false, configureUrl: 'https://pengu.uk' },
-  { name: 'Flix-Streams', url: 'https://flixnest.app/flix-streams', description: 'HTTP-based streaming with anime, live TV, sports. Free tier available.', category: 'Streaming' as Category, tags: ['HTTP', 'Live TV'], needsDebrid: false, configureUrl: 'https://flixnest.app/flix-streams' },
-  { name: 'AIOStreams', url: 'https://aiostreams.elfhosted.com', description: 'Aggregates 80+ addons into one. Best for power users with debrid.', category: 'Streaming' as Category, tags: ['All-in-One'], needsDebrid: true, configureUrl: 'https://aiostreams.elfhosted.com/configure' },
+  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Free public instance available.', category: 'Streaming' as Category, tags: ['Free', 'Multi-source'] },
+  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight torrent addon. Free public instance, no account needed.', category: 'Streaming' as Category, tags: ['Free', 'Fast'] },
+  { name: 'PenguPlay', url: 'https://pengu.uk', description: 'Free HTTP streams — no debrid needed. 4K, anime, regional content.', category: 'Streaming' as Category, tags: ['Free', 'HTTP'], configureUrl: 'https://pengu.uk' },
+  { name: 'Flix-Streams', url: 'https://flixnest.app/flix-streams', description: 'HTTP-based streaming with anime, live TV, sports. Free tier available.', category: 'Streaming' as Category, tags: ['Free', 'HTTP'], configureUrl: 'https://flixnest.app/flix-streams' },
   { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata. Required for content discovery.', category: 'Metadata' as Category, tags: ['Required'] },
-  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles' as Category, tags: ['Subtitles'] },
+  { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles' as Category, tags: ['Free'] },
   { name: 'YouTube', url: 'https://youtube.strem.fun/manifest.json', description: 'YouTube content integration', category: 'Catalog' as Category, tags: ['Free'] },
-  { name: 'WatchHub', url: 'https://watchhub.strem.io/manifest.json', description: 'Streaming availability checker across services', category: 'Catalog' as Category, tags: ['Catalog'] },
+  { name: 'WatchHub', url: 'https://watchhub.strem.io/manifest.json', description: 'Streaming availability checker across services', category: 'Catalog' as Category, tags: ['Free'] },
 ];
 
 function SkeletonRow() {
@@ -193,7 +191,7 @@ export default function Streaming() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[13px] text-gray-400">
             <div className="bg-white/[0.03] rounded-xl p-4">
               <p className="text-white font-semibold mb-1">1. Install Addons</p>
-              <p>Add streaming addons like Torrentio or MediaFusion below. These provide direct HTTP stream URLs.</p>
+              <p>Add free streaming addons like PenguPlay or Flix-Streams. These provide direct HTTP stream URLs that play instantly.</p>
             </div>
             <div className="bg-white/[0.03] rounded-xl p-4">
               <p className="text-white font-semibold mb-1">2. Browse & Play</p>
@@ -201,7 +199,7 @@ export default function Streaming() {
             </div>
             <div className="bg-white/[0.03] rounded-xl p-4">
               <p className="text-white font-semibold mb-1">3. Choose Source</p>
-              <p>Pick the best stream from multiple addons. Quality options appear in the player's source selector.</p>
+              <p>Pick the best stream from multiple addons. HTTP streams play directly in the browser.</p>
             </div>
           </div>
         </section>
@@ -407,18 +405,12 @@ export default function Streaming() {
                           </span>
                           {addon.tags?.map((tag) => (
                             <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
-                              tag === 'Free' ? 'text-green-400 bg-green-500/10' :
                               tag === 'Required' ? 'text-blue-400 bg-blue-500/10' :
-                              'text-exyo-red bg-exyo-red/10'
+                              'text-green-400 bg-green-500/10'
                             }`}>
                               {tag}
                             </span>
                           ))}
-                          {'needsDebrid' in addon && addon.needsDebrid && (
-                            <span className="text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                              Debrid Required
-                            </span>
-                          )}
                         </div>
                       </div>
                       {isInstalled ? (
@@ -446,9 +438,6 @@ export default function Streaming() {
                         >
                           Configure &rarr;
                         </a>
-                      )}
-                      {'needsDebrid' in addon && addon.needsDebrid && (
-                        <span className="text-[10px] text-gray-500">Needs Real-Debrid or TorBox for instant playback</span>
                       )}
                     </div>
                   </motion.button>
