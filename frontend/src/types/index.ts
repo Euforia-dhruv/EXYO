@@ -38,6 +38,7 @@ export interface CatalogItem {
 
 export interface Stream {
   url: string;
+  proxiedUrl?: string;
   title?: string;
   infoHash?: string;
   quality?: string;

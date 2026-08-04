@@ -3,6 +3,7 @@ import Hls from 'hls.js';
 
 export interface PlayerStream {
   url: string;
+  proxiedUrl?: string;
   title?: string;
   infoHash?: string;
   quality?: string;
@@ -186,37 +187,22 @@ export function usePlayer({
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('error', handleError);
 
-    const lower = url.toLowerCase();
+    const playUrl = selectedStream?.proxiedUrl || url;
+    const lower = playUrl.toLowerCase();
     const isMkv = lower.includes('.mkv') || lower.includes('matroska');
     const isHls = lower.includes('.m3u8');
 
-    function buildProxyUrl(streamUrl: string) {
-      const base = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
-      const proxyHeaders = selectedStream?.behaviorHints?.proxyHeaders?.request || {};
-      const params = new URLSearchParams({ url: streamUrl });
-      if (Object.keys(proxyHeaders).length > 0) {
-        params.set('proxyHeaders', JSON.stringify(proxyHeaders));
-      }
-      return `${base}/api/content/proxy-stream?${params.toString()}`;
-    }
-
-    async function startPlayback(playUrl: string) {
+    async function startPlayback(playbackUrl: string) {
       if (cancelled || !video) return;
-      const proxyHeaders = selectedStream?.behaviorHints?.proxyHeaders?.request || {};
 
-      if (playUrl.includes('.m3u8') && Hls.isSupported()) {
+      if (playbackUrl.includes('.m3u8') && Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
-          xhrSetup: (xhr) => {
-            for (const [key, value] of Object.entries(proxyHeaders)) {
-              xhr.setRequestHeader(key, value);
-            }
-          },
         });
-        hls.loadSource(playUrl);
+        hls.loadSource(playbackUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (!cancelled) {
@@ -237,11 +223,11 @@ export function usePlayer({
             }
           }
         });
-      } else if (playUrl.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = playUrl;
+      } else if (playbackUrl.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = playbackUrl;
         video.play().catch(() => {});
       } else {
-        video.src = playUrl;
+        video.src = playbackUrl;
         video.play().catch(() => {});
       }
     }
@@ -254,18 +240,18 @@ export function usePlayer({
             onRemuxProgress?.('done', 1);
             startPlayback(blobUrl);
           } else if (!cancelled) {
-            startPlayback(buildProxyUrl(url));
+            startPlayback(playUrl);
           }
         })
         .catch(() => {
           if (!cancelled) {
-            startPlayback(buildProxyUrl(url));
+            startPlayback(playUrl);
           }
         });
     } else if (isHls) {
-      startPlayback(url);
+      startPlayback(playUrl);
     } else {
-      startPlayback(url);
+      startPlayback(playUrl);
     }
 
     return () => {

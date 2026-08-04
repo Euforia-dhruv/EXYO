@@ -41,13 +41,4 @@ export const contentApi = {
   getManifest: async (addon?: string) => {
     return contentFetch('/manifest', addon ? { addon } : undefined);
   },
-
-  proxyStream: async (streamUrl: string, proxyHeaders?: Record<string, string>) => {
-    const url = new URL(`${SITE_URL}/api/content/proxy-stream`);
-    url.searchParams.set("url", streamUrl);
-    if (proxyHeaders && Object.keys(proxyHeaders).length > 0) {
-      url.searchParams.set("proxyHeaders", JSON.stringify(proxyHeaders));
-    }
-    return url.toString();
-  },
 };

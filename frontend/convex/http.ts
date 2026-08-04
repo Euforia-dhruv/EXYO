@@ -4,6 +4,7 @@ import { httpAction } from "./_generated/server";
 const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
+const PROXY_BASE_URL = "https://exyo-proxy.exyo.workers.dev";
 
 const DEFAULT_STREAM_ADDONS = [
   "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
@@ -18,8 +19,29 @@ const corsHeaders: Record<string, string> = {
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...corsHeaders },
   });
+}
+
+function encodeProxyToken(target: string, referer: string): string {
+  const payload = JSON.stringify({ u: target, r: referer });
+  return btoa(payload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function buildProxiedUrl(streamUrl: string, behaviorHints?: Record<string, unknown>): string | undefined {
+  const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
+  if (!proxyHeaders) return undefined;
+  const referer = proxyHeaders.Referer || proxyHeaders.referer || "";
+  if (!referer) return undefined;
+  const token = encodeProxyToken(streamUrl, referer);
+  const lower = streamUrl.toLowerCase();
+  if (lower.includes(".m3u8")) {
+    return `${PROXY_BASE_URL}/hls/${token}.m3u8`;
+  }
+  if (lower.includes(".mp4")) {
+    return `${PROXY_BASE_URL}/mp4/${token}.mp4`;
+  }
+  return `${PROXY_BASE_URL}/hls/${token}.m3u8`;
 }
 
 http.route({
@@ -105,11 +127,16 @@ http.route({
         const res = await fetch(streamUrl);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.streams || []).map((s: Record<string, unknown>) => ({
-          ...s,
-          addonName: addonUrl.split("/")[2] || addonUrl,
-          addonUrl: base,
-        }));
+        return (data.streams || []).map((s: Record<string, unknown>) => {
+          const streamUrl = s.url as string;
+          const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+          return {
+            ...s,
+            addonName: addonUrl.split("/")[2] || addonUrl,
+            addonUrl: base,
+            proxiedUrl: streamUrl ? buildProxiedUrl(streamUrl, behaviorHints) : undefined,
+          };
+        });
       })
     );
 
@@ -156,11 +183,16 @@ http.route({
       const res = await fetch(streamUrl);
       if (!res.ok) return json({ error: "Addon returned error" }, res.status);
       const data = await res.json();
-      const streams = (data.streams || []).map((s: Record<string, unknown>) => ({
-        ...s,
-        addonName: addon.split("/")[2] || addon,
-        addonUrl: base,
-      }));
+      const streams = (data.streams || []).map((s: Record<string, unknown>) => {
+        const streamUrl = s.url as string;
+        const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+        return {
+          ...s,
+          addonName: addon.split("/")[2] || addon,
+          addonUrl: base,
+          proxiedUrl: streamUrl ? buildProxiedUrl(streamUrl, behaviorHints) : undefined,
+        };
+      });
       return json(streams);
     } catch {
       return json({ error: "Addon unreachable" }, 502);
@@ -204,62 +236,6 @@ http.route({
       return json(data.meta || data);
     } catch {
       return json({ error: "Addon unreachable" }, 502);
-    }
-  }),
-});
-
-http.route({
-  path: "/api/content/proxy-stream",
-  method: "GET",
-  handler: httpAction(async (_ctx, request) => {
-    const url = new URL(request.url);
-    const streamUrl = url.searchParams.get("url");
-    const proxyHeadersParam = url.searchParams.get("proxyHeaders");
-    if (!streamUrl) return json({ error: "url required" }, 400);
-
-    let proxyHeaders: Record<string, string> = {};
-    if (proxyHeadersParam) {
-      try {
-        proxyHeaders = JSON.parse(proxyHeadersParam);
-      } catch {}
-    }
-
-    try {
-      const res = await fetch(streamUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-          ...proxyHeaders,
-        },
-        redirect: "follow",
-      });
-
-      if (!res.ok) {
-        return json({ error: `Upstream returned ${res.status}` }, res.status);
-      }
-
-      const contentType = res.headers.get("content-type") || "application/octet-stream";
-
-      const headers = new Headers({
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Content-Type": contentType,
-      });
-
-      const contentLength = res.headers.get("content-length");
-      if (contentLength) headers.set("Content-Length", contentLength);
-
-      const range = request.headers.get("range");
-      if (range) {
-        headers.set("Content-Range", res.headers.get("content-range") || "");
-      }
-
-      return new Response(res.body, {
-        status: res.status,
-        headers,
-      });
-    } catch {
-      return json({ error: "Proxy fetch failed" }, 502);
     }
   }),
 });
