@@ -5,6 +5,10 @@ const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 
+const DEFAULT_STREAM_ADDONS = [
+  "https://torrentio.strem.fun",
+];
+
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -88,13 +92,11 @@ http.route({
     const addonsParam = url.searchParams.get("addons");
     if (!id) return json({ error: "id required" }, 400);
 
-    const addonUrls = addonsParam
+    const userAddonUrls = addonsParam
       ? addonsParam.split(",").filter(Boolean)
       : [];
 
-    if (addonUrls.length === 0) {
-      return json([]);
-    }
+    const addonUrls = [...new Set([...DEFAULT_STREAM_ADDONS, ...userAddonUrls])];
 
     const results = await Promise.allSettled(
       addonUrls.map(async (addonUrl) => {
