@@ -120,6 +120,9 @@ export function usePlayer({
     if (nextIdx < streams.length) {
       setSelectedStream(streams[nextIdx]);
       setVideoError(null);
+    } else {
+      setVideoError('All streams failed to play');
+      setIsBuffering(false);
     }
   }, [streams, selectedStream]);
 
@@ -156,9 +159,16 @@ export function usePlayer({
     const handleError = () => {
       const err = video.error;
       const errMsg = err?.message || 'Unknown playback error';
-      setVideoError(errMsg);
-      setIsBuffering(false);
-      onStreamError?.(errMsg, selectedStream);
+      const currentIdx = streams.findIndex((s) => s === selectedStream);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx < streams.length) {
+        setSelectedStream(streams[nextIdx]);
+        setVideoError(null);
+      } else {
+        setVideoError(errMsg);
+        setIsBuffering(false);
+        onStreamError?.(errMsg, selectedStream);
+      }
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -185,17 +195,23 @@ export function usePlayer({
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            tryNextStream();
+          const currentIdx = streams.findIndex((s) => s === selectedStream);
+          const nextIdx = currentIdx + 1;
+          if (nextIdx < streams.length) {
+            setSelectedStream(streams[nextIdx]);
+            setVideoError(null);
           } else {
             setVideoError(`Stream error: ${data.details}`);
+            setIsBuffering(false);
           }
         }
       });
     } else if (url.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url;
+      video.play().catch(() => {});
     } else {
       video.src = url;
+      video.play().catch(() => {});
     }
 
     return () => {
