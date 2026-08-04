@@ -116,10 +116,10 @@ export default function Watch() {
             />
           </svg>
         </div>
-        <p className="text-2xl font-bold mb-3">No streams available</p>
+        <p className="text-2xl font-bold mb-3">No streams found</p>
         <p className="text-gray-400 mb-10 text-center max-w-md">
-          Install streaming addons to watch content. Addons like Torrentio or MediaFusion provide
-          direct HTTP stream URLs from torrents.
+          Install streaming addons to watch content. PenguPlay and Flix-Streams provide free HTTP
+          streams. Torrentio and MediaFusion provide torrent streams (need debrid for instant playback).
         </p>
         <div className="flex gap-3">
           <button
