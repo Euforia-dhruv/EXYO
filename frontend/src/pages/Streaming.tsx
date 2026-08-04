@@ -10,12 +10,10 @@ const CATEGORIES = ['All', 'Streaming', 'Metadata', 'Subtitles', 'Catalog'] as c
 type Category = typeof CATEGORIES[number];
 
 const POPULAR_ADDONS: { name: string; url: string; description: string; category: Category; tags: string[]; configureUrl?: string }[] = [
-  { name: 'HDHub', url: 'https://hdhub.thevolecitor.qzz.io', description: 'Free HTTP streams — instant playback, no debrid needed. Multiple providers, 480p-1080p.', category: 'Streaming', tags: ['Free', 'HTTP', 'Instant'] },
-  { name: 'Flix-Streams Free', url: 'https://free.flixnest.app', description: 'Free HTTP streams — HDHub, DLStreams providers. Movies and TV shows.', category: 'Streaming', tags: ['Free', 'HTTP', 'Instant'] },
+  { name: 'PenguPlay', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D', description: 'Free HTTP streams — instant playback, no debrid needed. 4K, anime, regional content.', category: 'Streaming', tags: ['Free', 'HTTP', 'Instant'] },
   { name: 'Torrentio', url: 'https://torrentio.strem.fun', description: 'Most popular Stremio addon. Torrent-based — works with debrid or P2P.', category: 'Streaming', tags: ['Popular', 'Torrent'] },
-  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Free public instance available.', category: 'Streaming', tags: ['Free', 'Multi-source'] },
-  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight torrent addon. Free public instance, no account needed.', category: 'Streaming', tags: ['Free', 'Fast'] },
-  { name: 'PenguPlay', url: 'https://pengu.uk', description: 'Free HTTP streams — no debrid needed. 4K, anime, regional content.', category: 'Streaming', tags: ['Free', 'HTTP'] },
+  { name: 'MediaFusion', url: 'https://mediafusion.elfhosted.com/manifest.json', description: 'Multi-source streaming with regional content. Requires debrid for streams.', category: 'Streaming', tags: ['Debrid'] },
+  { name: 'Comet', url: 'https://comet.elfhosted.com/manifest.json', description: 'Lightweight torrent addon. Requires debrid for streams.', category: 'Streaming', tags: ['Debrid'] },
   { name: 'Cinemeta', url: 'https://v3-cinemeta.strem.io/manifest.json', description: 'Movies & TV shows with full metadata. Required for content discovery.', category: 'Metadata', tags: ['Required'] },
   { name: 'OpenSubtitles v3', url: 'https://opensubtitles-v3.strem.io/manifest.json', description: 'Subtitles in 50+ languages with auto-sync.', category: 'Subtitles', tags: ['Free'] },
 ];

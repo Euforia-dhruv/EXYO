@@ -6,9 +6,7 @@ const http = httpRouter();
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 
 const DEFAULT_STREAM_ADDONS = [
-  "https://hdhub.thevolecitor.qzz.io",
-  "https://free.flixnest.app",
-  "https://torrentio.strem.fun",
+  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
 ];
 
 const corsHeaders: Record<string, string> = {
