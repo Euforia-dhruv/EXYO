@@ -5,7 +5,6 @@ const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TORRENTIO_URL = "https://torrentio.strem.fun";
-const CONVENIO_URL = "https://convenio.wiki";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -80,18 +79,16 @@ http.route({
   }),
 });
 
-// ── Streams: fetch from multiple addons in parallel ──
 http.route({
-  path: "/api/content/:id/streams",
+  path: "/api/content/streams",
   method: "GET",
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
-    const pathParts = url.pathname.split("/");
-    const id = pathParts[pathParts.length - 2];
+    const id = url.searchParams.get("id");
     const type = url.searchParams.get("type") || "movie";
     const addonsParam = url.searchParams.get("addons");
+    if (!id) return json({ error: "id required" }, 400);
 
-    // If specific addon URLs are provided, fetch from those
     if (addonsParam) {
       const addonUrls = addonsParam.split(",").filter(Boolean);
       if (addonUrls.length > 0) {
@@ -115,24 +112,21 @@ http.route({
       }
     }
 
-    // Default: fetch from Torrentio + Convenio in parallel
-    const [torrentioRes, convenioRes] = await Promise.allSettled([
+    const torrentioRes = await Promise.allSettled([
       fetch(`${TORRENTIO_URL}/stream/${type}/${id}.json`),
-      fetch(`${CONVENIO_URL}/stream/${type}/${id}.json`),
     ]);
 
     const allStreams: unknown[] = [];
 
-    for (const result of [torrentioRes, convenioRes]) {
+    for (const result of torrentioRes) {
       if (result.status === "fulfilled" && result.value.ok) {
         try {
           const data = await result.value.json();
-          const source = result.value.url.includes("torrentio") ? "Torrentio" : "Convenio";
           const baseUrl = (result.value.url as string).replace(/\/stream\/.*/, "");
           for (const s of data.streams || []) {
             allStreams.push({
               ...s,
-              addonName: source,
+              addonName: "Torrentio",
               addonUrl: baseUrl,
             });
           }
@@ -140,13 +134,12 @@ http.route({
       }
     }
 
-    // Deduplicate by URL
     const seen = new Set<string>();
     const deduped = allStreams.filter((s: unknown) => {
       const stream = s as Record<string, unknown>;
-      const url = stream.url as string;
-      if (!url || seen.has(url)) return false;
-      seen.add(url);
+      const key = (stream.url as string) || (stream.infoHash as string) || "";
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
@@ -154,46 +147,17 @@ http.route({
   }),
 });
 
-// ── Stream single addon (for custom addon URLs) ──
 http.route({
-  path: "/api/content/:id/stream",
+  path: "/api/content/subtitles",
   method: "GET",
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
-    const pathParts = url.pathname.split("/");
-    const id = pathParts[pathParts.length - 2];
+    const id = url.searchParams.get("id");
     const type = url.searchParams.get("type") || "movie";
-    const addon = url.searchParams.get("addon");
-    if (!addon) return json({ error: "Addon URL required" }, 400);
+    if (!id) return json([], 400);
 
     try {
-      const res = await fetch(`${addon.replace(/\/$/, "")}/stream/${type}/${id}.json`);
-      if (!res.ok) return json({ streams: [] });
-      const data = await res.json();
-      const baseName = new URL(addon).hostname;
-      const streams = (data.streams || []).map((s: Record<string, unknown>) => ({
-        ...s,
-        addonName: baseName,
-        addonUrl: addon.replace(/\/$/, ""),
-      }));
-      return json(streams);
-    } catch {
-      return json({ streams: [] });
-    }
-  }),
-});
-
-http.route({
-  path: "/api/content/:id/subtitles",
-  method: "GET",
-  handler: httpAction(async (_ctx, request) => {
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split("/");
-    const id = pathParts[pathParts.length - 2];
-    const type = url.searchParams.get("type") || "movie";
-
-    try {
-      const res = await fetch(`${CINEMETA_URL}/subtitles/${type}/${id}.json`);
+      const res = await fetch(`${CINEMETA_URL}/meta/subtitles/${type}/${id}.json`);
       if (!res.ok) return json([]);
       const data = await res.json();
       return json(data.subtitles || []);
@@ -204,16 +168,16 @@ http.route({
 });
 
 http.route({
-  path: "/api/content/:id",
+  path: "/api/content/details",
   method: "GET",
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
-    const pathParts = url.pathname.split("/");
-    const id = pathParts[pathParts.length - 1];
+    const id = url.searchParams.get("id");
     const type = url.searchParams.get("type") || "movie";
+    if (!id) return json({ error: "id required" }, 400);
 
     try {
-      const res = await fetch(`${CINEMETA_URL}/${type}/${id}.json`);
+      const res = await fetch(`${CINEMETA_URL}/meta/${type}/${id}.json`);
       if (!res.ok) return json({ error: "Not found" }, 404);
       const data = await res.json();
       return json(data.meta || data);

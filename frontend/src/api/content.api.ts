@@ -20,22 +20,22 @@ export const contentApi = {
   },
 
   getDetails: async (id: string, type = 'movie') => {
-    return contentFetch(`/${id}`, { type });
+    return contentFetch('/details', { id, type });
   },
 
   getStreams: async (id: string, type = 'movie', addonUrls?: string[]) => {
     if (addonUrls && addonUrls.length > 0) {
-      return contentFetch(`/${id}/streams`, { type, addons: addonUrls.join(',') });
+      return contentFetch('/streams', { id, type, addons: addonUrls.join(',') });
     }
-    return contentFetch(`/${id}/streams`, { type });
+    return contentFetch('/streams', { id, type });
   },
 
   getStreamFromAddon: async (id: string, type = 'movie', addonUrl: string) => {
-    return contentFetch(`/${id}/stream`, { type, addon: addonUrl });
+    return contentFetch('/stream', { id, type, addon: addonUrl });
   },
 
   getSubtitles: async (id: string, type = 'movie') => {
-    return contentFetch(`/${id}/subtitles`, { type });
+    return contentFetch('/subtitles', { id, type });
   },
 
   getManifest: async (addon?: string) => {
