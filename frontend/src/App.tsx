@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-react';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppearanceProvider } from './providers/AppearanceProvider';
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import DownloadIndicator from './components/DownloadIndicator';
@@ -71,9 +72,10 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <Router>
-            <div className="min-h-screen bg-[#0A0A0A] text-white">
+        <AppearanceProvider>
+          <ToastProvider>
+            <Router>
+              <div className="min-h-screen bg-[var(--exyo-bg,#0A0A0A)] text-white">
               <a href="#main-content" className="skip-link">Skip to main content</a>
               <ScrollToTop />
               <Routes>
@@ -102,6 +104,7 @@ function App() {
             </div>
           </Router>
         </ToastProvider>
+        </AppearanceProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

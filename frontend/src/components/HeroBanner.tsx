@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useDownloadStore } from '../store/downloadStore';
+import { useAppearanceStore } from '../store/appStore';
 import { useToast } from './Toast';
 import type { CatalogItem } from '../types';
 
@@ -18,6 +19,7 @@ export default function HeroBanner({ items }: HeroBannerProps) {
   const { showToast } = useToast();
   const addDownload = useDownloadStore((s) => s.addDownload);
   const addToWatchlist = useMutation(api.watchlist.addToWatchlist);
+  const autoplayTrailers = useAppearanceStore((s) => s.autoplayTrailers);
 
   const goTo = useCallback((index: number) => {
     setDirection(index > currentIndex ? 1 : -1);
@@ -30,10 +32,10 @@ export default function HeroBanner({ items }: HeroBannerProps) {
   }, [items.length]);
 
   useEffect(() => {
-    if (items.length <= 1) return;
+    if (items.length <= 1 || !autoplayTrailers) return;
     const interval = setInterval(next, 7000);
     return () => clearInterval(interval);
-  }, [items.length, next]);
+  }, [items.length, next, autoplayTrailers]);
 
   if (!items.length) return null;
 

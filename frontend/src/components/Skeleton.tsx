@@ -12,11 +12,11 @@ export function SkeletonCard() {
 export function SkeletonRow() {
   return (
     <div className="mb-14 md:mb-16">
-      <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 mb-4">
+      <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 mb-4">
         <div className="h-6 shimmer rounded-lg w-40" />
         <div className="h-4 shimmer rounded-lg w-16" />
       </div>
-      <div className="flex gap-4 md:gap-5 px-5 md:px-10 lg:px-12 overflow-hidden">
+      <div className="flex gap-3 md:gap-4 px-6 md:px-12 lg:px-16 overflow-hidden">
         {[...Array(7)].map((_, i) => (
           <SkeletonCard key={i} />
         ))}

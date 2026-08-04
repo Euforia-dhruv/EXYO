@@ -191,6 +191,24 @@ export function usePlayer({
     const lower = playUrl.toLowerCase();
     const isMkv = lower.includes('.mkv') || lower.includes('matroska');
     const isHls = lower.includes('.m3u8');
+    const streamCodec = selectedStream?.codec || 'h264';
+    const isHevc = streamCodec === 'hevc';
+
+    function canPlayHevc(): boolean {
+      const v = document.createElement('video');
+      const canH265 = v.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"');
+      const canH265Alt = v.canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"');
+      return !!(canH265 || canH265Alt);
+    }
+
+    if (isHevc && !canPlayHevc() && !isHls) {
+      const currentIdx = streams.findIndex((s) => s === selectedStream);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx < streams.length) {
+        setSelectedStream(streams[nextIdx]);
+        return () => {};
+      }
+    }
 
     async function startPlayback(playbackUrl: string) {
       if (cancelled || !video) return;

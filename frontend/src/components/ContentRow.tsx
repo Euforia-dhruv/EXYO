@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Thumbnail from './Thumbnail';
 import type { CatalogItem, WatchHistory } from '../types';
@@ -12,6 +13,7 @@ interface ContentRowProps {
 
 export default function ContentRow({ title, items, showProgress, onAddToList }: ContentRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
@@ -40,7 +42,10 @@ export default function ContentRow({ title, items, showProgress, onAddToList }: 
         <h2 className="text-[20px] md:text-[24px] font-bold text-white tracking-tight">
           {title}
         </h2>
-        <button className="text-[13px] font-semibold text-gray-500 hover:text-white transition-colors duration-200">
+        <button
+          onClick={() => navigate(`/search?q=${encodeURIComponent(title)}`)}
+          className="text-[13px] font-semibold text-gray-500 hover:text-white transition-colors duration-200"
+        >
           See All
         </button>
       </div>
@@ -49,7 +54,7 @@ export default function ContentRow({ title, items, showProgress, onAddToList }: 
         {/* Left fade edge */}
         {showLeftArrow && (
           <>
-            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0A0A0A] to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[var(--exyo-bg,#0A0A0A)] to-transparent z-10 pointer-events-none" />
             <motion.button
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -84,7 +89,7 @@ export default function ContentRow({ title, items, showProgress, onAddToList }: 
         {/* Right fade edge */}
         {showRightArrow && (
           <>
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0A0A0A] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[var(--exyo-bg,#0A0A0A)] to-transparent z-10 pointer-events-none" />
             <motion.button
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

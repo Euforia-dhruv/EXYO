@@ -161,6 +161,21 @@ http.route({
       if (url.includes('.mkv?')) return false;
       if (url.includes('content-disposition') && url.includes('.mkv')) return false;
       return true;
+    }).map((s: unknown) => {
+      const stream = s as Record<string, unknown>;
+      const title = ((stream.title as string) || "").toLowerCase();
+      const desc = ((stream.description as string) || "").toLowerCase();
+      const name = ((stream.name as string) || "").toLowerCase();
+      const combined = `${title} ${desc} ${name}`;
+      let codec = "h264";
+      if (combined.includes("hevc") || combined.includes("h.265") || combined.includes("x265")) {
+        codec = "hevc";
+      } else if (combined.includes("av1") || combined.includes("av01")) {
+        codec = "av1";
+      } else if (combined.includes("h.264") || combined.includes("avc") || combined.includes("x264")) {
+        codec = "h264";
+      }
+      return { ...stream, codec };
     });
 
     return json(playable);

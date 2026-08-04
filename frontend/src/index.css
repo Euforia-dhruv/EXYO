@@ -116,3 +116,31 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Theme system */
+body {
+  background-color: var(--exyo-bg, #0A0A0A);
+  transition: background-color 0.3s ease;
+}
+
+.glass-mode .glass {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.rounded-posters .poster-card {
+  border-radius: 12px;
+}
+
+:not(.rounded-posters) .poster-card {
+  border-radius: 4px;
+}
