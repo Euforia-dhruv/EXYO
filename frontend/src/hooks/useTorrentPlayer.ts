@@ -1,9 +1,53 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import WebTorrent from 'webtorrent';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-type WTTorrent = InstanceType<typeof WebTorrent>;
+interface WTFile {
+  name: string;
+  path: string;
+  length: number;
+  type: string;
+  streamURL: string;
+  streamTo(elem: HTMLVideoElement): void;
+  on(event: string, cb: (...args: unknown[]) => void): void;
+}
 
-let sharedClient: WTTorrent | null = null;
+interface WTTorrentInstance {
+  infoHash: string;
+  name: string;
+  files: WTFile[];
+  downloadSpeed: number;
+  uploadSpeed: number;
+  numPeers: number;
+  progress: number;
+  downloaded: number;
+  uploaded: number;
+  ready: boolean;
+  destroyed: boolean;
+  on(event: string, cb: (...args: unknown[]) => void): void;
+  destroy(): void;
+}
+
+interface WTClient {
+  destroyed: boolean;
+  ready: boolean;
+  torrents: WTTorrentInstance[];
+  add(torrentId: string, opts?: Record<string, unknown>): WTTorrentInstance;
+  get(torrentId: string): WTTorrentInstance | null;
+  createServer(opts?: Record<string, unknown>): { pathname: string; destroy: () => void };
+  on(event: string, cb: (...args: unknown[]) => void): void;
+  destroy(cb?: () => void): void;
+}
+
+let WTConstructor: (new (opts?: Record<string, unknown>) => WTClient) | null = null;
+
+async function loadWebTorrent(): Promise<new (opts?: Record<string, unknown>) => WTClient> {
+  if (!WTConstructor) {
+    const mod = await import('webtorrent');
+    WTConstructor = mod.default as unknown as new (opts?: Record<string, unknown>) => WTClient;
+  }
+  return WTConstructor;
+}
+
+let sharedClient: WTClient | null = null;
 let swRegistered = false;
 
 async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -23,20 +67,10 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> 
   }
 }
 
-export interface TorrentState {
-  status: 'idle' | 'loading' | 'ready' | 'streaming' | 'error';
-  progress: number;
-  downloadSpeed: number;
-  uploadSpeed: number;
-  peers: number;
-  downloaded: number;
-  uploaded: number;
-  error: string | null;
-}
-
-function getOrCreateClient(): WTTorrent {
+async function getOrCreateClient(): Promise<WTClient> {
   if (sharedClient && !sharedClient.destroyed) return sharedClient;
 
+  const WebTorrent = await loadWebTorrent();
   sharedClient = new WebTorrent({
     tracker: {
       rtcConfig: {
@@ -51,6 +85,17 @@ function getOrCreateClient(): WTTorrent {
   return sharedClient;
 }
 
+export interface TorrentState {
+  status: 'idle' | 'loading' | 'ready' | 'streaming' | 'error';
+  progress: number;
+  downloadSpeed: number;
+  uploadSpeed: number;
+  peers: number;
+  downloaded: number;
+  uploaded: number;
+  error: string | null;
+}
+
 export function useTorrentPlayer() {
   const [state, setState] = useState<TorrentState>({
     status: 'idle',
@@ -63,7 +108,7 @@ export function useTorrentPlayer() {
     error: null,
   });
 
-  const torrentRef = useRef<InstanceType<typeof WebTorrent>['torrents'][0] | null>(null);
+  const torrentRef = useRef<WTTorrentInstance | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const cleanup = useCallback(() => {
@@ -87,10 +132,9 @@ export function useTorrentPlayer() {
     try {
       await ensureServiceWorker();
 
-      const client = getOrCreateClient();
+      const client = await getOrCreateClient();
 
-      // Check if torrent already exists
-      let torrent = client.get(infoHash) as typeof torrentRef.current;
+      let torrent: WTTorrentInstance | null = client.get(infoHash);
 
       if (!torrent) {
         torrent = client.add(infoHash, {
@@ -100,12 +144,11 @@ export function useTorrentPlayer() {
             'wss://tracker.webtorrent.dev',
             'wss://tracker.files.fm:7073/announce',
           ],
-        }) as typeof torrentRef.current;
+        });
       }
 
       torrentRef.current = torrent;
 
-      // Wait for metadata (file listing)
       await new Promise<void>((resolve, reject) => {
         if (torrent!.ready) {
           resolve();
@@ -127,26 +170,20 @@ export function useTorrentPlayer() {
         });
       });
 
-      // Find the largest video file
       const videoExtensions = /\.(mp4|mkv|avi|mov|webm|ts|m4v)$/i;
-      const files = torrent!.files as Array<{ name: string; length: number; streamTo: (el: HTMLVideoElement) => void }>;
-      const videoFiles = files.filter((f) => videoExtensions.test(f.name));
+      const videoFiles = torrent!.files.filter((f) => videoExtensions.test(f.name));
       const file = videoFiles.length > 0
         ? videoFiles.sort((a, b) => b.length - a.length)[0]
-        : files.sort((a, b) => b.length - a.length)[0];
+        : torrent!.files.sort((a, b) => b.length - a.length)[0];
 
       if (!file) {
         throw new Error('No video files found in torrent');
       }
 
-      // Create server if not already created
       try {
         client.createServer({ origin: '*' });
-      } catch {
-        // Server already exists
-      }
+      } catch {}
 
-      // Start streaming to the video element
       file.streamTo(element);
 
       setState((prev) => ({
@@ -154,18 +191,17 @@ export function useTorrentPlayer() {
         status: 'streaming',
       }));
 
-      // Update stats periodically
       intervalRef.current = setInterval(() => {
         const t = torrentRef.current;
         if (t && !t.destroyed) {
           setState((prev) => ({
             ...prev,
-            progress: Math.round((t as Record<string, unknown>['progress'] as number) * 100 || 0),
-            downloadSpeed: (t as unknown as { downloadSpeed: number }).downloadSpeed,
-            uploadSpeed: (t as unknown as { uploadSpeed: number }).uploadSpeed,
-            peers: (t as unknown as { numPeers: number }).numPeers,
-            downloaded: (t as unknown as { downloaded: number }).downloaded,
-            uploaded: (t as unknown as { uploaded: number }).uploaded,
+            progress: Math.round((t!.progress || 0) * 100),
+            downloadSpeed: t.downloadSpeed,
+            uploadSpeed: t.uploadSpeed,
+            peers: t.numPeers,
+            downloaded: t.downloaded,
+            uploaded: t.uploaded,
           }));
         }
       }, 1000);
