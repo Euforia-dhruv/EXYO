@@ -207,18 +207,20 @@ export function usePlayer({
       const errMsg = err?.message || 'Unknown playback error';
       console.log('[Player] Native error:', errMsg, '| format:', fmt.format, '| codec:', fmt.codec);
 
-      // For MKV/HEVC/AVI, try WebCodecs streaming player before moving to next stream
+      // For MKV/HEVC/AVI, try WebCodecs streaming player
       if (!tryingFFmpeg && (fmt.format === 'mkv' || fmt.format === 'avi' || fmt.codec === 'hevc')) {
         tryingFFmpeg = true;
         console.log('[Player] Launching streaming player for', fmt.format, fmt.codec);
         launchStreamingPlayer(playUrl).catch(e => {
           console.error('[Player] Streaming player failed:', e);
-          tryNextStreamPlayback();
+          setVideoError(`Playback failed: ${e.message || 'Unknown error'}`);
+          setIsBuffering(false);
         });
         return;
       }
 
-      tryNextStreamPlayback();
+      setVideoError(errMsg);
+      setIsBuffering(false);
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -245,7 +247,8 @@ export function usePlayer({
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             hls?.startLoad();
           } else {
-            tryNextStreamPlayback();
+            setVideoError(data.error?.message || 'HLS playback error');
+            setIsBuffering(false);
           }
         }
       });
@@ -296,7 +299,8 @@ export function usePlayer({
               setSourceAndPlay(playUrl);
             }
           } catch {
-            if (!cancelled) tryNextStreamPlayback();
+            setVideoError('Transcoding failed for this format');
+            setIsBuffering(false);
           }
         }
       }
@@ -307,7 +311,8 @@ export function usePlayer({
       const canvas = canvasRef.current;
       if (!canvas) {
         console.error('[Player] No canvas element for streaming player');
-        tryNextStreamPlayback();
+        setVideoError('Streaming player unavailable');
+        setIsBuffering(false);
         return;
       }
 
@@ -338,7 +343,8 @@ export function usePlayer({
           video.style.display = '';
           canvas.style.display = 'none';
           setIsStreamingPlayer(false);
-          tryNextStreamPlayback();
+          setVideoError(err?.message || 'Streaming player error');
+          setIsBuffering(false);
         }
       });
 
@@ -355,7 +361,8 @@ export function usePlayer({
           video.style.display = '';
           canvas.style.display = 'none';
           setIsStreamingPlayer(false);
-          tryNextStreamPlayback();
+          setVideoError(e?.message || 'Failed to load stream');
+          setIsBuffering(false);
         }
       }
     }
