@@ -9,6 +9,7 @@ import './index.css';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
+const appUrl = import.meta.env.VITE_APP_URL;
 
 const convex = new ConvexReactClient(convexUrl);
 
