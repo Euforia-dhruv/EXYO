@@ -215,10 +215,22 @@ http.route({
     if (!id) return json([], 400);
 
     try {
+      // For episode IDs like "tt0944947:1:1", try the full ID first, then fallback to series ID
       const res = await fetch(`${CINEMETA_URL}/meta/subtitles/${type}/${id}.json`);
-      if (!res.ok) return json([]);
-      const data = await res.json();
-      return json(data.subtitles || []);
+      if (res.ok) {
+        const data = await res.json();
+        return json(data.subtitles || []);
+      }
+      // Fallback: try with base series ID
+      if (id.includes(":")) {
+        const seriesId = id.split(":")[0];
+        const fallback = await fetch(`${CINEMETA_URL}/meta/subtitles/${type}/${seriesId}.json`);
+        if (fallback.ok) {
+          const data = await fallback.json();
+          return json(data.subtitles || []);
+        }
+      }
+      return json([]);
     } catch {
       return json([]);
     }
@@ -235,10 +247,34 @@ http.route({
     if (!id) return json({ error: "id required" }, 400);
 
     try {
-      const res = await fetch(`${CINEMETA_URL}/meta/${type}/${id}.json`);
+      // For episode IDs like "tt0944947:1:1", fetch the series meta and find the episode
+      const seriesId = id.includes(":") ? id.split(":")[0] : id;
+      const res = await fetch(`${CINEMETA_URL}/meta/${type}/${seriesId}.json`);
       if (!res.ok) return json({ error: "Not found" }, 404);
       const data = await res.json();
-      return json(data.meta || data);
+      const meta = data.meta || data;
+
+      // If it's an episode ID, extract the specific episode info
+      if (id.includes(":") && meta.videos) {
+        const parts = id.split(":");
+        const seasonNum = parseInt(parts[1]);
+        const epNum = parseInt(parts[2]);
+        const episode = meta.videos.find(
+          (v: Record<string, unknown>) => v.season === seasonNum && (v.number === epNum || v.episode === epNum)
+        );
+        if (episode) {
+          return json({
+            ...meta,
+            ...episode,
+            id: id,
+            type: "series",
+            name: `${meta.name} — S${String(seasonNum).padStart(2, "0")}E${String(epNum).padStart(2, "0")} ${episode.name || ""}`,
+            background: meta.background || meta.poster,
+          });
+        }
+      }
+
+      return json(meta);
     } catch {
       return json({ error: "Addon unreachable" }, 502);
     }

@@ -279,7 +279,17 @@ export default function Detail() {
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2.5">
                 <button
-                  onClick={() => navigate(`/watch/${id}?type=${type}`)}
+                  onClick={() => {
+                    if (type === 'series' && seasonsData.length > 0) {
+                      const firstEp = seasonsData[0]?.episodes[0];
+                      if (firstEp) {
+                        const epId = firstEp.id || `${id}:${firstEp.season || 1}:${firstEp.number}`;
+                        navigate(`/watch/${epId}?type=series&season=${firstEp.season || 1}&episode=${firstEp.number}`);
+                        return;
+                      }
+                    }
+                    navigate(`/watch/${id}?type=${type}`);
+                  }}
                   className="flex items-center gap-2 bg-white hover:bg-white/90 text-black px-7 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 shadow-2xl shadow-black/30"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -440,11 +450,12 @@ export default function Detail() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(ep.number * 0.03, 0.3) }}
-                onClick={() =>
+                onClick={() => {
+                  const epId = ep.id || `${id}:${ep.season || selectedSeason}:${ep.number}`;
                   navigate(
-                    `/watch/${id}?type=series&season=${ep.season || selectedSeason}&episode=${ep.number}`
-                  )
-                }
+                    `/watch/${epId}?type=series&season=${ep.season || selectedSeason}&episode=${ep.number}`
+                  );
+                }}
                 className="w-full text-left p-3 bg-white/[0.02] hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] rounded-xl transition-all duration-200 group"
               >
                 <div className="flex items-center gap-4">
@@ -547,7 +558,17 @@ export default function Detail() {
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate(`/watch/${id}?type=${type}`)}
+                  onClick={() => {
+                    if (type === 'series' && seasonsData.length > 0) {
+                      const firstEp = seasonsData[0]?.episodes[0];
+                      if (firstEp) {
+                        const epId = firstEp.id || `${id}:${firstEp.season || 1}:${firstEp.number}`;
+                        navigate(`/watch/${epId}?type=series&season=${firstEp.season || 1}&episode=${firstEp.number}`);
+                        return;
+                      }
+                    }
+                    navigate(`/watch/${id}?type=${type}`);
+                  }}
                   className="px-4 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] rounded-lg text-[12px] font-semibold text-gray-300 transition-colors"
                 >
                   Watch
