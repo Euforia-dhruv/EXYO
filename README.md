@@ -2,12 +2,12 @@
 
 A production-ready streaming platform that looks and feels like Netflix, powered by Stremio addons for unlimited content.
 
-![EXYO Logo](frontend/public/favicon.svg)
+![EXYO Logo](frontend/public/logo-Photoroom.png)
 
 ## Live Demo
 
-- **Frontend**: https://exyo.qd.je
-- **API**: https://api.exyo.qd.je/api/health
+- **Frontend**: https://exyo.pp.ua
+- **API**: Backend API (deployed separately)
 
 ## Features
 
