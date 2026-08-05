@@ -1,21 +1,12 @@
-import { memo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  PlayIcon,
-  PauseIcon,
-  BackwardIcon,
-  ForwardIcon,
-  SpeakerWaveIcon,
-  SpeakerXMarkIcon,
-  ArrowsPointingOutIcon,
-  ArrowsPointingInIcon,
-  Cog6ToothIcon,
-  ArrowLeftIcon,
-  Bars3BottomLeftIcon,
-} from '@heroicons/react/24/outline';
-import type { Stream } from '../../types';
-import { cn, formatTime } from '../../utils/helpers';
+  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize,
+  Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw,
+} from 'lucide-react';
+import { formatTime } from '../../utils/helpers';
+import type { PlayerStream } from '../../hooks/usePlayer';
 
-interface PlayerControlsProps {
+interface Props {
   visible: boolean;
   playing: boolean;
   currentTime: number;
@@ -25,258 +16,177 @@ interface PlayerControlsProps {
   muted: boolean;
   isFullscreen: boolean;
   playbackRate: number;
-  currentStream?: Stream | null;
+  currentStream: PlayerStream | null;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (vol: number) => void;
   onMuteToggle: () => void;
   onFullscreenToggle: () => void;
-  onSpeedChange: (speed: number) => void;
+  onSpeedChange: (rate: number) => void;
   onBack: () => void;
   onOpenSettings: () => void;
   onOpenStreams: () => void;
-  onSubtitleToggle?: () => void;
+  onSubtitleToggle: () => void;
 }
 
-function PlayerControls({
-  visible,
-  playing,
-  currentTime,
-  duration,
-  buffered,
-  volume,
-  muted,
-  isFullscreen,
-  playbackRate,
-  currentStream,
-  onPlayPause,
-  onSeek,
-  onVolumeChange,
-  onMuteToggle,
-  onFullscreenToggle,
-  onSpeedChange,
-  onBack,
-  onOpenSettings,
-  onOpenStreams,
+export default function PlayerControls({
+  visible, playing, currentTime, duration, buffered, volume, muted,
+  isFullscreen, currentStream, onPlayPause, onSeek, onVolumeChange,
+  onMuteToggle, onFullscreenToggle, onBack, onOpenSettings, onOpenStreams,
   onSubtitleToggle,
-}: PlayerControlsProps) {
+}: Props) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const bufferedProgress = duration > 0 ? (buffered / duration) * 100 : 0;
-
-  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const pct = x / rect.width;
-    onSeek(pct * duration);
-  }, [duration, onSeek]);
-
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onVolumeChange(parseFloat(e.target.value));
-  }, [onVolumeChange]);
-
-  const handleSpeedChange = useCallback(() => {
-    const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-    const idx = speeds.indexOf(playbackRate);
-    const next = speeds[(idx + 1) % speeds.length];
-    onSpeedChange(next);
-  }, [playbackRate, onSpeedChange]);
+  const buffPercent = duration > 0 ? (buffered / 100) * 100 : 0;
 
   return (
-    <div
-      className={cn(
-        'absolute inset-0 z-30 transition-all duration-300',
-        visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      )}
-    >
-      {/* Top gradient */}
-      <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
-
-      {/* Bottom gradient */}
-      <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-      {/* Top bar */}
-      <div className="absolute top-0 inset-x-0 p-4 sm:p-5 flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="p-2.5 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-sm text-white transition-all duration-200"
-          aria-label="Go back"
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="absolute inset-0 z-30 flex flex-col"
         >
-          <ArrowLeftIcon className="w-5 h-5" />
-        </button>
+          {/* Top gradient */}
+          <div className="h-24 bg-gradient-to-b from-black/70 to-transparent" />
 
-        <div className="flex items-center gap-2">
-          {currentStream && (
-            <span className="text-white/40 text-[12px] font-medium px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm">
-              {currentStream.name || currentStream.title || 'Stream'}
-            </span>
-          )}
-          {currentStream?.quality && currentStream.quality !== 'Unknown' && (
-            <span className="text-exyo-red text-[12px] font-bold px-2.5 py-1.5 rounded-lg bg-exyo-red/10 backdrop-blur-sm">
-              {currentStream.quality}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Center play/pause (large) */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <button
-          onClick={onPlayPause}
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-105"
-          aria-label={playing ? 'Pause' : 'Play'}
-        >
-          {playing ? (
-            <PauseIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-          ) : (
-            <PlayIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
-          )}
-        </button>
-      </div>
-
-      {/* Bottom controls */}
-      <div className="absolute bottom-0 inset-x-0 p-4 sm:p-5">
-        {/* Progress bar */}
-        <div
-          className="group/progress h-1.5 hover:h-2.5 bg-white/10 rounded-full cursor-pointer transition-all duration-200 mb-4"
-          onClick={handleProgressClick}
-          role="slider"
-          aria-label="Seek"
-          aria-valuenow={Math.round(currentTime)}
-          aria-valuemax={Math.round(duration)}
-        >
-          <div className="relative h-full">
-            {/* Buffered */}
-            <div
-              className="absolute inset-y-0 left-0 bg-white/15 rounded-full"
-              style={{ width: `${bufferedProgress}%` }}
-            />
-            {/* Progress */}
-            <div
-              className="absolute inset-y-0 left-0 bg-exyo-red rounded-full transition-[width] duration-75"
-              style={{ width: `${progress}%` }}
-            />
-            {/* Thumb */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200"
-              style={{ left: `calc(${progress}% - 7px)` }}
-            />
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-6 py-3">
+            <button
+              onClick={onBack}
+              className="w-10 h-10 rounded-xl glass glass-border flex items-center justify-center hover:bg-white/[0.1] transition-all"
+            >
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-white/60 text-sm font-medium">
+                {currentStream?.name || currentStream?.title || 'Playing'}
+              </span>
+            </div>
+            <div className="w-10" />
           </div>
-        </div>
 
-        {/* Controls row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Play/Pause */}
-            <button
-              onClick={onPlayPause}
-              className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white transition-all duration-200"
-              aria-label={playing ? 'Pause' : 'Play'}
-            >
-              {playing ? (
-                <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-              ) : (
-                <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-              )}
-            </button>
-
-            {/* Skip -10s */}
-            <button
-              onClick={() => onSeek(Math.max(0, currentTime - 10))}
-              className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200 hidden sm:flex items-center gap-1"
-              aria-label="Rewind 10 seconds"
-            >
-              <BackwardIcon className="w-4 h-4" />
-              <span className="text-[11px] font-medium">10</span>
-            </button>
-
-            {/* Skip +10s */}
-            <button
-              onClick={() => onSeek(Math.min(duration, currentTime + 10))}
-              className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200 hidden sm:flex items-center gap-1"
-              aria-label="Forward 10 seconds"
-            >
-              <ForwardIcon className="w-4 h-4" />
-              <span className="text-[11px] font-medium">10</span>
-            </button>
-
-            {/* Volume */}
-            <div className="flex items-center gap-1 group/vol">
+          {/* Center controls */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center gap-6">
               <button
-                onClick={onMuteToggle}
-                className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200"
-                aria-label={muted ? 'Unmute' : 'Mute'}
+                onClick={() => onSeek(Math.max(0, currentTime - 10))}
+                className="w-14 h-14 rounded-full glass glass-border flex items-center justify-center hover:bg-white/[0.1] transition-all"
               >
-                {muted || volume === 0 ? (
-                  <SpeakerXMarkIcon className="w-5 h-5" />
+                <RotateCcw className="w-6 h-6 text-white" />
+              </button>
+              <button
+                onClick={onPlayPause}
+                className="w-18 h-18 rounded-full bg-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
+                style={{ width: 72, height: 72 }}
+              >
+                {playing ? (
+                  <Pause className="w-8 h-8 text-black fill-black" />
                 ) : (
-                  <SpeakerWaveIcon className="w-5 h-5" />
+                  <Play className="w-8 h-8 text-black fill-black ml-1" />
                 )}
               </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={muted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-0 group-hover/vol:w-20 transition-all duration-200 accent-white h-1 cursor-pointer opacity-0 group-hover/vol:opacity-100"
-                aria-label="Volume"
-              />
-            </div>
-
-            {/* Time */}
-            <div className="text-white/50 text-[12px] sm:text-[13px] font-medium tabular-nums ml-2">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Subtitles */}
-            {onSubtitleToggle && (
               <button
-                onClick={onSubtitleToggle}
-                className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200"
-                aria-label="Subtitles"
+                onClick={() => onSeek(Math.min(duration, currentTime + 10))}
+                className="w-14 h-14 rounded-full glass glass-border flex items-center justify-center hover:bg-white/[0.1] transition-all"
               >
-                <Bars3BottomLeftIcon className="w-5 h-5" />
+                <SkipForward className="w-6 h-6 text-white" />
               </button>
-            )}
-
-            {/* Stream selector */}
-            <button
-              onClick={onOpenStreams}
-              className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200"
-              aria-label="Change stream"
-            >
-              <Cog6ToothIcon className="w-5 h-5" />
-            </button>
-
-            {/* Speed */}
-            <button
-              onClick={handleSpeedChange}
-              className="px-3 py-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200 text-[13px] font-semibold"
-              aria-label={`Playback speed: ${playbackRate}x`}
-            >
-              {playbackRate}x
-            </button>
-
-            {/* Fullscreen */}
-            <button
-              onClick={onFullscreenToggle}
-              className="p-2 sm:p-2.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all duration-200"
-              aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            >
-              {isFullscreen ? (
-                <ArrowsPointingInIcon className="w-5 h-5" />
-              ) : (
-                <ArrowsPointingOutIcon className="w-5 h-5" />
-              )}
-            </button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+
+          {/* Bottom gradient */}
+          <div className="h-32 bg-gradient-to-t from-black/70 to-transparent" />
+
+          {/* Bottom controls */}
+          <div className="absolute bottom-0 inset-x-0 px-6 pb-5">
+            {/* Progress bar */}
+            <div className="group/progress mb-3">
+              <div
+                className="relative h-1 group-hover/progress:h-1.5 bg-white/10 rounded-full cursor-pointer transition-all"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  onSeek((x / rect.width) * duration);
+                }}
+              >
+                <div
+                  className="absolute left-0 top-0 bottom-0 bg-white/20 rounded-full"
+                  style={{ width: `${buffPercent}%` }}
+                />
+                <div
+                  className="absolute left-0 top-0 bottom-0 bg-red rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-red shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity"
+                  style={{ left: `calc(${progress}% - 7px)` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button onClick={onPlayPause} className="text-white hover:text-white/80 transition-colors">
+                  {playing ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                </button>
+                <button
+                  onClick={() => onSeek(Math.min(duration, currentTime + 10))}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <SkipForward className="w-5 h-5" />
+                </button>
+                {/* Volume */}
+                <div className="flex items-center gap-2 group/vol">
+                  <button onClick={onMuteToggle} className="text-white/60 hover:text-white transition-colors">
+                    {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={muted ? 0 : volume}
+                    onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+                    className="w-20 h-1 accent-red opacity-0 group-hover/vol:opacity-100 transition-opacity cursor-pointer"
+                  />
+                </div>
+                <span className="text-white/40 text-xs font-mono">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onSubtitleToggle}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                >
+                  <Subtitles className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onOpenStreams}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                >
+                  <Layers className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onOpenSettings}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onFullscreenToggle}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                >
+                  {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
-
-export default memo(PlayerControls);

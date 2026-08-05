@@ -1,138 +1,93 @@
-import { useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { contentApi, type ContentSearchResult } from '../api/content.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
-import { RowSkeleton } from '../components/Skeleton';
-import { contentApi, type ContentSearchResult } from '../api/content.api';
-import type { CatalogItem } from '../types';
+import { HeroSkeleton, RowSkeleton } from '../components/Skeleton';
 
-const ANIME_CATALOG_ID = 'animestream';
+function extractItems(data: ContentSearchResult | undefined): any[] {
+  if (!data?.results) return [];
+  return data.results;
+}
 
 export default function Home() {
-  const [searchParams] = useSearchParams();
-  const catalogId = searchParams.get('catalogId') || undefined;
   const { isSignedIn } = useUser();
-
-  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
-
-  const continueWatchingItems = useMemo(() => {
-    if (!watchHistory || !Array.isArray(watchHistory)) return [];
-    return watchHistory
-      .filter((item: { progress?: number; duration?: number }) => item.progress && item.progress > 0 && item.duration && item.duration > 0)
-      .sort((a: { lastWatched?: number }, b: { lastWatched?: number }) => (b.lastWatched || 0) - (a.lastWatched || 0))
-      .slice(0, 20)
-      .map((item: { title?: string; name?: string; posterUrl?: string; id?: string; imdbId?: string; backdropUrl?: string; year?: string; rating?: number; progress?: number; duration?: number; type?: string }) => ({
-        id: item.contentId || item.id || item.imdbId || '',
-        imdbId: item.imdbId,
-        name: item.name || item.title,
-        title: item.title,
-        posterUrl: item.posterUrl,
-        backdropUrl: item.backdropUrl,
-        year: item.year,
-        rating: item.rating,
-        type: (item.type || item.contentType) as 'movie' | 'tv' | undefined,
-        progress: item.progress,
-        duration: item.duration,
-      })) as CatalogItem[];
-  }, [watchHistory]);
-
-  const heroItems = useMemo(() => {
-    return continueWatchingItems.filter((item) => item.backdropUrl).slice(0, 5);
-  }, [continueWatchingItems]);
-
-  const isAnime = catalogId === ANIME_CATALOG_ID;
+  const watchHistory = useConvexQuery(api.watchHistory.getWatchHistory);
 
   const { data: trending, isLoading: trendingLoading } = useQuery({
-    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'trending'],
-    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'trending'),
+    queryKey: ['cinemeta', 'movie', 'trending'],
+    queryFn: () => contentApi.getCatalog('movie', 'trending'),
   });
 
-  const { data: popular, isLoading: popularLoading } = useQuery({
-    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'popular'],
-    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'popular'),
+  const { data: popular } = useQuery({
+    queryKey: ['cinemeta', 'movie', 'popular'],
+    queryFn: () => contentApi.getCatalog('movie', 'popular'),
   });
 
-  const { data: latest, isLoading: latestLoading } = useQuery({
-    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'newest'],
-    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'newest'),
+  const { data: topRated } = useQuery({
+    queryKey: ['cinemeta', 'movie', 'top_rated'],
+    queryFn: () => contentApi.getCatalog('movie', 'top_rated'),
   });
 
-  const { data: topRated, isLoading: topRatedLoading } = useQuery({
-    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'top_rated'],
-    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'top_rated'),
+  const { data: tvTrending } = useQuery({
+    queryKey: ['cinemeta', 'series', 'trending'],
+    queryFn: () => contentApi.getCatalog('series', 'trending'),
   });
 
-  const extractItems = useCallback((data: ContentSearchResult | undefined): CatalogItem[] => {
-    if (!data || !data.results) return [];
-    return data.results.map((item) => ({
-      id: item.id || item.imdbId || '',
-      imdbId: item.imdbId,
-      name: item.name,
-      title: item.title,
-      posterUrl: item.posterUrl,
-      backdropUrl: item.backdropUrl,
-      type: item.type as 'movie' | 'tv' | undefined,
-      year: item.year,
-      rating: item.rating,
-    }));
-  }, []);
+  const { data: tvPopular } = useQuery({
+    queryKey: ['cinemeta', 'series', 'popular'],
+    queryFn: () => contentApi.getCatalog('series', 'popular'),
+  });
 
-  const trendingItems = useMemo(() => extractItems(trending), [trending, extractItems]);
-  const popularItems = useMemo(() => extractItems(popular), [popular, extractItems]);
-  const latestItems = useMemo(() => extractItems(latest), [latest, extractItems]);
-  const topRatedItems = useMemo(() => extractItems(topRated), [topRated, extractItems]);
+  const { data: anime } = useQuery({
+    queryKey: ['cinemeta', 'anime', 'trending'],
+    queryFn: () => contentApi.getCatalog('anime', 'trending'),
+  });
+
+  const historyMap = useMemo(() => {
+    if (!watchHistory || !Array.isArray(watchHistory)) return {};
+    const map: Record<string, any> = {};
+    for (const h of watchHistory) map[h.contentId] = h;
+    return map;
+  }, [watchHistory]);
 
   return (
-    <main className="min-h-screen">
-      {heroItems.length > 0 && <HeroBanner items={heroItems} />}
+    <div className="min-h-screen bg-bg">
+      {/* Hero */}
+      {trendingLoading ? (
+        <HeroSkeleton />
+      ) : (
+        <HeroBanner items={extractItems(trending)} />
+      )}
 
-      <div className="relative z-10 -mt-16 sm:-mt-24 lg:-mt-32">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
-          {continueWatchingItems.length > 0 && (
-            <ContentRow
-              title="Continue Watching"
-              items={continueWatchingItems}
-              size="md"
-            />
-          )}
+      {/* Content rows */}
+      <div className="relative z-10 -mt-20 space-y-10 pb-20">
+        {isSignedIn && Object.keys(historyMap).length > 0 && (
+          <ContentRow
+            title="Continue Watching"
+            items={Object.values(historyMap).map((h: any) => ({
+              id: h.contentId,
+              name: h.title,
+              backdropUrl: h.backdropUrl,
+              type: h.contentType,
+            }))}
+            size="md"
+            watchHistory={historyMap}
+          />
+        )}
 
-          {trendingLoading ? (
-            <RowSkeleton />
-          ) : (
-            trendingItems.length > 0 && (
-              <ContentRow title={isAnime ? "Trending Anime" : "Trending Now"} items={trendingItems} size="md" />
-            )
-          )}
-
-          {popularLoading ? (
-            <RowSkeleton />
-          ) : (
-            popularItems.length > 0 && (
-              <ContentRow title={isAnime ? "Popular Anime" : "Popular"} items={popularItems} size="md" />
-            )
-          )}
-
-          {latestLoading ? (
-            <RowSkeleton />
-          ) : (
-            latestItems.length > 0 && (
-              <ContentRow title={isAnime ? "Latest Anime" : "Latest"} items={latestItems} size="md" />
-            )
-          )}
-
-          {topRatedLoading ? (
-            <RowSkeleton />
-          ) : (
-            topRatedItems.length > 0 && (
-              <ContentRow title={isAnime ? "Top Rated Anime" : "Top Rated"} items={topRatedItems} size="md" />
-            )
-          )}
-        </div>
+        {trendingLoading ? <RowSkeleton /> : (
+          <ContentRow title="Trending Movies" items={extractItems(trending)} size="md" viewAllLink="/movies" />
+        )}
+        {popular && <ContentRow title="Popular Movies" items={extractItems(popular)} size="md" viewAllLink="/movies" />}
+        {topRated && <ContentRow title="Top Rated" items={extractItems(topRated)} size="lg" viewAllLink="/movies" />}
+        {tvTrending && <ContentRow title="Trending Series" items={extractItems(tvTrending)} size="md" viewAllLink="/tv" />}
+        {tvPopular && <ContentRow title="Popular Series" items={extractItems(tvPopular)} size="md" viewAllLink="/tv" />}
+        {anime && <ContentRow title="Anime" items={extractItems(anime)} size="md" viewAllLink="/home?catalogId=anime" />}
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,132 +1,131 @@
-import { memo, useCallback } from 'react';
-import { XMarkIcon, CheckIcon, PlayIcon, ServerIcon } from '@heroicons/react/24/outline';
-import type { Stream } from '../../types';
+import { motion } from 'framer-motion';
+import { X, Play, Check } from 'lucide-react';
+import type { PlayerStream } from '../../hooks/usePlayer';
 import { cn } from '../../utils/helpers';
 
-interface StreamSelectorProps {
-  streams: Stream[];
-  currentStream?: Stream | null;
-  onSelect: (stream: Stream) => void;
+interface Props {
+  streams: PlayerStream[];
+  currentStream: PlayerStream | null;
+  onSelect: (stream: PlayerStream) => void;
   onClose: () => void;
   loading?: boolean;
 }
 
-function StreamSelector({ streams, currentStream, onSelect, onClose, loading }: StreamSelectorProps) {
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+const QUALITY_COLORS: Record<string, string> = {
+  '2160p': 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
+  '4k': 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
+  '1080p': 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+  '720p': 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  '480p': 'bg-white/[0.06] text-white/50 border-white/[0.06]',
+};
 
-  const getCodecBadge = (stream: Stream) => {
-    const codec = stream.codec || stream.videoCodec;
-    if (codec && codec !== 'Unknown') {
-      return codec.toUpperCase();
-    }
-    return null;
-  };
+function getCodecBadge(codec?: string): { label: string; color: string } {
+  const c = (codec || '').toLowerCase();
+  if (c.includes('h264') || c.includes('avc')) return { label: 'H.264', color: 'bg-emerald-500/15 text-emerald-400' };
+  if (c.includes('h265') || c.includes('hevc')) return { label: 'HEVC', color: 'bg-purple-500/15 text-purple-400' };
+  if (c.includes('vp9')) return { label: 'VP9', color: 'bg-blue-500/15 text-blue-400' };
+  if (c.includes('av1')) return { label: 'AV1', color: 'bg-orange-500/15 text-orange-400' };
+  return { label: '', color: '' };
+}
 
+export default function StreamSelector({ streams, currentStream, onSelect, onClose, loading }: Props) {
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={handleBackdropClick}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-40 flex items-center justify-end"
     >
-      <div className="w-full sm:w-[min(480px,90vw)] max-h-[80vh] bg-[#141414] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up border border-white/[0.06]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-exyo-red/10 flex items-center justify-center">
-              <ServerIcon className="w-5 h-5 text-exyo-red" />
-            </div>
-            <div>
-              <h3 className="text-white text-[15px] font-semibold">Select Stream</h3>
-              <p className="text-white/40 text-[12px]">{streams.length} streams available</p>
-            </div>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="relative w-full max-w-md h-full glass-heavy border-l border-white/[0.06] overflow-y-auto"
+      >
+        <div className="sticky top-0 glass-heavy border-b border-white/[0.06] px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h3 className="text-white font-bold text-lg">Streams</h3>
+            <p className="text-white/40 text-sm">{streams.length} available</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-white/[0.06] text-white/50 hover:text-white transition-all duration-200"
-            aria-label="Close"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
           >
-            <XMarkIcon className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Streams list */}
-        <div className="overflow-y-auto max-h-[calc(80vh-70px)] overscroll-contain">
+        <div className="p-4 space-y-2">
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="w-10 h-10 border-2 border-exyo-red/20 border-t-exyo-red rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-white/50 text-[13px]">Fetching streams...</p>
+            <div className="flex flex-col items-center py-12">
+              <div className="w-10 h-10 border-2 border-red/20 border-t-red rounded-full animate-spin" />
+              <p className="text-white/40 text-sm mt-4">Loading streams...</p>
             </div>
           ) : streams.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-white/50 text-[13px]">No streams available</p>
+            <div className="py-12 text-center">
+              <p className="text-white/40 text-sm">No streams available</p>
             </div>
           ) : (
-            <div className="p-3 space-y-1.5">
-              {streams.map((stream, i) => {
-                const isSelected = currentStream?.url === stream.url;
-                const badge = getCodecBadge(stream);
+            streams.map((stream, i) => {
+              const isActive = currentStream?.url === stream.url;
+              const qColor = QUALITY_COLORS[stream.quality?.toLowerCase() || ''] || QUALITY_COLORS['480p'];
+              const codec = getCodecBadge(stream.codec || stream.videoCodec);
 
-                return (
-                  <button
-                    key={`${stream.url}-${i}`}
-                    onClick={() => onSelect(stream)}
-                    className={cn(
-                      'w-full text-left p-3.5 rounded-xl transition-all duration-200 flex items-center gap-3 group',
-                      isSelected
-                        ? 'bg-exyo-red/10 border border-exyo-red/20'
-                        : 'hover:bg-white/[0.04] border border-transparent'
-                    )}
-                  >
-                    {/* Play indicator */}
+              return (
+                <motion.button
+                  key={`${stream.url}-${i}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  onClick={() => onSelect(stream)}
+                  className={cn(
+                    'w-full text-left p-4 rounded-2xl transition-all duration-200 border',
+                    isActive
+                      ? 'bg-red/10 border-red/20'
+                      : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
+                  )}
+                >
+                  <div className="flex items-center gap-4">
                     <div className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all',
-                      isSelected
-                        ? 'bg-exyo-red text-white'
-                        : 'bg-white/[0.06] text-white/40 group-hover:bg-white/[0.1] group-hover:text-white/70'
+                      'w-11 h-11 rounded-xl flex items-center justify-center shrink-0',
+                      isActive ? 'bg-red/20' : 'bg-white/[0.04]'
                     )}>
-                      {isSelected ? (
-                        <CheckIcon className="w-4 h-4" />
+                      {isActive ? (
+                        <Check className="w-5 h-5 text-red" />
                       ) : (
-                        <PlayIcon className="w-4 h-4" />
+                        <Play className="w-5 h-5 text-white/40" />
                       )}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={cn(
-                          'text-[13px] font-medium truncate',
-                          isSelected ? 'text-white' : 'text-white/80'
-                        )}>
-                          {stream.name || stream.title || `Stream ${i + 1}`}
-                        </span>
+                      <p className="text-white text-sm font-medium truncate">
+                        {stream.name || stream.title || `Stream ${i + 1}`}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {stream.quality && stream.quality !== 'Unknown' && (
-                          <span className={cn(
-                            'text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0',
-                            isSelected
-                              ? 'bg-exyo-red/20 text-exyo-red'
-                              : 'bg-white/[0.06] text-white/50'
-                          )}>
+                          <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-lg border', qColor)}>
                             {stream.quality}
                           </span>
                         )}
+                        {codec.label && (
+                          <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-lg', codec.color)}>
+                            {codec.label}
+                          </span>
+                        )}
+                        {stream.addonName && (
+                          <span className="text-[10px] text-white/30">{stream.addonName}</span>
+                        )}
                       </div>
-                      {badge && (
-                        <span className="text-[11px] text-white/30 font-medium">
-                          {badge}
-                        </span>
-                      )}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                </motion.button>
+              );
+            })
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
-
-export default memo(StreamSelector);

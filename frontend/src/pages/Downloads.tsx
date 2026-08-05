@@ -1,75 +1,52 @@
 import { useMemo } from 'react';
-import { ArrowDownTrayIcon, TrashIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { Download, Trash2, Play } from 'lucide-react';
 import { useDownloadStore } from '../store/downloadStore';
 
 export default function Downloads() {
   const downloads = useDownloadStore((s) => s.downloads);
   const removeDownload = useDownloadStore((s) => s.removeDownload);
 
-  const activeDownloads = useMemo(
-    () => downloads.filter((d) => d.status === 'downloading' || d.status === 'queued' || d.status === 'paused' || d.status === 'retrying'),
+  const all = useMemo(() =>
+    downloads.filter((d) => d.status === 'completed' || d.status === 'downloading' || d.status === 'queued'),
     [downloads]
   );
-  const completedDownloads = useMemo(
-    () => downloads.filter((d) => d.status === 'completed'),
-    [downloads]
-  );
-
-  const allDownloads = [...activeDownloads, ...completedDownloads];
 
   return (
-    <div className="animate-fade-in-up">
-      <h2 className="text-white text-[20px] font-semibold tracking-tight mb-6">Downloads</h2>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
+          <Download className="w-5 h-5 text-white/40" />
+        </div>
+        <h1 className="text-white text-2xl font-extrabold tracking-tight">Downloads</h1>
+      </div>
 
-      {allDownloads.length === 0 ? (
-        <div className="text-center py-16">
-          <ArrowDownTrayIcon className="w-12 h-12 text-white/10 mx-auto mb-4" />
-          <p className="text-white/50 text-[14px] font-medium mb-1">No downloads</p>
-          <p className="text-white/30 text-[12px]">Downloaded content will appear here</p>
+      {all.length === 0 ? (
+        <div className="glass glass-border rounded-3xl p-12 text-center">
+          <Download className="w-12 h-12 text-white/10 mx-auto mb-4" />
+          <p className="text-white/50 font-medium mb-1">No downloads</p>
+          <p className="text-white/25 text-sm">Downloaded content appears here</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {allDownloads.map((dl) => (
-            <div
-              key={dl.id}
-              className="bg-exyo-card rounded-xl border border-white/[0.04] p-4 flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
-                {dl.status === 'completed' ? (
-                  <PlayIcon className="w-5 h-5 text-exyo-red" />
-                ) : (
-                  <div className="w-5 h-5 border-2 border-exyo-red/30 border-t-exyo-red rounded-full animate-spin" />
-                )}
+          {all.map((dl) => (
+            <div key={dl.id} className="glass glass-border rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
+                {dl.status === 'completed' ? <Play className="w-5 h-5 text-red" /> : <div className="w-5 h-5 border-2 border-red/30 border-t-red rounded-full animate-spin" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-[13px] font-medium truncate">{dl.title}</p>
-                <p className="text-white/30 text-[11px] mt-0.5">
-                  {dl.status === 'completed' ? (
-                    'Downloaded'
-                  ) : (
-                    `${Math.round(dl.progress || 0)}%`
-                  )}
+                <p className="text-sm font-medium text-white truncate">{dl.title}</p>
+                <p className="text-xs text-white/30 mt-0.5">
+                  {dl.status === 'completed' ? 'Downloaded' : `${Math.round(dl.progress || 0)}%`}
                 </p>
-                {dl.status === 'downloading' && (
-                  <div className="mt-2 h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-exyo-red rounded-full transition-all duration-300"
-                      style={{ width: `${dl.progress || 0}%` }}
-                    />
-                  </div>
-                )}
               </div>
-              <button
-                onClick={() => removeDownload(dl.id)}
-                className="p-2 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-red-400 transition-all"
-                aria-label="Remove download"
-              >
-                <TrashIcon className="w-4 h-4" />
+              <button onClick={() => removeDownload(dl.id)} className="p-2 rounded-xl hover:bg-white/[0.06] text-white/20 hover:text-red transition-all">
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

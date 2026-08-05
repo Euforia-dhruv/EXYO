@@ -1,65 +1,47 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
-import { useQuery as useConvexQuery } from 'convex/react';
+import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import Thumbnail from '../components/Thumbnail';
-import { ListBulletIcon } from '@heroicons/react/24/outline';
-import type { CatalogItem } from '../types';
+import { motion } from 'framer-motion';
+import { ListOrdered } from 'lucide-react';
+import Card from '../components/Card';
 
 export default function MyList() {
-  const { isSignedIn } = useUser();
   const watchlist = useConvexQuery(api.watchlist.getWatchlist);
+  const removeMutation = useConvexMutation(api.watchlist.removeFromWatchlist);
 
-  const items: CatalogItem[] = useMemo(() => {
+  const items = useMemo(() => {
     if (!watchlist || !Array.isArray(watchlist)) return [];
-    return watchlist.map((item: { contentId?: string; title?: string; name?: string; posterUrl?: string; backdropUrl?: string; year?: string; rating?: number; contentType?: string }) => ({
-      id: item.contentId || '',
-      name: item.name || item.title,
-      title: item.title,
+    return watchlist.map((item: any) => ({
+      id: item.contentId,
+      name: item.title,
       posterUrl: item.posterUrl,
       backdropUrl: item.backdropUrl,
-      year: item.year,
-      rating: item.rating,
-      type: item.contentType as 'movie' | 'tv' | undefined,
+      type: item.contentType,
     }));
   }, [watchlist]);
 
   return (
-    <main className="min-h-screen pt-8 pb-20">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="flex items-center gap-3 mb-8">
-          <ListBulletIcon className="w-7 h-7 text-exyo-red" />
-          <h1 className="text-white text-[28px] sm:text-[32px] font-bold tracking-tight">My List</h1>
-          {items.length > 0 && (
-            <span className="text-white/30 text-[14px]">({items.length})</span>
-          )}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
+          <ListOrdered className="w-5 h-5 text-white/40" />
         </div>
-
-        {!isSignedIn ? (
-          <div className="text-center py-20">
-            <p className="text-white/50 text-[14px] mb-4">Sign in to access your watchlist</p>
-            <Link
-              to="/login"
-              className="inline-flex items-center px-6 py-2.5 rounded-xl bg-exyo-red hover:bg-exyo-red-hover text-white text-[13px] font-semibold transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-20">
-            <ListBulletIcon className="w-12 h-12 text-white/10 mx-auto mb-4" />
-            <p className="text-white/50 text-[14px] font-medium mb-1">Your list is empty</p>
-            <p className="text-white/30 text-[12px]">Add titles to your list to keep track of what you want to watch</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {items.map((item, i) => (
-              <Thumbnail key={item.id || i} item={item} size="md" />
-            ))}
-          </div>
-        )}
+        <h1 className="text-white text-2xl font-extrabold tracking-tight">My List</h1>
       </div>
-    </main>
+
+      {items.length === 0 ? (
+        <div className="glass glass-border rounded-3xl p-12 text-center">
+          <ListOrdered className="w-12 h-12 text-white/10 mx-auto mb-4" />
+          <p className="text-white/50 font-medium mb-1">Your list is empty</p>
+          <p className="text-white/25 text-sm">Add movies and series to your list</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {items.map((item, i) => (
+            <Card key={item.id || i} item={item} index={i} size="md" />
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }

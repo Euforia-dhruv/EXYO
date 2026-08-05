@@ -1,142 +1,58 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MagnifyingGlassIcon, XMarkIcon, FilmIcon, TvIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { Search as SearchIcon } from 'lucide-react';
 import { contentApi } from '../api/content.api';
-import Thumbnail from '../components/Thumbnail';
-import { SearchSkeleton } from '../components/Skeleton';
-import { cn } from '../utils/helpers';
-import type { CatalogItem } from '../types';
-
-type SearchType = 'all' | 'movie' | 'tv';
+import Card from '../components/Card';
+import { RowSkeleton } from '../components/Skeleton';
 
 export default function Search() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-  const initialType = (searchParams.get('type') as SearchType) || 'all';
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q') || '';
 
-  const [query, setQuery] = useState(initialQuery);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
-  const [searchType, setSearchType] = useState<SearchType>(initialType);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-focus on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query);
-      if (query.trim()) {
-        setSearchParams({ q: query.trim(), type: searchType });
-      } else {
-        setSearchParams({ type: searchType });
-      }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [query, searchType, setSearchParams]);
-
-  // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['search', debouncedQuery, searchType],
-    queryFn: () => {
-      if (!debouncedQuery.trim()) return { results: [] };
-      const types: ('movie' | 'tv')[] = searchType === 'all' ? ['movie', 'tv'] : [searchType as 'movie' | 'tv'];
-      return contentApi.searchByName(debouncedQuery, { type: types.length === 1 ? types[0] : undefined, limit: 40 });
-    },
-    enabled: true,
+    queryKey: ['search', query],
+    queryFn: () => contentApi.search(query),
+    enabled: query.length >= 2,
   });
 
-  const results: CatalogItem[] = (data && 'results' in data && Array.isArray(data.results))
-    ? data.results.map((item: { id?: string; imdbId?: string; name?: string; title?: string; posterUrl?: string; type?: string; year?: string; rating?: number }) => ({
-        id: item.id || item.imdbId || '',
-        imdbId: item.imdbId,
-        name: item.name,
-        title: item.title,
-        posterUrl: item.posterUrl,
-        type: item.type as 'movie' | 'tv' | undefined,
-        year: item.year,
-        rating: item.rating,
-      }))
-    : [];
-
-  const handleClear = useCallback(() => {
-    setQuery('');
-    setSearchParams({});
-    inputRef.current?.focus();
-  }, [setSearchParams]);
-
-  const searchTypes: { value: SearchType; label: string; icon: typeof FilmIcon }[] = [
-    { value: 'all', label: 'All', icon: MagnifyingGlassIcon },
-    { value: 'movie', label: 'Movies', icon: FilmIcon },
-    { value: 'tv', label: 'TV Shows', icon: TvIcon },
-  ];
+  const results = useMemo(() => data?.results || [], [data]);
 
   return (
-    <main className="min-h-screen pt-6 pb-20">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        {/* Search header */}
-        <div className="mb-8">
-          <div className="relative max-w-2xl mx-auto mb-6">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search movies, TV shows, anime..."
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl pl-12 pr-12 py-4 text-white text-[15px] placeholder-white/30 focus:outline-none focus:border-exyo-red/40 focus:ring-1 focus:ring-exyo-red/20 transition-all duration-200"
-              aria-label="Search"
-            />
-            {query && (
-              <button
-                onClick={handleClear}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-all"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            )}
-          </div>
+    <main className="min-h-screen pt-24 pb-20">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-white text-3xl font-extrabold tracking-tight">
+            {query ? `Results for "${query}"` : 'Search'}
+          </h1>
+          {results.length > 0 && (
+            <p className="text-white/40 text-sm mt-2">{results.length} results found</p>
+          )}
+        </motion.div>
 
-          {/* Type filter */}
-          <div className="flex items-center justify-center gap-2">
-            {searchTypes.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                onClick={() => setSearchType(value)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 border',
-                  searchType === value
-                    ? 'bg-white/[0.08] border-white/[0.12] text-white'
-                    : 'bg-transparent border-white/[0.06] text-white/45 hover:text-white/70 hover:bg-white/[0.03]'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Results */}
         {isLoading ? (
-          <SearchSkeleton />
-        ) : !debouncedQuery.trim() ? (
-          <div className="text-center py-20">
-            <MagnifyingGlassIcon className="w-12 h-12 text-white/10 mx-auto mb-4" />
-            <p className="text-white/40 text-[14px]">Start typing to search...</p>
-          </div>
+          <RowSkeleton />
         ) : results.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-white/50 text-[15px] font-medium mb-1">No results found</p>
-            <p className="text-white/30 text-[13px]">Try a different search term</p>
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="w-20 h-20 rounded-3xl bg-elevated flex items-center justify-center mb-6">
+              <SearchIcon className="w-10 h-10 text-white/10" />
+            </div>
+            <p className="text-white/40 text-lg font-medium mb-2">
+              {query ? 'No results found' : 'Start typing to search'}
+            </p>
+            <p className="text-white/20 text-sm">
+              {query ? 'Try a different search term' : 'Movies, series, anime and more'}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {results.map((item, i) => (
-              <Thumbnail key={item.id || i} item={item} size="md" />
+              <Card key={item.id || item.imdbId || i} item={item} index={i} size="md" />
             ))}
           </div>
         )}

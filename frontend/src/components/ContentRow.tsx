@@ -1,8 +1,9 @@
-import { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
+import { useRef, useState, useCallback, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { CatalogItem } from '../types';
-import Thumbnail from './Thumbnail';
+import Card from './Card';
 import { cn } from '../utils/helpers';
 
 interface Props {
@@ -10,7 +11,6 @@ interface Props {
   items: CatalogItem[];
   size?: 'sm' | 'md' | 'lg';
   viewAllLink?: string;
-  onItemView?: (item: CatalogItem) => void;
   isWatchlisted?: (id: string) => boolean;
   onToggleWatchlist?: (id: string) => void;
   watchHistory?: Record<string, { progress?: number; position?: number; duration?: number }>;
@@ -22,7 +22,6 @@ function ContentRow({
   items,
   size = 'md',
   viewAllLink,
-  onItemView,
   isWatchlisted,
   onToggleWatchlist,
   watchHistory,
@@ -31,7 +30,6 @@ function ContentRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -52,57 +50,46 @@ function ContentRow({
     };
   }, [checkScroll, items]);
 
-  const scroll = useCallback((direction: 'left' | 'right') => {
+  const scroll = useCallback((dir: 'left' | 'right') => {
     const el = scrollRef.current;
     if (!el) return;
-    const scrollAmount = el.clientWidth * 0.85;
-    el.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
+    el.scrollBy({ left: dir === 'left' ? -el.clientWidth * 0.85 : el.clientWidth * 0.85, behavior: 'smooth' });
   }, []);
 
-  const visibleItems = useMemo(() => items.filter(Boolean), [items]);
-
+  const visibleItems = items.filter(Boolean);
   if (visibleItems.length === 0) return null;
 
   return (
-    <div
+    <motion.div
       className={cn('relative group/row', className)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.5 }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <h2 className="text-white text-[18px] sm:text-[20px] font-semibold tracking-tight">
-          {title}
-        </h2>
+      <div className="flex items-center justify-between mb-4 px-1 max-w-[1600px] mx-auto">
+        <h2 className="text-white text-lg sm:text-xl font-bold tracking-tight">{title}</h2>
         {viewAllLink && (
           <Link
             to={viewAllLink}
-            className="text-white/40 hover:text-white text-[13px] font-medium transition-colors duration-200"
+            className="text-white/40 hover:text-white text-sm font-medium transition-colors flex items-center gap-1"
           >
-            View All →
+            View All <ChevronRight className="w-4 h-4" />
           </Link>
         )}
       </div>
 
       {/* Scroll container */}
-      <div className="relative">
+      <div className="relative max-w-[1600px] mx-auto">
         {/* Left arrow */}
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className={cn(
-              'absolute left-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center',
-              'bg-gradient-to-r from-exyo-bg/95 to-transparent',
-              'opacity-0 group-hover/row:opacity-100 transition-opacity duration-200',
-              'cursor-pointer'
-            )}
-            aria-label="Scroll left"
+            className="absolute left-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center bg-gradient-to-r from-bg/95 to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity"
           >
-            <div className="w-10 h-10 rounded-full bg-exyo-elevated/80 backdrop-blur-sm flex items-center justify-center border border-white/[0.06] hover:bg-exyo-hover hover:border-white/[0.1] transition-all duration-200">
-              <ChevronLeftIcon className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full glass glass-border flex items-center justify-center hover:bg-white/[0.08] transition-all">
+              <ChevronLeft className="w-5 h-5 text-white" />
             </div>
           </button>
         )}
@@ -111,16 +98,10 @@ function ContentRow({
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className={cn(
-              'absolute right-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center',
-              'bg-gradient-to-l from-exyo-bg/95 to-transparent',
-              'opacity-0 group-hover/row:opacity-100 transition-opacity duration-200',
-              'cursor-pointer'
-            )}
-            aria-label="Scroll right"
+            className="absolute right-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center bg-gradient-to-l from-bg/95 to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity"
           >
-            <div className="w-10 h-10 rounded-full bg-exyo-elevated/80 backdrop-blur-sm flex items-center justify-center border border-white/[0.06] hover:bg-exyo-hover hover:border-white/[0.1] transition-all duration-200">
-              <ChevronRightIcon className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full glass glass-border flex items-center justify-center hover:bg-white/[0.08] transition-all">
+              <ChevronRight className="w-5 h-5 text-white" />
             </div>
           </button>
         )}
@@ -128,36 +109,27 @@ function ContentRow({
         {/* Items */}
         <div
           ref={scrollRef}
-          className="flex gap-2 overflow-x-auto overflow-y-visible scroll-smooth hide-scrollbar py-1 -mx-1 px-1"
+          className="flex gap-2.5 overflow-x-auto overflow-y-visible scroll-smooth hide-scrollbar py-2 px-4"
         >
           {visibleItems.map((item, i) => {
-            const key = item.id || item.imdbId || `row-${title}-${i}`;
             const id = item.id || item.imdbId || '';
             const progress = watchHistory?.[id]?.progress;
-
             return (
-              <div
-                key={key}
-                className={cn(
-                  'flex-none',
-                  size === 'sm' ? 'w-[130px] sm:w-[150px]' : 'w-[180px] sm:w-[220px] md:w-[240px]'
-                )}
-              >
-                <Thumbnail
-                  item={item}
-                  index={i}
-                  size={size}
-                  showProgress={!!progress && progress > 0}
-                  progress={progress || 0}
-                  isWatchlisted={isWatchlisted?.(id)}
-                  onToggleWatchlist={onToggleWatchlist}
-                />
-              </div>
+              <Card
+                key={id || `row-${title}-${i}`}
+                item={item}
+                index={i}
+                size={size}
+                showProgress={!!progress && progress > 0}
+                progress={progress || 0}
+                isWatchlisted={isWatchlisted?.(id)}
+                onToggleWatchlist={onToggleWatchlist}
+              />
             );
           })}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

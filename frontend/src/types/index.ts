@@ -1,82 +1,65 @@
-export interface WatchHistory {
-  id: string;
-  contentId: string;
-  title: string;
-  posterUrl?: string;
-  backdropUrl?: string;
-  contentType: 'movie' | 'series';
-  season?: number;
-  episode?: number;
-  progress: number;
-  position?: number;
-  duration?: number;
-  watchedAt: string;
-  lastWatched?: number;
-  addonSource?: string;
-}
-
-export interface WatchlistItem {
-  id: string;
-  contentId: string;
-  title: string;
-  posterUrl?: string;
-  backdropUrl?: string;
-  contentType: 'movie' | 'series';
-  addedAt: string;
-}
-
 export interface CatalogItem {
   id: string;
   imdbId?: string;
-  type?: string;
   name?: string;
   title?: string;
   posterUrl?: string;
   backdropUrl?: string;
   description?: string;
+  type?: 'movie' | 'tv' | 'series' | 'anime';
   year?: string;
+  rating?: number;
   runtime?: string;
   genres?: string[];
-  rating?: number;
-  cast?: string[];
-  progress?: number;
-  duration?: number;
 }
 
 export interface Stream {
   url: string;
-  proxiedUrl?: string;
+  name?: string;
   title?: string;
-  infoHash?: string;
   quality?: string;
   videoCodec?: string;
   audioCodec?: string;
   codec?: string;
   addon?: string;
-  behaviorHints?: Record<string, unknown>;
   addonName?: string;
   addonUrl?: string;
+  description?: string;
+  behaviorHints?: Record<string, unknown>;
+}
+
+export interface Episode {
+  id?: string;
+  videoId?: string;
   name?: string;
+  title?: string;
+  episodeNumber?: number;
+  seasonNumber?: number;
   description?: string;
+  runtime?: number;
+  rating?: number;
+  stillUrl?: string;
+  posterUrl?: string;
 }
 
-export interface AddonManifest {
-  id: string;
-  version: string;
-  name: string;
-  description?: string;
-  types: string[];
-  catalogs: Catalog[];
+export interface WatchHistory {
+  _id: string;
+  contentId: string;
+  title: string;
+  contentType: string;
+  progress: number;
+  position: number;
+  duration: number;
+  backdropUrl?: string;
+  lastWatched: number;
 }
 
-export interface Catalog {
-  type: string;
-  id: string;
-  name: string;
-}
-
-export interface SearchHistory {
-  id: string;
-  query: string;
-  searchedAt: string;
+export interface WatchlistItem {
+  _id: string;
+  contentId: string;
+  title: string;
+  posterUrl?: string;
+  backdropUrl?: string;
+  contentType: string;
+  addedAt: number;
 }

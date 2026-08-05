@@ -43,83 +43,34 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const root = document.documentElement;
-
-    // Resolve system theme
     let resolvedTheme = theme;
     if (theme === 'system') {
       resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-
-    // Set CSS variables
     root.style.setProperty('--theme-accent', accentColor);
-
-    if (resolvedTheme === 'light') {
-      root.style.setProperty('--theme-bg', '#FFFFFF');
-      root.style.setProperty('--theme-surface', '#F5F5F5');
-      root.style.setProperty('--theme-hover', '#EBEBEB');
-    } else {
-      root.style.setProperty('--theme-bg', '#080808');
-      root.style.setProperty('--theme-surface', '#121212');
-      root.style.setProperty('--theme-hover', '#1B1B1B');
-    }
-
-    // Apply utility classes
     root.classList.remove('theme-dark', 'theme-light', 'theme-system');
     root.classList.add(`theme-${theme}`);
-
-    if (glassMode) {
-      root.classList.add('glass-mode');
-    } else {
-      root.classList.remove('glass-mode');
-    }
-
-    if (reduceMotion) {
-      root.classList.add('reduce-motion');
-    } else {
-      root.classList.remove('reduce-motion');
-    }
-
-    if (roundedPosters) {
-      root.classList.add('rounded-posters');
-    } else {
-      root.classList.remove('rounded-posters');
-    }
-
-    // Listen for system theme changes
+    if (glassMode) root.classList.add('glass-mode');
+    else root.classList.remove('glass-mode');
+    if (reduceMotion) root.classList.add('reduce-motion');
+    else root.classList.remove('reduce-motion');
+    if (roundedPosters) root.classList.add('rounded-posters');
+    else root.classList.remove('rounded-posters');
     if (theme === 'system') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => {
-        if (mq.matches) {
-          root.style.setProperty('--theme-bg', '#080808');
-          root.style.setProperty('--theme-surface', '#121212');
-          root.style.setProperty('--theme-hover', '#1B1B1B');
-        } else {
-          root.style.setProperty('--theme-bg', '#FFFFFF');
-          root.style.setProperty('--theme-surface', '#F5F5F5');
-          root.style.setProperty('--theme-hover', '#EBEBEB');
-        }
-      };
+      const handler = () => root.classList.toggle('dark', mq.matches);
       mq.addEventListener('change', handler);
       return () => mq.removeEventListener('change', handler);
     }
   }, [theme, accentColor, glassMode, reduceMotion, roundedPosters]);
 
   const value: ThemeContextValue = {
-    theme,
-    setTheme: useAppearanceStore.getState().setTheme,
-    accentColor,
-    setAccentColor: useAppearanceStore.getState().setAccentColor,
-    glassMode,
-    setGlassMode: useAppearanceStore.getState().setGlassMode,
-    reduceMotion,
-    setReduceMotion: useAppearanceStore.getState().setReduceMotion,
-    roundedPosters,
-    setRoundedPosters: useAppearanceStore.getState().setRoundedPosters,
+    theme, setTheme: useAppearanceStore.getState().setTheme,
+    accentColor, setAccentColor: useAppearanceStore.getState().setAccentColor,
+    glassMode, setGlassMode: useAppearanceStore.getState().setGlassMode,
+    reduceMotion, setReduceMotion: useAppearanceStore.getState().setReduceMotion,
+    roundedPosters, setRoundedPosters: useAppearanceStore.getState().setRoundedPosters,
   };
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

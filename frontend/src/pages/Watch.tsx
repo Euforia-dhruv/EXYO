@@ -18,17 +18,14 @@ export default function Watch() {
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
   const initialStream = location.state?.stream as PlayerStream | undefined;
-
   const { isSignedIn } = useUser();
 
-  // Fetch streams
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', id],
     queryFn: () => contentApi.getStreams(id!),
     enabled: !!id,
   });
 
-  // Fetch subtitles
   const { data: subtitlesData } = useQuery({
     queryKey: ['contentSubtitles', id],
     queryFn: () => contentApi.getSubtitles(id!),
@@ -45,13 +42,13 @@ export default function Watch() {
       quality: s.quality,
       codec: s.videoCodec || s.codec,
       addon: s.addon,
-      behaviorHints: s.behaviorHints,
+      behaviorHints: s.behaviorHints as any,
     }));
   }, [streamsData, initialStream]);
 
   const subtitleTracks = useMemo(() => {
     if (!subtitlesData?.subtitles) return [];
-    return subtitlesData.subtitles.map((s) => ({
+    return subtitlesData.subtitles.map((s: any) => ({
       url: s.url,
       lang: s.lang || 'en',
       label: s.label || s.lang || 'English',
@@ -79,16 +76,13 @@ export default function Watch() {
       : undefined,
   });
 
-  // Auto-select first subtitle when tracks load
   useEffect(() => {
     if (subtitleTracks.length > 0 && !player.activeSubtitleUrl && player.showSubtitles) {
       player.setActiveSubtitleUrl(subtitleTracks[0].url);
     }
   }, [subtitleTracks, player]);
 
-  // Auto-hide controls
   const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
-
   const showControlsTemporarily = useCallback(() => {
     player.setShowControls(true);
     if (controlsTimeout) clearTimeout(controlsTimeout);
@@ -98,13 +92,8 @@ export default function Watch() {
     setControlsTimeout(timeout);
   }, [player, controlsTimeout]);
 
-  useEffect(() => {
-    return () => {
-      if (controlsTimeout) clearTimeout(controlsTimeout);
-    };
-  }, [controlsTimeout]);
+  useEffect(() => () => { if (controlsTimeout) clearTimeout(controlsTimeout); }, [controlsTimeout]);
 
-  // Only handle Escape for back navigation (usePlayer handles all other shortcuts)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !player.showStreamSelector && !player.showSettings) {
@@ -124,13 +113,6 @@ export default function Watch() {
     }
   }, [id, navigate]);
 
-  const handleStreamSelect = useCallback(
-    (stream: PlayerStream) => {
-      player.selectStream(stream);
-    },
-    [player]
-  );
-
   return (
     <div
       ref={player.containerRef}
@@ -138,22 +120,13 @@ export default function Watch() {
       onMouseMove={showControlsTemporarily}
       onClick={player.togglePlay}
     >
-      {/* Video element */}
-      <video
-        ref={player.videoRef}
-        className="w-full h-full object-contain"
-        playsInline
-        autoPlay
-      />
-
-      {/* Canvas for movi-player (MKV/HEVC/AV1) */}
+      <video ref={player.videoRef} className="w-full h-full object-contain" playsInline autoPlay />
       <canvas
         ref={player.canvasRef}
         className="absolute inset-0 w-full h-full object-contain"
         style={{ display: player.isStreamingPlayer ? 'block' : 'none' }}
       />
 
-      {/* Subtitles */}
       {player.showSubtitles && player.activeSubtitleUrl && (
         <SubtitleRenderer
           currentTime={player.currentTime}
@@ -162,29 +135,32 @@ export default function Watch() {
         />
       )}
 
-      {/* Loading spinner */}
       {player.isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-red/20 flex items-center justify-center animate-pulse">
+              <span className="text-white font-extrabold text-lg">E</span>
+            </div>
+            <div className="w-10 h-10 border-2 border-red/20 border-t-red rounded-full animate-spin" />
+          </div>
         </div>
       )}
 
-      {/* Error overlay */}
       {player.videoError && (
-        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/80">
-          <div className="text-center max-w-md px-6">
-            <p className="text-white text-[16px] font-medium mb-2">Playback Error</p>
-            <p className="text-white/50 text-[13px] mb-6">{player.videoError}</p>
+        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/80 backdrop-blur-sm">
+          <div className="glass glass-border rounded-3xl p-10 text-center max-w-md">
+            <p className="text-white font-bold text-lg mb-2">Playback Error</p>
+            <p className="text-white/40 text-sm mb-6">{player.videoError}</p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={(e) => { e.stopPropagation(); player.clearErrorAndOpenSelector(); }}
-                className="px-5 py-2.5 rounded-xl bg-white/[0.08] text-white text-[13px] font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
+                className="px-6 py-3 rounded-xl bg-white/[0.08] text-white text-sm font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
               >
                 Try Another Stream
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleBack(); }}
-                className="px-5 py-2.5 rounded-xl bg-white/[0.08] text-white/60 text-[13px] font-medium hover:bg-white/[0.14] transition-all border border-white/[0.06]"
+                className="px-6 py-3 rounded-xl bg-white/[0.08] text-white/50 text-sm font-medium hover:bg-white/[0.14] transition-all"
               >
                 Go Back
               </button>
@@ -193,7 +169,6 @@ export default function Watch() {
         </div>
       )}
 
-      {/* Controls overlay */}
       <PlayerControls
         visible={player.showControls}
         playing={player.isPlaying}
@@ -217,12 +192,11 @@ export default function Watch() {
         onSubtitleToggle={player.toggleSubtitles}
       />
 
-      {/* Stream selector */}
       {player.showStreamSelector && (
         <StreamSelector
           streams={rawStreams}
           currentStream={player.selectedStream}
-          onSelect={handleStreamSelect}
+          onSelect={player.selectStream}
           onClose={() => player.setShowStreamSelector(false)}
           loading={streamsLoading}
         />
