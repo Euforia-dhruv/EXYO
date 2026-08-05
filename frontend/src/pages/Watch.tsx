@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
+import { useMutation as useConvexMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
 import PlayerControls from '../components/player/PlayerControls';
@@ -57,6 +59,8 @@ export default function Watch() {
     }));
   }, [subtitlesData]);
 
+  const updateProgress = useConvexMutation(api.watchHistory.addOrUpdate);
+
   const player = usePlayer({
     streams: rawStreams,
     subtitles: subtitleTracks,
@@ -64,21 +68,24 @@ export default function Watch() {
       ? (progress: number) => {
           if (id && progress > 0.05) {
             const type = id.includes(':') ? 'series' : 'movie';
-            contentApi.updateProgress({
-              userId: '',
+            updateProgress({
               contentId: id,
               title: title || 'Untitled',
-              posterUrl: '',
-              backdropUrl,
+              contentType: type,
               progress,
-              position: player.currentTime,
-              duration: player.duration,
-              type,
+              backdropUrl,
             }).catch(() => {});
           }
         }
       : undefined,
   });
+
+  // Auto-select first subtitle when tracks load
+  useEffect(() => {
+    if (subtitleTracks.length > 0 && !player.activeSubtitleUrl && player.showSubtitles) {
+      player.setActiveSubtitleUrl(subtitleTracks[0].url);
+    }
+  }, [subtitleTracks, player]);
 
   // Auto-hide controls
   const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
