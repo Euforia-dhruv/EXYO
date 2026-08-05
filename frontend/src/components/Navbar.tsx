@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useUser, useClerk, SignOutButton } from '@clerk/clerk-react';
 import { useTheme } from '../providers/AppearanceProvider';
 import {
-  UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   SunIcon,
@@ -12,7 +11,6 @@ import {
   MagnifyingGlassIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowUpTrayIcon,
   TrashIcon,
   ExclamationTriangleIcon,
   PlayIcon,

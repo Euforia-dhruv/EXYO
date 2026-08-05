@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MagnifyingGlassIcon, XMarkIcon, FilmIcon, TvIcon } from '@heroicons/react/24/outline';
 import { contentApi } from '../api/content.api';
