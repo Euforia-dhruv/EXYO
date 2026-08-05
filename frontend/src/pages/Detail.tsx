@@ -4,13 +4,13 @@ import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Play, Plus, Check, Star, Calendar, Clock, ArrowLeft, Share2,
   Search, PlayCircle, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { contentApi } from '../api/content.api';
-import { DetailSkeleton, SeasonPillsSkeleton, EpisodeGridSkeleton } from '../components/Skeleton';
+import { DetailSkeleton } from '../components/Skeleton';
 import StreamDrawer from '../components/StreamDrawer';
 import { toast } from '../components/Toast';
 import { cn } from '../utils/helpers';

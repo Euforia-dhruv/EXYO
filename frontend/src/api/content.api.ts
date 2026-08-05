@@ -170,7 +170,24 @@ export const contentApi = {
   },
 
   getDetails: async (id: string, type = 'movie') => {
-    return contentFetch('/details', { id, type }) as Promise<ContentDetailsResult>;
+    const result = await contentFetch('/details', { id, type }) as ContentDetailsResult;
+    if (!result.episodes && (result as any).videos) {
+      result.episodes = (result as any).videos
+        .filter((v: any) => v.type === 'episode' || v.season)
+        .map((v: any) => ({
+          id: v.id || `${id}:${v.season}:${v.number || v.episode}`,
+          videoId: v.videoId || `${id}:${v.season}:${v.number || v.episode}`,
+          name: v.name,
+          title: v.name,
+          episodeNumber: v.number || v.episode,
+          seasonNumber: v.season,
+          description: v.description || '',
+          runtime: v.runtime,
+          rating: v.imdbRating ? Number(v.imdbRating) : undefined,
+          stillUrl: v.poster || v.thumb,
+        }));
+    }
+    return result;
   },
 
   getStreams: async (id: string, type = 'movie', addonUrls?: string[]) => {

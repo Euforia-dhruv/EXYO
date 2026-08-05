@@ -274,6 +274,24 @@ http.route({
         }
       }
 
+      // Map Cinemeta videos to episodes format
+      if (meta.videos && Array.isArray(meta.videos)) {
+        meta.episodes = meta.videos
+          .filter((v: Record<string, unknown>) => v.type === 'episode' || v.season)
+          .map((v: Record<string, unknown>) => ({
+            id: `${seriesId}:${v.season}:${v.number || v.episode}`,
+            videoId: `${seriesId}:${v.season}:${v.number || v.episode}`,
+            name: v.name,
+            title: v.name,
+            episodeNumber: v.number || v.episode,
+            seasonNumber: v.season,
+            description: v.description || '',
+            runtime: v.runtime,
+            rating: v.imdbRating ? Number(v.imdbRating) : undefined,
+            stillUrl: v.poster ? `https://images.metahub.space/episode/med/${seriesId}/${v.season}/${v.number || v.episode}/img` : undefined,
+          }));
+      }
+
       return json(meta);
     } catch {
       return json({ error: "Addon unreachable" }, 502);

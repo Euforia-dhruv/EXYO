@@ -20,7 +20,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/react')) return 'vendor';
+          if (id.includes('node_modules/react') || id.includes('node_modules/convex') || id.includes('node_modules/@clerk')) return 'vendor';
           if (id.includes('node_modules/@tanstack')) return 'query';
           if (id.includes('node_modules/hls.js')) return 'video';
           if (id.includes('node_modules/@ffmpeg')) return 'ffmpeg';
