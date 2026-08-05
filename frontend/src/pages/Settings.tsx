@@ -1,25 +1,24 @@
+import { useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
-import { contentApi } from '../api/content.api';
-import { FilmIcon, TvIcon, ClockIcon, StarIcon } from '@heroicons/react/24/outline';
+import { useQuery as useConvexQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { FilmIcon, StarIcon } from '@heroicons/react/24/outline';
 
 export default function Settings() {
   const { user } = useUser();
 
-  const { data: watchHistory } = useQuery({
-    queryKey: ['watchHistory'],
-    queryFn: () => contentApi.getWatchHistory(user!.id),
-    enabled: !!user,
-  });
+  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
+  const watchlist = useConvexQuery(api.watchlist.getWatchlist);
 
-  const { data: watchlist } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: () => contentApi.getWatchlist(user!.id),
-    enabled: !!user,
-  });
+  const historyCount = useMemo(() => {
+    if (!watchHistory || !Array.isArray(watchHistory)) return 0;
+    return watchHistory.length;
+  }, [watchHistory]);
 
-  const historyCount = Array.isArray(watchHistory) ? watchHistory.length : 0;
-  const watchlistCount = Array.isArray(watchlist) ? watchlist.length : 0;
+  const watchlistCount = useMemo(() => {
+    if (!watchlist || !Array.isArray(watchlist)) return 0;
+    return watchlist.length;
+  }, [watchlist]);
 
   const stats = [
     { label: 'Watched', value: historyCount, icon: FilmIcon, color: 'text-exyo-red' },

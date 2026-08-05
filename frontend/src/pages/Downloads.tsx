@@ -1,9 +1,20 @@
+import { useMemo } from 'react';
 import { ArrowDownTrayIcon, TrashIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { useDownloadStore } from '../store/downloadStore';
 import { cn, formatTime } from '../utils/helpers';
 
 export default function Downloads() {
-  const { completedDownloads, activeDownloads, removeDownload } = useDownloadStore();
+  const downloads = useDownloadStore((s) => s.downloads);
+  const removeDownload = useDownloadStore((s) => s.removeDownload);
+
+  const activeDownloads = useMemo(
+    () => downloads.filter((d) => d.status === 'downloading' || d.status === 'queued' || d.status === 'paused' || d.status === 'retrying'),
+    [downloads]
+  );
+  const completedDownloads = useMemo(
+    () => downloads.filter((d) => d.status === 'completed'),
+    [downloads]
+  );
 
   const allDownloads = [...activeDownloads, ...completedDownloads];
 
@@ -37,7 +48,7 @@ export default function Downloads() {
                   {dl.status === 'completed' ? (
                     'Downloaded'
                   ) : (
-                    `${Math.round(dl.progress || 0)}% · ${formatTime(dl.estimatedTimeRemaining || 0)} remaining`
+                    `${Math.round(dl.progress || 0)}%`
                   )}
                 </p>
                 {dl.status === 'downloading' && (

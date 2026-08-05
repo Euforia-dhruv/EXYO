@@ -1,17 +1,20 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useDownloadStore } from '../store/downloadStore';
 import { cn } from '../utils/helpers';
 
 function DownloadIndicator() {
-  const activeDownloads = useDownloadStore((s) => s.activeDownloads);
-  const completedDownloads = useDownloadStore((s) => s.completedDownloads);
+  const downloads = useDownloadStore((s) => s.downloads);
 
-  const total = activeDownloads.length + completedDownloads.length;
-  if (total === 0) return null;
+  const activeCount = useMemo(
+    () => downloads.filter((d) => d.status === 'downloading' || d.status === 'queued' || d.status === 'paused' || d.status === 'retrying').length,
+    [downloads]
+  );
 
-  const activeCount = activeDownloads.length;
+  const totalCount = downloads.length;
+
+  if (totalCount === 0) return null;
 
   return (
     <Link
@@ -20,7 +23,7 @@ function DownloadIndicator() {
         'relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200',
         'bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.06] hover:border-white/[0.1]'
       )}
-      aria-label={`${total} downloads, ${activeCount} active`}
+      aria-label={`${totalCount} downloads, ${activeCount} active`}
     >
       <ArrowDownTrayIcon className="w-4 h-4 text-white/60" />
       {activeCount > 0 && (

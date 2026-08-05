@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import {
   PlayIcon,
   PlusIcon,
@@ -13,7 +15,6 @@ import {
   ShareIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
   PlayCircleIcon,
 } from '@heroicons/react/24/outline';
 import { contentApi } from '../api/content.api';
@@ -22,13 +23,10 @@ import { toast } from '../components/Toast';
 import type { Stream, CatalogItem } from '../types';
 import { cn } from '../utils/helpers';
 
-const API_URL = import.meta.env.VITE_CONVEX_SITE_URL;
-
 export default function Detail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isSignedIn, user } = useUser();
-  const queryClient = useQueryClient();
 
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [episodeSearch, setEpisodeSearch] = useState('');
@@ -48,48 +46,41 @@ export default function Detail() {
     enabled: !!id,
   });
 
-  // Watchlist
-  const { data: watchlist } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: () => contentApi.getWatchlist(user!.id),
-    enabled: isSignedIn,
-  });
-
-  const addToWatchlist = useMutation({
-    mutationFn: (data: { userId: string; contentId: string; type: string }) =>
-      contentApi.addToWatchlist(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      toast.success('Added to My List');
-    },
-  });
-
-  const removeFromWatchlist = useMutation({
-    mutationFn: (data: { userId: string; contentId: string }) =>
-      contentApi.removeFromWatchlist(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      toast.success('Removed from My List');
-    },
-  });
+  // Watchlist via Convex
+  const watchlist = useConvexQuery(api.watchlist.getWatchlist);
+  const convexAddToWatchlist = useConvexMutation(api.watchlist.addToWatchlist);
+  const convexRemoveFromWatchlist = useConvexMutation(api.watchlist.removeFromWatchlist);
 
   const isWatchlisted = useMemo(() => {
     if (!watchlist || !Array.isArray(watchlist) || !id) return false;
     return watchlist.some((item: { contentId?: string }) => item.contentId === id);
   }, [watchlist, id]);
 
-  const toggleWatchlist = useCallback(() => {
+  const toggleWatchlist = useCallback(async () => {
     if (!user || !details) return;
-    if (isWatchlisted) {
-      removeFromWatchlist.mutate({ userId: user.id, contentId: id! });
-    } else {
-      addToWatchlist.mutate({
-        userId: user.id,
-        contentId: id!,
-        type: details.type === 'tv' || details.type === 'series' ? 'tv' : 'movie',
-      });
+    const title = details.name || details.title || 'Untitled';
+    const contentType = details.type === 'tv' || details.type === 'series' ? 'series' : 'movie';
+    try {
+      if (isWatchlisted) {
+        const existing = watchlist?.find((item: { contentId?: string }) => item.contentId === id);
+        if (existing) {
+          await convexRemoveFromWatchlist({ id: existing._id });
+        }
+        toast.success('Removed from My List');
+      } else {
+        await convexAddToWatchlist({
+          contentId: id!,
+          title,
+          posterUrl: details.posterUrl,
+          backdropUrl: details.backdropUrl,
+          contentType,
+        });
+        toast.success('Added to My List');
+      }
+    } catch {
+      toast.error('Failed to update list');
     }
-  }, [user, details, isWatchlisted, id, addToWatchlist, removeFromWatchlist]);
+  }, [user, details, isWatchlisted, id, watchlist, convexAddToWatchlist, convexRemoveFromWatchlist]);
 
   // Parse seasons from episodes
   const seasons = useMemo(() => {

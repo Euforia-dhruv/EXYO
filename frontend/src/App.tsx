@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-react';
 import { ToastContainer } from './components/Toast';
@@ -77,6 +77,11 @@ function PageLoader() {
   );
 }
 
+function DetailRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/movie/${id}`} replace />;
+}
+
 function SettingsPageLoader() {
   return (
     <div className="py-12 text-center">
@@ -127,7 +132,7 @@ function App() {
                   <Route path="/tv" element={<Suspense fallback={<PageLoader />}><main id="main-content"><TVShows /></main></Suspense>} />
                   <Route path="/movie/:id" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Detail /></main></Suspense>} />
                   <Route path="/series/:id" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Detail /></main></Suspense>} />
-                  <Route path="/detail/:id" element={<Navigate to={`/movie/${window.location.pathname.split('/').pop()}`} replace />} />
+                  <Route path="/detail/:id" element={<DetailRedirect />} />
                   <Route path="/search" element={<Suspense fallback={<PageLoader />}><main id="main-content"><Search /></main></Suspense>} />
                   <Route path="/my-list" element={<Suspense fallback={<PageLoader />}><main id="main-content"><MyList /></main></Suspense>} />
                   <Route path="/continue-watching" element={<Suspense fallback={<PageLoader />}><main id="main-content"><ContinueWatching /></main></Suspense>} />

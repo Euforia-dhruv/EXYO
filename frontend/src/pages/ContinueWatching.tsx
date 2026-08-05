@@ -1,35 +1,30 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
-import { contentApi } from '../api/content.api';
+import { useQuery as useConvexQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import Thumbnail from '../components/Thumbnail';
 import { PlayIcon } from '@heroicons/react/24/outline';
 import type { CatalogItem } from '../types';
 
 export default function ContinueWatching() {
-  const { isSignedIn, user } = useUser();
-
-  const { data: watchHistory } = useQuery({
-    queryKey: ['watchHistory'],
-    queryFn: () => contentApi.getWatchHistory(user!.id),
-    enabled: isSignedIn,
-  });
+  const { isSignedIn } = useUser();
+  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
 
   const items: CatalogItem[] = useMemo(() => {
     if (!watchHistory || !Array.isArray(watchHistory)) return [];
     return watchHistory
       .filter((item: { progress?: number }) => item.progress && item.progress > 0)
       .sort((a: { lastWatched?: number }, b: { lastWatched?: number }) => (b.lastWatched || 0) - (a.lastWatched || 0))
-      .map((item: { title?: string; name?: string; posterUrl?: string; id?: string; imdbId?: string; backdropUrl?: string; year?: string; rating?: number; progress?: number; duration?: number; type?: string }) => ({
-        id: item.id || item.imdbId || '',
-        name: item.name,
+      .map((item: { title?: string; name?: string; posterUrl?: string; contentId?: string; id?: string; imdbId?: string; backdropUrl?: string; year?: string; rating?: number; progress?: number; duration?: number; contentType?: string }) => ({
+        id: item.contentId || item.id || item.imdbId || '',
+        name: item.name || item.title,
         title: item.title,
         posterUrl: item.posterUrl,
         backdropUrl: item.backdropUrl,
         year: item.year,
         rating: item.rating,
-        type: item.type as 'movie' | 'tv' | undefined,
+        type: item.contentType as 'movie' | 'tv' | undefined,
         progress: item.progress,
         duration: item.duration,
       }));

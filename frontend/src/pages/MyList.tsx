@@ -1,32 +1,27 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
-import { contentApi } from '../api/content.api';
+import { useQuery as useConvexQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import Thumbnail from '../components/Thumbnail';
 import { ListBulletIcon } from '@heroicons/react/24/outline';
 import type { CatalogItem } from '../types';
 
 export default function MyList() {
-  const { isSignedIn, user } = useUser();
-
-  const { data: watchlist, isLoading } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: () => contentApi.getWatchlist(user!.id),
-    enabled: isSignedIn,
-  });
+  const { isSignedIn } = useUser();
+  const watchlist = useConvexQuery(api.watchlist.getWatchlist);
 
   const items: CatalogItem[] = useMemo(() => {
     if (!watchlist || !Array.isArray(watchlist)) return [];
-    return watchlist.map((item: { contentId?: string; title?: string; name?: string; posterUrl?: string; backdropUrl?: string; year?: string; rating?: number; type?: string }) => ({
+    return watchlist.map((item: { contentId?: string; title?: string; name?: string; posterUrl?: string; backdropUrl?: string; year?: string; rating?: number; contentType?: string }) => ({
       id: item.contentId || '',
-      name: item.name,
+      name: item.name || item.title,
       title: item.title,
       posterUrl: item.posterUrl,
       backdropUrl: item.backdropUrl,
       year: item.year,
       rating: item.rating,
-      type: item.type as 'movie' | 'tv' | undefined,
+      type: item.contentType as 'movie' | 'tv' | undefined,
     }));
   }, [watchlist]);
 
@@ -50,12 +45,6 @@ export default function MyList() {
             >
               Sign In
             </Link>
-          </div>
-        ) : isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="aspect-[2/3] bg-exyo-elevated rounded-xl shimmer" />
-            ))}
           </div>
         ) : items.length === 0 ? (
           <div className="text-center py-20">

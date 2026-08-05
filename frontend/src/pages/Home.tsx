@@ -2,10 +2,12 @@ import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
+import { useQuery as useConvexQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
-import { HeroSkeleton, RowSkeleton } from '../components/Skeleton';
-import { contentApi, type ContentSearchResult, type ContentStreamsResult } from '../api/content.api';
+import { RowSkeleton } from '../components/Skeleton';
+import { contentApi, type ContentSearchResult } from '../api/content.api';
 import type { CatalogItem } from '../types';
 
 const ANIME_CATALOG_ID = 'animestream';
@@ -13,13 +15,9 @@ const ANIME_CATALOG_ID = 'animestream';
 export default function Home() {
   const [searchParams] = useSearchParams();
   const catalogId = searchParams.get('catalogId') || undefined;
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn } = useUser();
 
-  const { data: watchHistory } = useQuery({
-    queryKey: ['watchHistory'],
-    queryFn: () => contentApi.getWatchHistory(user!.id),
-    enabled: isSignedIn,
-  });
+  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
 
   const continueWatchingItems = useMemo(() => {
     if (!watchHistory || !Array.isArray(watchHistory)) return [];
@@ -28,15 +26,15 @@ export default function Home() {
       .sort((a: { lastWatched?: number }, b: { lastWatched?: number }) => (b.lastWatched || 0) - (a.lastWatched || 0))
       .slice(0, 20)
       .map((item: { title?: string; name?: string; posterUrl?: string; id?: string; imdbId?: string; backdropUrl?: string; year?: string; rating?: number; progress?: number; duration?: number; type?: string }) => ({
-        id: item.id || item.imdbId || '',
+        id: item.contentId || item.id || item.imdbId || '',
         imdbId: item.imdbId,
-        name: item.name,
+        name: item.name || item.title,
         title: item.title,
         posterUrl: item.posterUrl,
         backdropUrl: item.backdropUrl,
         year: item.year,
         rating: item.rating,
-        type: item.type as 'movie' | 'tv' | undefined,
+        type: (item.type || item.contentType) as 'movie' | 'tv' | undefined,
         progress: item.progress,
         duration: item.duration,
       })) as CatalogItem[];
@@ -68,22 +66,19 @@ export default function Home() {
     queryFn: () => contentApi.searchByName(isAnime ? 'anime top rated' : 'top rated', { limit: 20 }),
   });
 
-  const extractItems = useCallback((data: ContentSearchResult | ContentStreamsResult | undefined): CatalogItem[] => {
-    if (!data) return [];
-    if ('streams' in data) return [];
-    if ('results' in data && Array.isArray(data.results)) {
-      return data.results.map((item: { id?: string; imdbId?: string; name?: string; title?: string; posterUrl?: string; type?: string; year?: string; rating?: number }) => ({
-        id: item.id || item.imdbId || '',
-        imdbId: item.imdbId,
-        name: item.name,
-        title: item.title,
-        posterUrl: item.posterUrl,
-        type: item.type as 'movie' | 'tv' | undefined,
-        year: item.year,
-        rating: item.rating,
-      }));
-    }
-    return [];
+  const extractItems = useCallback((data: ContentSearchResult | undefined): CatalogItem[] => {
+    if (!data || !data.results) return [];
+    return data.results.map((item) => ({
+      id: item.id || item.imdbId || '',
+      imdbId: item.imdbId,
+      name: item.name,
+      title: item.title,
+      posterUrl: item.posterUrl,
+      backdropUrl: item.backdropUrl,
+      type: item.type as 'movie' | 'tv' | undefined,
+      year: item.year,
+      rating: item.rating,
+    }));
   }, []);
 
   const trendingItems = useMemo(() => extractItems(trending), [trending, extractItems]);
@@ -93,71 +88,47 @@ export default function Home() {
 
   return (
     <main className="min-h-screen">
-      {/* Hero */}
       {heroItems.length > 0 && <HeroBanner items={heroItems} />}
 
-      {/* Content rows */}
       <div className="relative z-10 -mt-16 sm:-mt-24 lg:-mt-32">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
-          {/* Continue Watching */}
           {continueWatchingItems.length > 0 && (
             <ContentRow
               title="Continue Watching"
               items={continueWatchingItems}
-              watchHistory={watchHistory}
               size="md"
             />
           )}
 
-          {/* Trending */}
           {trendingLoading ? (
             <RowSkeleton />
           ) : (
             trendingItems.length > 0 && (
-              <ContentRow
-                title={isAnime ? "Trending Anime" : "Trending Now"}
-                items={trendingItems}
-                size="md"
-              />
+              <ContentRow title={isAnime ? "Trending Anime" : "Trending Now"} items={trendingItems} size="md" />
             )
           )}
 
-          {/* Popular */}
           {popularLoading ? (
             <RowSkeleton />
           ) : (
             popularItems.length > 0 && (
-              <ContentRow
-                title={isAnime ? "Popular Anime" : "Popular"}
-                items={popularItems}
-                size="md"
-              />
+              <ContentRow title={isAnime ? "Popular Anime" : "Popular"} items={popularItems} size="md" />
             )
           )}
 
-          {/* Latest */}
           {latestLoading ? (
             <RowSkeleton />
           ) : (
             latestItems.length > 0 && (
-              <ContentRow
-                title={isAnime ? "Latest Anime" : "Latest"}
-                items={latestItems}
-                size="md"
-              />
+              <ContentRow title={isAnime ? "Latest Anime" : "Latest"} items={latestItems} size="md" />
             )
           )}
 
-          {/* Top Rated */}
           {topRatedLoading ? (
             <RowSkeleton />
           ) : (
             topRatedItems.length > 0 && (
-              <ContentRow
-                title={isAnime ? "Top Rated Anime" : "Top Rated"}
-                items={topRatedItems}
-                size="md"
-              />
+              <ContentRow title={isAnime ? "Top Rated Anime" : "Top Rated"} items={topRatedItems} size="md" />
             )
           )}
         </div>

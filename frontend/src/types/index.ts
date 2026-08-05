@@ -8,7 +8,10 @@ export interface WatchHistory {
   season?: number;
   episode?: number;
   progress: number;
+  position?: number;
+  duration?: number;
   watchedAt: string;
+  lastWatched?: number;
   addonSource?: string;
 }
 
@@ -24,16 +27,20 @@ export interface WatchlistItem {
 
 export interface CatalogItem {
   id: string;
-  type: string;
-  name: string;
-  poster?: string;
-  background?: string;
+  imdbId?: string;
+  type?: string;
+  name?: string;
+  title?: string;
+  posterUrl?: string;
+  backdropUrl?: string;
   description?: string;
   year?: string;
   runtime?: string;
   genres?: string[];
-  imdbRating?: string;
-  cast?: { name: string; role: string; avatar?: string }[];
+  rating?: number;
+  cast?: string[];
+  progress?: number;
+  duration?: number;
 }
 
 export interface Stream {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useToast } from '../components/Toast';
+import { toast } from '../components/Toast';
 
 interface ShareData {
   title: string;
@@ -9,7 +9,6 @@ interface ShareData {
 
 export function useShare() {
   const [isSharing, setIsSharing] = useState(false);
-  const { showToast } = useToast();
 
   const share = async (data: ShareData) => {
     setIsSharing(true);
@@ -21,14 +20,14 @@ export function useShare() {
           text: data.description,
           url: data.url
         });
-        showToast('Shared successfully', 'success');
+        toast.success('Shared successfully');
       } else {
         await navigator.clipboard.writeText(data.url);
-        showToast('Link copied to clipboard', 'success');
+        toast.success('Link copied to clipboard');
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        showToast('Failed to share', 'error');
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        toast.error('Failed to share');
       }
     } finally {
       setIsSharing(false);
