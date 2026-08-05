@@ -42,6 +42,10 @@ export interface Stream {
   title?: string;
   infoHash?: string;
   quality?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  codec?: string;
+  addon?: string;
   behaviorHints?: Record<string, unknown>;
   addonName?: string;
   addonUrl?: string;

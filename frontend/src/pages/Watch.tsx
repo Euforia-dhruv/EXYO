@@ -1,101 +1,102 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowLeftIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
-import { usePlayer } from '../hooks/usePlayer';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import { contentApi } from '../api/content.api';
-import type { Stream } from '../types';
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
-  const streamParam = searchParams.get('stream');
-  const initialStream: Stream | undefined = streamParam
-    ? { url: streamParam, name: location.state?.stream?.name || 'Stream' }
-    : undefined;
+  const initialStream = location.state?.stream as PlayerStream | undefined;
 
-  const [selectedStream, setSelectedStream] = useState<Stream | null>(initialStream || null);
-  const [showStreamSelector, setShowStreamSelector] = useState(!initialStream);
-  const [showControls, setShowControls] = useState(true);
-  const [showSubtitles, setShowSubtitles] = useState(true);
+  const { isSignedIn } = useUser();
 
+  // Fetch streams
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', id],
     queryFn: () => contentApi.getStreams(id!),
     enabled: !!id,
   });
 
-  const streams = streamsData?.streams || [];
-
-  // Auto-select first stream if none selected and streams are loaded
-  useEffect(() => {
-    if (!selectedStream && streams.length > 0 && !streamsLoading) {
-      setSelectedStream(streams[0]);
-    }
-  }, [selectedStream, streams, streamsLoading]);
-
-  // If URL has stream param, navigate with it
-  useEffect(() => {
-    if (streamParam && !selectedStream) {
-      setSelectedStream({ url: streamParam, name: 'Stream' });
-    }
-  }, [streamParam]);
-
-  const handleStreamSelect = useCallback((stream: Stream) => {
-    setSelectedStream(stream);
-    setShowStreamSelector(false);
-  }, []);
-
-  const handleBack = useCallback(() => {
-    if (id) {
-      const type = id.includes(':') ? 'series' : 'movie';
-      navigate(`/${type}/${id}`);
-    } else {
-      navigate(-1);
-    }
-  }, [id, navigate]);
-
-  const player = usePlayer({
-    streamUrl: selectedStream?.url || null,
-    containerRef,
-    title: title || 'Video',
-    onError: (error) => {
-      console.error('Player error:', error);
-    },
+  // Fetch subtitles
+  const { data: subtitlesData } = useQuery({
+    queryKey: ['contentSubtitles', id],
+    queryFn: () => contentApi.getSubtitles(id!),
+    enabled: !!id,
   });
 
-  // Hide controls after inactivity
+  const rawStreams: PlayerStream[] = useMemo(() => {
+    if (initialStream) return [initialStream];
+    if (!streamsData?.streams) return [];
+    return streamsData.streams.map((s) => ({
+      url: s.url,
+      name: s.name || s.title,
+      title: s.name || s.title,
+      quality: s.quality,
+      codec: s.videoCodec || s.codec,
+      addon: s.addon,
+      behaviorHints: s.behaviorHints,
+    }));
+  }, [streamsData, initialStream]);
+
+  const subtitleTracks = useMemo(() => {
+    if (!subtitlesData?.subtitles) return [];
+    return subtitlesData.subtitles.map((s) => ({
+      url: s.url,
+      lang: s.lang || 'en',
+      label: s.label || s.lang || 'English',
+    }));
+  }, [subtitlesData]);
+
+  const player = usePlayer({
+    streams: rawStreams,
+    subtitles: subtitleTracks,
+    onProgress: isSignedIn
+      ? (progress: number) => {
+          if (id && progress > 0.05) {
+            const type = id.includes(':') ? 'series' : 'movie';
+            contentApi.updateProgress({
+              userId: '',
+              contentId: id,
+              title: title || 'Untitled',
+              posterUrl: '',
+              backdropUrl,
+              progress,
+              position: player.currentTime,
+              duration: player.duration,
+              type,
+            }).catch(() => {});
+          }
+        }
+      : undefined,
+  });
+
+  // Auto-hide controls
+  const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const showControlsTemporarily = useCallback(() => {
+    player.setShowControls(true);
+    if (controlsTimeout) clearTimeout(controlsTimeout);
+    const timeout = setTimeout(() => {
+      if (player.isPlaying) player.setShowControls(false);
+    }, 4000);
+    setControlsTimeout(timeout);
+  }, [player, controlsTimeout]);
+
   useEffect(() => {
-    if (!player.playing) return;
-    let timeout: ReturnType<typeof setTimeout>;
-    const show = () => {
-      setShowControls(true);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => setShowControls(false), 4000);
-    };
-    show();
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('mousemove', show);
-      container.addEventListener('touchstart', show);
-    }
     return () => {
-      clearTimeout(timeout);
-      if (container) {
-        container.removeEventListener('mousemove', show);
-        container.removeEventListener('touchstart', show);
-      }
+      if (controlsTimeout) clearTimeout(controlsTimeout);
     };
-  }, [player.playing]);
+  }, [controlsTimeout]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -109,11 +110,11 @@ export default function Watch() {
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          player.seek(Math.max(0, player.currentTime - 10));
+          player.skip(-10);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          player.seek(Math.min(player.duration, player.currentTime + 10));
+          player.skip(10);
           break;
         case 'f':
           e.preventDefault();
@@ -126,116 +127,129 @@ export default function Watch() {
         case 'Escape':
           handleBack();
           break;
+        case 'ArrowUp':
+          e.preventDefault();
+          player.adjustVolume(0.1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          player.adjustVolume(-0.1);
+          break;
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [player, handleBack]);
+  }, [player]);
 
-  if (!selectedStream) {
-    return (
-      <div className="fixed inset-0 bg-black flex flex-col">
-        {/* Back button */}
-        <div className="absolute top-4 left-4 z-50">
-          <button
-            onClick={handleBack}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white transition-all duration-200"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </button>
+  const handleBack = useCallback(() => {
+    if (id) {
+      const type = id.includes(':') ? 'series' : 'movie';
+      navigate(`/${type}/${id}`);
+    } else {
+      navigate(-1);
+    }
+  }, [id, navigate]);
+
+  const handleStreamSelect = useCallback(
+    (stream: PlayerStream) => {
+      player.selectStream(stream);
+    },
+    [player]
+  );
+
+  return (
+    <div
+      ref={player.containerRef}
+      className="fixed inset-0 bg-black cursor-none"
+      onMouseMove={showControlsTemporarily}
+      onClick={player.togglePlay}
+    >
+      {/* Video element */}
+      <video
+        ref={player.videoRef}
+        className="w-full h-full object-contain"
+        playsInline
+        autoPlay
+      />
+
+      {/* Canvas for movi-player (MKV/HEVC/AV1) */}
+      <canvas
+        ref={player.canvasRef}
+        className="absolute inset-0 w-full h-full object-contain"
+        style={{ display: player.isStreamingPlayer ? 'block' : 'none' }}
+      />
+
+      {/* Subtitles */}
+      {player.showSubtitles && player.activeSubtitleUrl && (
+        <SubtitleRenderer
+          currentTime={player.currentTime}
+          subtitleUrl={player.activeSubtitleUrl}
+          isActive={player.showSubtitles}
+        />
+      )}
+
+      {/* Loading spinner */}
+      {player.isBuffering && (
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         </div>
+      )}
 
-        {streamsLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-12 h-12 border-2 border-exyo-red/20 border-t-exyo-red rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-white/50 text-[14px]">Loading streams...</p>
-            </div>
-          </div>
-        ) : streams.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center max-w-md px-6">
-              <p className="text-white/70 text-[16px] font-medium mb-2">No streams available</p>
-              <p className="text-white/40 text-[13px]">Try again later or select a different title.</p>
+      {/* Error overlay */}
+      {player.videoError && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/80">
+          <div className="text-center max-w-md px-6">
+            <p className="text-white text-[16px] font-medium mb-2">Playback Error</p>
+            <p className="text-white/50 text-[13px] mb-6">{player.videoError}</p>
+            <div className="flex items-center justify-center gap-3">
               <button
-                onClick={handleBack}
-                className="mt-6 px-6 py-2.5 rounded-xl bg-exyo-red hover:bg-exyo-red-hover text-white text-[13px] font-semibold transition-colors"
+                onClick={(e) => { e.stopPropagation(); player.clearErrorAndOpenSelector(); }}
+                className="px-5 py-2.5 rounded-xl bg-white/[0.08] text-white text-[13px] font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
+              >
+                Try Another Stream
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleBack(); }}
+                className="px-5 py-2.5 rounded-xl bg-white/[0.08] text-white/60 text-[13px] font-medium hover:bg-white/[0.14] transition-all border border-white/[0.06]"
               >
                 Go Back
               </button>
             </div>
           </div>
-        ) : (
-          <StreamSelector
-            streams={streams}
-            onSelect={handleStreamSelect}
-            onClose={() => setShowStreamSelector(false)}
-            loading={streamsLoading}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 bg-black cursor-none"
-      onMouseMove={() => setShowControls(true)}
-    >
-      {/* Video element (used by hls.js and native playback) */}
-      <video
-        className="w-full h-full object-contain"
-        playsInline
-        autoPlay
-        onClick={player.togglePlay}
-      />
-
-      {/* Canvas for movi-player (MKV/HEVC/AV1) */}
-      <canvas
-        className="absolute inset-0 w-full h-full object-contain"
-        style={{ display: player.canvasActive ? 'block' : 'none' }}
-      />
-
-      {/* Subtitles */}
-      {showSubtitles && player.currentSubtitle && (
-        <SubtitleRenderer
-          text={player.currentSubtitle.text}
-          style={player.currentSubtitle.style}
-        />
+        </div>
       )}
 
       {/* Controls overlay */}
       <PlayerControls
-        visible={showControls}
-        playing={player.playing}
+        visible={player.showControls}
+        playing={player.isPlaying}
         currentTime={player.currentTime}
         duration={player.duration}
         buffered={player.buffered}
         volume={player.volume}
-        muted={player.muted}
+        muted={player.isMuted}
         isFullscreen={player.isFullscreen}
         playbackRate={player.playbackRate}
-        currentStream={selectedStream}
+        currentStream={player.selectedStream}
         onPlayPause={player.togglePlay}
-        onSeek={player.seek}
-        onVolumeChange={player.setVolume}
+        onSeek={player.seekTo}
+        onVolumeChange={player.setVolumeTo}
         onMuteToggle={player.toggleMute}
         onFullscreenToggle={player.toggleFullscreen}
-        onSpeedChange={player.setPlaybackRate}
+        onSpeedChange={player.changePlaybackRate}
         onBack={handleBack}
-        onOpenSettings={() => {}}
-        onOpenStreams={() => setShowStreamSelector(true)}
-        onSubtitleToggle={() => setShowSubtitles(!showSubtitles)}
+        onOpenSettings={() => player.setShowSettings(true)}
+        onOpenStreams={() => player.setShowStreamSelector(true)}
+        onSubtitleToggle={player.toggleSubtitles}
       />
 
       {/* Stream selector */}
-      {showStreamSelector && (
+      {player.showStreamSelector && (
         <StreamSelector
-          streams={streams}
-          currentStream={selectedStream}
+          streams={rawStreams}
+          currentStream={player.selectedStream}
           onSelect={handleStreamSelect}
-          onClose={() => setShowStreamSelector(false)}
+          onClose={() => player.setShowStreamSelector(false)}
           loading={streamsLoading}
         />
       )}

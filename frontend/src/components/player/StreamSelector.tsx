@@ -17,14 +17,11 @@ function StreamSelector({ streams, currentStream, onSelect, onClose, loading }: 
   }, [onClose]);
 
   const getCodecBadge = (stream: Stream) => {
-    const info = [];
-    if (stream.videoCodec && stream.videoCodec !== 'Unknown') {
-      info.push(stream.videoCodec.toUpperCase());
+    const codec = stream.codec || stream.videoCodec;
+    if (codec && codec !== 'Unknown') {
+      return codec.toUpperCase();
     }
-    if (stream.audioCodec && stream.audioCodec !== 'Unknown') {
-      info.push(stream.audioCodec.toUpperCase());
-    }
-    return info.length > 0 ? info.join(' / ') : null;
+    return null;
   };
 
   return (
