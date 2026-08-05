@@ -62,9 +62,7 @@ export default function StreamSelector({ streams, currentStream, onSelect, onClo
         <div className="p-4 space-y-2">
           {loading ? (
             <div className="flex flex-col items-center py-12 gap-3">
-              <div className="animate-pulse">
-                <ELogo size={40} />
-              </div>
+              <ELogo size={40} animate />
               <p className="text-white/40 text-sm">Loading streams...</p>
             </div>
           ) : streams.length === 0 ? (

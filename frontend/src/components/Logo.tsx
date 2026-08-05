@@ -41,15 +41,17 @@ export default function Logo({ size = 'md', showWord = true, className = '', ani
   );
 }
 
-export function ELogo({ size = 32, className = '' }: { size?: number; className?: string }) {
+export function ELogo({ size = 32, className = '', animate = false }: { size?: number; className?: string; animate?: boolean }) {
   return (
-    <img
+    <motion.img
       src="/logo-Photoroom.png"
       alt="EXYO"
       width={size}
       height={size}
       className={`object-contain shrink-0 ${className}`}
       style={{ width: size, height: size }}
+      animate={animate ? { rotate: 360 } : undefined}
+      transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
     />
   );
 }

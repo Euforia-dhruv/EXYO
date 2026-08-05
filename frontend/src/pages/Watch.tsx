@@ -139,10 +139,7 @@ export default function Watch() {
       {player.isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="flex flex-col items-center gap-3">
-            <div className="animate-pulse">
-              <ELogo size={48} />
-            </div>
-            <div className="w-8 h-8 border-2 border-white/10 border-t-red rounded-full animate-spin" />
+            <ELogo size={48} animate />
           </div>
         </div>
       )}

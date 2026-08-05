@@ -37,7 +37,7 @@ export default function ContinueWatching() {
 
       {items.length === 0 ? (
         <div className="glass glass-border rounded-3xl p-12 text-center">
-          <div className="opacity-20 mb-4 flex justify-center"><ELogo size={48} /></div>
+          <div className="opacity-20 mb-4 flex justify-center"><ELogo size={48} animate /></div>
           <p className="text-white/50 font-medium mb-1">Nothing to continue</p>
           <p className="text-white/25 text-sm">Start watching to see your progress here</p>
         </div>

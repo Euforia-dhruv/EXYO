@@ -560,9 +560,7 @@ export default function Detail() {
                     <div className="p-8 text-center">
                       {streamsLoading ? (
                         <div className="flex flex-col items-center gap-3 py-4">
-                          <div className="animate-pulse">
-                            <ELogo size={40} />
-                          </div>
+                          <ELogo size={40} animate />
                           <p className="text-white/30 text-sm">Loading streams...</p>
                         </div>
                       ) : (

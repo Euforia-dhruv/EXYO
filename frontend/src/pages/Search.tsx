@@ -41,7 +41,7 @@ export default function Search() {
         ) : results.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="opacity-20 mb-6">
-              <ELogo size={80} />
+              <ELogo size={80} animate />
             </div>
             <p className="text-white/40 text-lg font-medium mb-2">
               {query ? 'No results found' : 'Start typing to search'}
