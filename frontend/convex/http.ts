@@ -4,7 +4,7 @@ import { httpAction } from "./_generated/server";
 const http = httpRouter();
 
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
-const PROXY_BASE_URL = "https://exyo-proxy.exyo.workers.dev";
+const PROXY_BASE_URL = "https://exyo.vercel.app";
 
 const DEFAULT_STREAM_ADDONS = [
   "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
@@ -23,26 +23,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-function encodeProxyToken(target: string, referer: string): string {
-  const payload = JSON.stringify({ u: target, r: referer });
-  return btoa(payload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
 
-function buildProxiedUrl(streamUrl: string, behaviorHints?: Record<string, unknown>): string | undefined {
-  const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
-  if (!proxyHeaders) return undefined;
-  const referer = proxyHeaders.Referer || proxyHeaders.referer || "";
-  if (!referer) return undefined;
-  const token = encodeProxyToken(streamUrl, referer);
-  const lower = streamUrl.toLowerCase();
-  if (lower.includes(".m3u8")) {
-    return `${PROXY_BASE_URL}/hls/${token}.m3u8`;
-  }
-  if (lower.includes(".mp4")) {
-    return `${PROXY_BASE_URL}/mp4/${token}.mp4`;
-  }
-  return `${PROXY_BASE_URL}/hls/${token}.m3u8`;
-}
 
 http.route({
   path: "/api/content/:path*",
@@ -130,11 +111,16 @@ http.route({
         return (data.streams || []).map((s: Record<string, unknown>) => {
           const streamUrl = s.url as string;
           const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+          const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
+          const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
+          const proxiedUrl = streamUrl
+            ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+            : undefined;
           return {
             ...s,
             addonName: addonUrl.split("/")[2] || addonUrl,
             addonUrl: base,
-            proxiedUrl: streamUrl ? buildProxiedUrl(streamUrl, behaviorHints) : undefined,
+            proxiedUrl,
           };
         });
       })
@@ -201,11 +187,16 @@ http.route({
       const streams = (data.streams || []).map((s: Record<string, unknown>) => {
         const streamUrl = s.url as string;
         const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+        const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
+        const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
+        const proxiedUrl = streamUrl
+          ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+          : undefined;
         return {
           ...s,
           addonName: addon.split("/")[2] || addon,
           addonUrl: base,
-          proxiedUrl: streamUrl ? buildProxiedUrl(streamUrl, behaviorHints) : undefined,
+          proxiedUrl,
         };
       });
       return json(streams);
@@ -253,6 +244,87 @@ http.route({
       return json({ error: "Addon unreachable" }, 502);
     }
   }),
+});
+
+// Stream proxy - proxies HLS playlists and segments, and MP4 files
+http.route({
+  path: "/api/proxy",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const target = url.searchParams.get("url");
+    const referer = url.searchParams.get("referer") || "";
+    if (!target) return new Response("url required", { status: 400 });
+
+    const proxyOrigin = url.origin;
+
+    try {
+      const headers: Record<string, string> = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      };
+      if (referer) headers.Referer = referer;
+
+      const upstream = await fetch(target, { headers });
+      if (!upstream.ok) return new Response(null, { status: upstream.status });
+
+      const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+
+      // For m3u8 playlists, rewrite segment URLs to go through this proxy
+      if (target.endsWith(".m3u8") || contentType.includes("mpegurl") || contentType.includes("m3u8")) {
+        const text = await upstream.text();
+        const base = new URL(target);
+        const rewritten = text.split("\n").map(line => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) {
+            // Rewrite URI="..." in tags
+            return line.replace(/URI="([^"]+)"/g, (_m, uri) => {
+              const abs = new URL(uri, base).href;
+              return `URI="${proxyOrigin}/api/proxy?url=${encodeURIComponent(abs)}&referer=${encodeURIComponent(referer)}"`;
+            });
+          }
+          // Rewrite segment URLs — use absolute URLs to avoid cross-origin resolution issues
+          const abs = new URL(trimmed, base).href;
+          return `${proxyOrigin}/api/proxy?url=${encodeURIComponent(abs)}&referer=${encodeURIComponent(referer)}`;
+        }).join("\n");
+
+        return new Response(rewritten, {
+          status: 200,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/vnd.apple.mpegurl",
+            "Cache-Control": "no-cache",
+          },
+        });
+      }
+
+      // For non-playlist content (segments, MP4s), stream through
+      const respHeaders: Record<string, string> = {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400",
+      };
+
+      const contentLength = upstream.headers.get("content-length");
+      if (contentLength) respHeaders["Content-Length"] = contentLength;
+
+      const contentRange = upstream.headers.get("content-range");
+      if (contentRange) respHeaders["Content-Range"] = contentRange;
+
+      const acceptRanges = upstream.headers.get("accept-ranges");
+      if (acceptRanges) respHeaders["Accept-Ranges"] = acceptRanges;
+
+      return new Response(upstream.body, { status: 200, headers: respHeaders });
+    } catch (err: any) {
+      return new Response("proxy error: " + err.message, { status: 502 });
+    }
+  }),
+});
+
+// OPTIONS for proxy
+http.route({
+  path: "/api/proxy",
+  method: "OPTIONS",
+  handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
 });
 
 export default http;

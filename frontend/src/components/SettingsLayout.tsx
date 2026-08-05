@@ -52,7 +52,7 @@ const SIDEBAR_ITEMS = [
   },
   {
     label: 'Extensions',
-    path: '/settings/extensions',
+    path: '/settings/streaming',
     icon: (
       <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25" />
@@ -107,7 +107,7 @@ export default function SettingsLayout({ children, title, subtitle }: SettingsLa
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-exyo-black">
       <div className="h-[72px]" />
 
       <div className="max-w-[1280px] mx-auto px-6 md:px-12 lg:px-12 pt-10 pb-20">

@@ -14,7 +14,7 @@ export default function ContinueWatching() {
 
   if (continueWatching === undefined) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
+      <div className="min-h-screen bg-exyo-black pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
         <h1 className="text-[32px] md:text-[40px] font-black mb-8 tracking-tight">Continue Watching</h1>
         <SkeletonGrid count={10} />
       </div>
@@ -24,7 +24,7 @@ export default function ContinueWatching() {
   const items = continueWatching || [];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
+    <div className="min-h-screen bg-exyo-black pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-[32px] md:text-[40px] font-black tracking-tight">Continue Watching</h1>

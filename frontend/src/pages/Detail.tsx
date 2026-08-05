@@ -162,7 +162,7 @@ export default function Detail() {
 
   if (!content) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center bg-exyo-black">
         <div className="text-center max-w-md px-6">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
             <svg
@@ -193,7 +193,7 @@ export default function Detail() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-exyo-black">
       {/* Hero section */}
       <div className="relative h-[80vh] min-h-[480px]">
         <div
@@ -202,8 +202,8 @@ export default function Detail() {
         />
         <div className="absolute inset-0 bg-hero-gradient-left" />
         <div className="absolute inset-0 bg-hero-gradient" />
-        <div className="absolute inset-0 bg-[#0A0A0A]/40" />
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent" />
+        <div className="absolute inset-0 bg-exyo-black/40" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-exyo-black via-exyo-black/60 to-transparent" />
 
         {/* Back button */}
         <button
@@ -250,7 +250,7 @@ export default function Detail() {
               {/* Metadata */}
               <div className="flex flex-wrap items-center gap-2.5 mb-5 text-[13px]">
                 <span className="flex items-center gap-1 text-green-400 font-bold">
-                  {content.imdbRating ? `${Math.round(Number(content.imdbRating) * 10)}% Match` : '95% Match'}
+                  {content.imdbRating ? `${Math.round(Number(content.imdbRating) * 10)}% Match` : ''}
                 </span>
                 {content.imdbRating && (
                   <span className="flex items-center gap-1 text-yellow-400 font-bold">
@@ -383,6 +383,8 @@ export default function Detail() {
                 <button
                   onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
                   className="flex items-center gap-2 px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-xl text-[13px] font-semibold text-white transition-colors"
+                  aria-haspopup="listbox"
+                  aria-expanded={showSeasonDropdown}
                 >
                   Season {selectedSeason}
                   <svg
@@ -405,7 +407,7 @@ export default function Detail() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute top-full right-0 mt-2 bg-[#1A1A1A] border border-white/[0.08] rounded-xl overflow-hidden shadow-2xl shadow-black/60 min-w-[140px] z-20"
+                      className="absolute top-full right-0 mt-2 bg-exyo-surface border border-white/[0.08] rounded-xl overflow-hidden shadow-2xl shadow-black/60 min-w-[140px] z-20"
                     >
                       {seasonsData.map((s) => (
                         <button
@@ -437,7 +439,7 @@ export default function Detail() {
                 key={ep.number}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: ep.number * 0.03 }}
+                transition={{ delay: Math.min(ep.number * 0.03, 0.3) }}
                 onClick={() =>
                   navigate(
                     `/watch/${id}?type=series&season=${ep.season || selectedSeason}&episode=${ep.number}`

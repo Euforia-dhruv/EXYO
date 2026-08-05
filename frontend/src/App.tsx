@@ -62,8 +62,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#E50914]" />
+    <div className="min-h-screen bg-exyo-black flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-exyo-red" />
     </div>
   );
 }

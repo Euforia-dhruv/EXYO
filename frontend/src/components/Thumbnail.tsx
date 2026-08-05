@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CatalogItem, WatchHistory, WatchlistItem } from '../types';
@@ -45,13 +45,6 @@ function getGenres(item: CatalogItem | WatchHistory | WatchlistItem): string[] {
   return [];
 }
 
-function getMatch(item: CatalogItem | WatchHistory | WatchlistItem): number {
-  if ('imdbRating' in item && item.imdbRating) {
-    return Math.round(Number(item.imdbRating) * 10);
-  }
-  return Math.floor(Math.random() * 20) + 75;
-}
-
 export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
@@ -63,10 +56,14 @@ export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
   const title = getItemTitle(item);
   const poster = getItemPoster(item);
   const genres = getGenres(item);
-  const match = getMatch(item);
 
   const year = isCatalogItem(item) ? item.year : undefined;
   const imdbRating = isCatalogItem(item) ? item.imdbRating : undefined;
+
+  const matchScore = useMemo(() => {
+    const r = parseFloat(imdbRating || '0');
+    return r > 0 ? Math.min(Math.round(r * 10), 99) : null;
+  }, [imdbRating]);
 
   const handleMouseEnter = () => {
     hoverTimeout.current = setTimeout(() => setIsHovered(true), 300);
@@ -84,18 +81,13 @@ export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
       onMouseLeave={handleMouseLeave}
     >
       <motion.div
-        className="poster-card relative aspect-video rounded-xl overflow-hidden bg-exyo-surface"
+        className={`poster-card relative aspect-video rounded-xl overflow-hidden bg-exyo-surface ${isHovered ? 'shadow-[0_25px_80px_rgba(0,0,0,0.9)]' : ''}`}
         animate={{
           scale: isHovered ? 1.08 : 1,
           zIndex: isHovered ? 40 : 1,
           y: isHovered ? -12 : 0,
         }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        style={{
-          boxShadow: isHovered
-            ? '0 25px 80px rgba(0,0,0,0.9), 0 0 50px rgba(229,9,20,0.1)'
-            : '0 4px 12px rgba(0,0,0,0.3)',
-        }}
       >
         {/* Poster */}
         <img
@@ -119,7 +111,7 @@ export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
               <div className="absolute top-0 left-0 right-0 p-3.5 pb-0">
                 <p className="text-[13px] font-bold text-white truncate leading-tight">{title}</p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-green-400">{match}% Match</span>
+                  {matchScore !== null && <span className="text-[11px] font-bold text-green-400">{matchScore}% Match</span>}
                   {year && <span className="text-[10px] text-gray-300 font-medium">{year}</span>}
                   {type === 'series' && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 border border-gray-500 rounded text-gray-400">Series</span>
@@ -167,7 +159,8 @@ export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
                       e.stopPropagation();
                       navigate(`/detail/${contentId}?type=${type}`);
                     }}
-                    className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
+                    aria-label="Add to My List"
+                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -178,7 +171,8 @@ export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
                       e.stopPropagation();
                       navigate(`/detail/${contentId}?type=${type}`);
                     }}
-                    className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
+                    aria-label="More info"
+                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

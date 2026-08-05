@@ -11,8 +11,7 @@ const CLIENT_HINTS = {
 };
 
 function browserHeaders(referer) {
-  const origin = new URL(referer).origin;
-  return { "User-Agent": USER_AGENT, ...CLIENT_HINTS, Referer: referer, Origin: origin };
+  return { "User-Agent": USER_AGENT, ...CLIENT_HINTS, Referer: referer };
 }
 
 const HLS_PREFIX = "/hls/";
@@ -93,7 +92,6 @@ async function handleMp4(request, path) {
     headers: {
       "User-Agent": USER_AGENT,
       Referer: referer,
-      Origin: new URL(referer).origin,
       ...CLIENT_HINTS,
       Range: range || "bytes=0-",
     },

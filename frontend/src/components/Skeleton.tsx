@@ -28,8 +28,8 @@ export function SkeletonRow() {
 export function SkeletonHero() {
   return (
     <div className="relative h-[85vh] min-h-[560px] max-h-[880px] w-full shimmer">
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/50 to-transparent" />
-      <div className="absolute bottom-[10%] left-0 right-0 px-5 md:px-10 lg:px-14">
+      <div className="absolute inset-0 bg-gradient-to-r from-exyo-black via-exyo-black/50 to-transparent" />
+      <div className="absolute bottom-[10%] left-0 right-0 px-6 md:px-12 lg:px-16">
         <div className="max-w-3xl">
           <div className="h-4 shimmer rounded-lg w-24 mb-4" />
           <div className="h-[5rem] md:h-[6rem] lg:h-[7rem] shimmer rounded-2xl w-[60%] mb-5" />
@@ -56,9 +56,9 @@ export function SkeletonHero() {
 
 export function SkeletonDetail() {
   return (
-    <div className="min-h-screen bg-exyo-dark">
+    <div className="min-h-screen bg-exyo-black">
       <div className="relative h-[85vh] min-h-[500px] shimmer" />
-      <div className="px-5 md:px-10 lg:px-14 py-10">
+      <div className="px-6 md:px-12 lg:px-16 py-10">
         <div className="max-w-3xl">
           <div className="flex gap-2 mb-4">
             <div className="h-3.5 shimmer rounded-lg w-14" />

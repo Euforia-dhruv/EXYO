@@ -6,6 +6,8 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
   return (
     <button
       onClick={onChange}
+      role="switch"
+      aria-checked={enabled}
       className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
         enabled ? 'bg-exyo-red' : 'bg-white/10'
       }`}
@@ -98,6 +100,7 @@ function DownloadRow({ item }: { item: DownloadItem }) {
               onClick={() => pauseDownload(item.id)}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Pause"
+              aria-label="Pause"
             >
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
@@ -109,6 +112,7 @@ function DownloadRow({ item }: { item: DownloadItem }) {
               onClick={() => resumeDownload(item.id)}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Resume"
+              aria-label="Resume"
             >
               <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
@@ -120,6 +124,7 @@ function DownloadRow({ item }: { item: DownloadItem }) {
               onClick={() => retryDownload(item.id)}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Retry"
+              aria-label="Retry"
             >
               <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
@@ -130,6 +135,7 @@ function DownloadRow({ item }: { item: DownloadItem }) {
             onClick={() => item.status === 'completed' ? removeDownload(item.id) : cancelDownload(item.id)}
             className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
             title={item.status === 'completed' ? 'Remove' : 'Cancel'}
+            aria-label={item.status === 'completed' ? 'Remove' : 'Cancel'}
           >
             <svg className="w-4 h-4 text-gray-500 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

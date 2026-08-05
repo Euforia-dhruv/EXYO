@@ -5,14 +5,14 @@ export default function Login() {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Cinematic background */}
-      <div className="absolute inset-0 bg-exyo-dark">
+      <div className="absolute inset-0 bg-exyo-black">
         <img
           src="https://images.unsplash.com/photo-1574375927938-d5a98e8d7e28?w=1920&q=80"
           alt=""
           className="w-full h-full object-cover opacity-25 blur-[2px]"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-exyo-dark via-exyo-dark/85 to-exyo-dark/50" />
-        <div className="absolute inset-0 bg-gradient-to-t from-exyo-dark via-exyo-dark/40 to-exyo-dark/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-exyo-black via-exyo-black/85 to-exyo-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-exyo-black via-exyo-black/40 to-exyo-black/70" />
       </div>
 
       {/* Content */}

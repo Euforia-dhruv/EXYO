@@ -107,8 +107,8 @@ export default function Navbar() {
           navVisible ? 'translate-y-0' : '-translate-y-full'
         } ${
           showBackground
-            ? 'bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl shadow-black/50'
-            : 'bg-gradient-to-b from-[#0A0A0A]/80 via-[#0A0A0A]/40 to-transparent'
+            ? 'bg-exyo-black/95 backdrop-blur-xl shadow-2xl shadow-black/50'
+            : 'bg-gradient-to-b from-exyo-black/80 via-exyo-black/40 to-transparent'
         }`}
         role="navigation"
         aria-label="Main navigation"
@@ -235,7 +235,7 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-3 w-64 bg-[#1A1A1A]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+                    className="absolute right-0 top-full mt-3 w-64 bg-exyo-surface/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
                   >
                     {/* User info */}
                     <div className="px-4 py-3.5 border-b border-white/[0.06]">
@@ -267,7 +267,7 @@ export default function Navbar() {
                         { label: 'Continue Watching', path: '/continue-watching', icon: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                         { label: 'Downloads', path: '/settings/downloads', icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3' },
                         { label: 'Settings', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-                        { label: 'Extensions', path: '/settings/extensions', icon: 'M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25' },
+                        { label: 'Extensions', path: '/settings/streaming', icon: 'M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25' },
                       ].map(({ label, path, icon }) => (
                         <Link
                           key={`${path}-${label}`}
@@ -316,7 +316,7 @@ export default function Navbar() {
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               className="lg:hidden overflow-hidden border-t border-white/[0.06]"
             >
-              <div className="px-6 py-4 bg-[#0A0A0A]/95 backdrop-blur-xl">
+              <div className="px-6 py-4 bg-exyo-black/95 backdrop-blur-xl">
                 {NAV_LINKS.map(({ label, path }) => (
                   <Link
                     key={path}
@@ -345,7 +345,7 @@ export default function Navbar() {
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               className="overflow-hidden border-t border-white/[0.06]"
             >
-              <div className="px-6 md:px-12 lg:px-16 py-4 bg-[#0A0A0A]/95 backdrop-blur-xl">
+              <div className="px-6 md:px-12 lg:px-16 py-4 bg-exyo-black/95 backdrop-blur-xl">
                 <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
                   <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <circle cx="11" cy="11" r="8" />

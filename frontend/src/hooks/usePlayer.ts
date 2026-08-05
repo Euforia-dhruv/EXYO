@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
+import { detectFormat, selectDecodeMethod } from '../lib/formatDetector';
+import { remuxToSupported, transcodeForBrowser } from '../lib/browserDecoder';
 
 export interface PlayerStream {
   url: string;
@@ -49,11 +51,21 @@ function rankQuality(q?: string): number {
   return QUALITY_RANK[q.toLowerCase()] ?? 0;
 }
 
+function codecRank(s: PlayerStream): number {
+  const c = (s.codec || '').toLowerCase();
+  if (c === 'h264' || c === 'avc') return 3;
+  if (c === 'vp9' || c === 'vp8' || c === 'av1') return 2;
+  if (c === 'hevc' || c === 'h265') return 1;
+  return 0;
+}
+
 function sortStreamsByQuality(streams: PlayerStream[]): PlayerStream[] {
   return [...streams].sort((a, b) => {
     const aPlay = a.url && !a.infoHash ? 1 : 0;
     const bPlay = b.url && !b.infoHash ? 1 : 0;
     if (aPlay !== bPlay) return bPlay - aPlay;
+    const cd = codecRank(b) - codecRank(a);
+    if (cd !== 0) return cd;
     return rankQuality(b.quality) - rankQuality(a.quality);
   });
 }
@@ -109,28 +121,29 @@ export function usePlayer({
     }
   }, [streams, selectedStream, autoSelectBest]);
 
+  // Store all callbacks in refs so the main playback effect never re-runs
+  // due to callback reference changes
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  const onStreamErrorRef = useRef(onStreamError);
+  onStreamErrorRef.current = onStreamError;
+  const onRemuxProgressRef = useRef(onRemuxProgress);
+  onRemuxProgressRef.current = onRemuxProgress;
+  const remuxMkvRef = useRef(remuxMkv);
+  remuxMkvRef.current = remuxMkv;
+  const streamsRef = useRef(streams);
+  streamsRef.current = streams;
+
   const lastSaveTime = useRef(0);
   const saveProgress = useCallback(
     (progress: number) => {
       const now = Date.now();
       if (now - lastSaveTime.current < 10000) return;
       lastSaveTime.current = now;
-      onProgress?.(Math.min(progress, 100));
+      onProgressRef.current?.(Math.min(progress, 100));
     },
-    [onProgress]
+    []
   );
-
-  const tryNextStream = useCallback(() => {
-    const currentIdx = streams.findIndex((s) => s === selectedStream);
-    const nextIdx = currentIdx + 1;
-    if (nextIdx < streams.length) {
-      setSelectedStream(streams[nextIdx]);
-      setVideoError(null);
-    } else {
-      setVideoError('All streams failed to play');
-      setIsBuffering(false);
-    }
-  }, [streams, selectedStream]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -144,6 +157,7 @@ export function usePlayer({
 
     let hls: Hls | null = null;
     let cancelled = false;
+    let blobUrl: string | null = null;
     setVideoError(null);
     setIsBuffering(true);
 
@@ -163,18 +177,34 @@ export function usePlayer({
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setIsBuffering(true);
     const handlePlaying = () => setIsBuffering(false);
+
+    function tryNextStreamPlayback() {
+      if (cancelled) return;
+      const currentStreams = streamsRef.current;
+      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx < currentStreams.length) {
+        setSelectedStream(currentStreams[nextIdx]);
+        setVideoError(null);
+      } else {
+        setVideoError('All streams failed to play');
+        setIsBuffering(false);
+      }
+    }
+
     const handleError = () => {
       const err = video.error;
       const errMsg = err?.message || 'Unknown playback error';
-      const currentIdx = streams.findIndex((s) => s === selectedStream);
+      const currentStreams = streamsRef.current;
+      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
       const nextIdx = currentIdx + 1;
-      if (nextIdx < streams.length) {
-        setSelectedStream(streams[nextIdx]);
+      if (nextIdx < currentStreams.length) {
+        setSelectedStream(currentStreams[nextIdx]);
         setVideoError(null);
       } else {
         setVideoError(errMsg);
         setIsBuffering(false);
-        onStreamError?.(errMsg, selectedStream);
+        onStreamErrorRef.current?.(errMsg, selectedStream);
       }
     };
 
@@ -188,89 +218,96 @@ export function usePlayer({
     video.addEventListener('error', handleError);
 
     const playUrl = selectedStream?.proxiedUrl || url;
-    const lower = playUrl.toLowerCase();
-    const isMkv = lower.includes('.mkv') || lower.includes('matroska');
-    const isHls = lower.includes('.m3u8');
-    const streamCodec = selectedStream?.codec || 'h264';
-    const isHevc = streamCodec === 'hevc';
+    const fmt = detectFormat(playUrl, selectedStream.title, selectedStream.description);
+    console.log('[Player] Stream:', selectedStream.name, '| codec:', fmt.codec, '| format:', fmt.format, '| URL:', playUrl.substring(0, 100));
 
-    function canPlayHevc(): boolean {
-      const v = document.createElement('video');
-      const canH265 = v.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"');
-      const canH265Alt = v.canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"');
-      return !!(canH265 || canH265Alt);
-    }
-
-    if (isHevc && !canPlayHevc() && !isHls) {
-      const currentIdx = streams.findIndex((s) => s === selectedStream);
-      const nextIdx = currentIdx + 1;
-      if (nextIdx < streams.length) {
-        setSelectedStream(streams[nextIdx]);
-        return () => {};
-      }
-    }
-
-    async function startPlayback(playbackUrl: string) {
+    function playWithHls(sourceUrl: string) {
       if (cancelled || !video) return;
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        startLevel: -1,
+      });
 
-      if (playbackUrl.includes('.m3u8') && Hls.isSupported()) {
-        hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-        });
-        hls.loadSource(playbackUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (!cancelled) {
-            setIsBuffering(false);
-            video?.play().catch(() => {});
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal && !cancelled) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls?.startLoad();
+          } else {
+            tryNextStreamPlayback();
           }
+        }
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (!cancelled) {
+          setIsBuffering(false);
+          video?.play().catch(() => {});
+        }
+      });
+
+      hls.loadSource(sourceUrl);
+      hls.attachMedia(video);
+    }
+
+    function setSourceAndPlay(sourceUrl: string) {
+      if (cancelled || !video) return;
+      video.src = sourceUrl;
+      video.play().catch(() => {});
+    }
+
+    async function decodeWithFFmpeg(sourceUrl: string, format: string) {
+      if (cancelled) return;
+      onRemuxProgressRef.current?.('converting', 0);
+      try {
+        const result = await remuxToSupported(sourceUrl, format, (stage, p) => {
+          onRemuxProgressRef.current?.(stage, p);
         });
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal && !cancelled) {
-            const currentIdx = streams.findIndex((s) => s === selectedStream);
-            const nextIdx = currentIdx + 1;
-            if (nextIdx < streams.length) {
-              setSelectedStream(streams[nextIdx]);
-              setVideoError(null);
-            } else {
-              setVideoError(`Stream error: ${data.details}`);
-              setIsBuffering(false);
+        if (!cancelled && result.blobUrl) {
+          blobUrl = result.blobUrl;
+          onRemuxProgressRef.current?.('done', 1);
+          setSourceAndPlay(result.blobUrl);
+        } else if (!cancelled) {
+          setSourceAndPlay(playUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          try {
+            onRemuxProgressRef.current?.('transcoding', 0);
+            const transcoded = await transcodeForBrowser(sourceUrl, format, (stage, p) => {
+              onRemuxProgressRef.current?.(stage, p);
+            });
+            if (!cancelled && transcoded) {
+              blobUrl = transcoded;
+              onRemuxProgressRef.current?.('done', 1);
+              setSourceAndPlay(transcoded);
+            } else if (!cancelled) {
+              setSourceAndPlay(playUrl);
             }
+          } catch {
+            if (!cancelled) tryNextStreamPlayback();
           }
-        });
-      } else if (playbackUrl.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = playbackUrl;
-        video.play().catch(() => {});
-      } else {
-        video.src = playbackUrl;
-        video.play().catch(() => {});
+        }
       }
     }
 
-    if (isMkv && remuxMkv) {
-      onRemuxProgress?.('remuxing', 0);
-      remuxMkv(url)
-        .then((blobUrl) => {
-          if (!cancelled && blobUrl) {
-            onRemuxProgress?.('done', 1);
-            startPlayback(blobUrl);
-          } else if (!cancelled) {
-            startPlayback(playUrl);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            startPlayback(playUrl);
-          }
-        });
-    } else if (isHls) {
-      startPlayback(playUrl);
-    } else {
-      startPlayback(playUrl);
-    }
+    (async () => {
+      const method = await selectDecodeMethod(fmt.format, fmt.codec);
+
+      if (method === 'hls.js' && Hls.isSupported()) {
+        playWithHls(playUrl);
+      } else if (method === 'hls.js' && video.canPlayType('application/vnd.apple.mpegurl')) {
+        setSourceAndPlay(playUrl);
+      } else if (method === 'native') {
+        setSourceAndPlay(playUrl);
+      } else if (method === 'ffmpeg-remux' || method === 'ffmpeg-decode') {
+        decodeWithFFmpeg(playUrl, fmt.format);
+      } else {
+        setSourceAndPlay(playUrl);
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -283,8 +320,10 @@ export function usePlayer({
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('error', handleError);
       if (hls) hls.destroy();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [selectedStream, saveProgress, onStreamError, tryNextStream, remuxMkv, onRemuxProgress]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStream]);
 
   useEffect(() => {
     const handleMouseMove = () => {
@@ -463,7 +502,18 @@ export function usePlayer({
     skip,
     changePlaybackRate,
     toggleSubtitles,
-    tryNextStream,
+    tryNextStream: useCallback(() => {
+      const currentStreams = streamsRef.current;
+      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx < currentStreams.length) {
+        setSelectedStream(currentStreams[nextIdx]);
+        setVideoError(null);
+      } else {
+        setVideoError('All streams failed to play');
+        setIsBuffering(false);
+      }
+    }, [selectedStream]),
     clearErrorAndOpenSelector,
     downloadStream,
   };

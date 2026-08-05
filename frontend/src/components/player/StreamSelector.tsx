@@ -120,7 +120,7 @@ export default function StreamSelector({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="absolute top-0 right-0 bottom-0 w-full sm:w-[400px] bg-[#0A0A0A]/95 backdrop-blur-xl border-l border-white/[0.06] z-50 overflow-y-auto"
+            className="absolute top-0 right-0 bottom-0 w-full sm:w-[400px] bg-exyo-black/95 backdrop-blur-xl border-l border-white/[0.06] z-50 overflow-y-auto"
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">

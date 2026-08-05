@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "lightpanda": {
+      "type": "local",
+      "command": ["npx", "-y", "lightpanda-mcp"],
+      "enabled": true
+    }
+  }
+}

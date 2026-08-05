@@ -13,7 +13,7 @@ export default function MyList() {
 
   if (watchlist === undefined) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
+      <div className="min-h-screen bg-exyo-black pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
         <h1 className="text-[40px] font-black mb-8 tracking-tight">My List</h1>
         <SkeletonGrid count={10} />
       </div>
@@ -23,7 +23,7 @@ export default function MyList() {
   const items = watchlist || [];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
+    <div className="min-h-screen bg-exyo-black pt-[100px] px-6 md:px-12 lg:px-16 pb-20">
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-[40px] md:text-[48px] font-black tracking-tight">My List</h1>

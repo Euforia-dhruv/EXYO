@@ -3,14 +3,14 @@ import { motion } from 'framer-motion';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-exyo-dark px-4">
+    <div className="min-h-screen flex items-center justify-center bg-exyo-black px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
         className="text-center"
       >
-        <span className="text-exyo-red/20 font-black text-[10rem] leading-none block mb-6">
+        <span className="text-exyo-red/20 font-black text-[8rem] md:text-[10rem] leading-none block mb-6">
           404
         </span>
         <h2 className="text-3xl font-bold mb-3">Page Not Found</h2>

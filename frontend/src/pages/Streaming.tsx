@@ -608,7 +608,7 @@ export default function Streaming() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative bg-[#1A1A1A] border border-white/[0.08] rounded-3xl p-8 w-full max-w-lg shadow-2xl"
+              className="relative bg-exyo-surface border border-white/[0.08] rounded-3xl p-8 w-full max-w-lg shadow-2xl"
             >
               <button
                 onClick={() => setShowInstallModal(false)}

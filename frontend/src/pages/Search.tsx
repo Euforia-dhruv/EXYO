@@ -64,7 +64,7 @@ export default function Search() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pt-[100px] px-6 md:px-12 lg:px-16 pb-16">
+    <div className="min-h-screen bg-exyo-black pt-[100px] px-6 md:px-12 lg:px-16 pb-16">
       {/* Search bar */}
       <form onSubmit={handleSearch} className="max-w-4xl mx-auto mb-8">
         <div className="relative">

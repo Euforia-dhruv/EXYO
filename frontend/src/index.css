@@ -2,14 +2,14 @@
 
 @layer base {
   @theme {
-    --color-exyo-black: #0A0A0A;
-    --color-exyo-dark: #141414;
-    --color-exyo-darker: #0A0A0A;
-    --color-exyo-surface: #1A1A1A;
-    --color-exyo-hover: #2A2A2A;
+    --color-exyo-black: var(--theme-bg, #0A0A0A);
+    --color-exyo-dark: var(--theme-surface, #141414);
+    --color-exyo-darker: var(--theme-bg, #0A0A0A);
+    --color-exyo-surface: var(--theme-surface, #1A1A1A);
+    --color-exyo-hover: var(--theme-hover, #2A2A2A);
     --color-exyo-gray: #E5E5E5;
     --color-exyo-muted: #808080;
-    --color-exyo-red: #E50914;
+    --color-exyo-red: var(--theme-accent, #E50914);
     --color-exyo-red-dark: #B20710;
     --color-exyo-red-hover: #F6121D;
     --color-exyo-border: rgba(255, 255, 255, 0.08);
@@ -29,13 +29,14 @@ html {
 
 body {
   font-family: 'Helvetica Neue', 'Arial', system-ui, -apple-system, sans-serif;
-  background-color: #0A0A0A;
+  background-color: var(--theme-bg, #0A0A0A);
   color: #ffffff;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color 0.3s ease;
 }
 
 /* Scrollbar */
@@ -50,7 +51,7 @@ body {
 ::selection { background-color: rgba(229, 9, 20, 0.4); color: white; }
 
 :focus-visible {
-  outline: 2px solid #E50914;
+  outline: 2px solid var(--theme-accent, #E50914);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -59,7 +60,7 @@ body {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #E50914;
+  background: var(--theme-accent, #E50914);
   color: white;
   padding: 8px 16px;
   z-index: 100;
@@ -70,7 +71,7 @@ body {
 
 /* Shimmer */
 .shimmer {
-  background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, var(--theme-surface, #1a1a1a) 25%, var(--theme-hover, #252525) 50%, var(--theme-surface, #1a1a1a) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
@@ -118,10 +119,6 @@ body {
 }
 
 /* Theme system */
-body {
-  background-color: var(--exyo-bg, #0A0A0A);
-  transition: background-color 0.3s ease;
-}
 
 .glass-mode .glass {
   background: rgba(20, 20, 20, 0.6);

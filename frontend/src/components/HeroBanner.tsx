@@ -87,7 +87,7 @@ export default function HeroBanner({ items }: HeroBannerProps) {
       <div className="absolute inset-0 bg-hero-gradient-left pointer-events-none" />
       <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
       <div className="absolute inset-0 bg-hero-gradient-top pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-exyo-black via-exyo-black/60 to-transparent pointer-events-none" />
 
       {/* Content */}
       <div className="absolute bottom-[12%] left-0 right-0 px-6 md:px-12 lg:px-16">
@@ -129,9 +129,6 @@ export default function HeroBanner({ items }: HeroBannerProps) {
                 )}
                 {item.year && <span className="text-gray-300 font-medium">{item.year}</span>}
                 {item.runtime && <span className="text-gray-300 font-medium">{item.runtime}</span>}
-                <span className="px-2 py-0.5 text-[9px] font-bold border border-white/20 rounded-full uppercase tracking-wider text-gray-300">
-                  HD
-                </span>
               </div>
 
               {/* Description */}

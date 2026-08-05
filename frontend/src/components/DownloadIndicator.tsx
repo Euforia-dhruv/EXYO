@@ -18,7 +18,7 @@ export default function DownloadIndicator() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.9 }}
         onClick={() => navigate('/settings/downloads')}
-        className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-4 shadow-2xl shadow-black/60 hover:bg-[#1A1A1A] transition-colors cursor-pointer group"
+        className="fixed bottom-6 right-6 z-50 bg-exyo-surface/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-4 shadow-2xl shadow-black/60 hover:bg-exyo-surface transition-colors cursor-pointer group"
       >
         <div className="flex items-center gap-3">
           {/* Animated icon */}

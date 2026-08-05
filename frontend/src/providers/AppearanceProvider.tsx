@@ -25,10 +25,10 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     const themeColors = THEME_COLORS[theme] || THEME_COLORS.midnight;
     const accent = ACCENT_COLORS[accentColor] || ACCENT_COLORS.red;
 
-    root.style.setProperty('--exyo-bg', themeColors.bg);
-    root.style.setProperty('--exyo-surface', themeColors.surface);
-    root.style.setProperty('--exyo-hover', themeColors.hover);
-    root.style.setProperty('--exyo-accent', accent);
+    root.style.setProperty('--theme-bg', themeColors.bg);
+    root.style.setProperty('--theme-surface', themeColors.surface);
+    root.style.setProperty('--theme-hover', themeColors.hover);
+    root.style.setProperty('--theme-accent', accent);
     root.style.setProperty('--exyo-navbar-alpha', `${navbarTransparency / 100}`);
 
     root.classList.remove('theme-oled', 'theme-midnight', 'theme-graphite');

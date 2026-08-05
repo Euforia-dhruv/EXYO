@@ -55,13 +55,13 @@ export default function Performance() {
           <StatCard
             icon={<svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25" /></svg>}
             label="Memory Usage"
-            value="~45 MB"
+            value={store.gpuDecode ? "Active" : "N/A"}
             color="bg-purple-500/10"
           />
           <StatCard
             icon={<svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>}
             label="CPU Usage"
-            value="~2%"
+            value="N/A"
             color="bg-orange-500/10"
           />
           <StatCard

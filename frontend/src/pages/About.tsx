@@ -38,9 +38,9 @@ export default function About() {
           <h2 className="text-[15px] font-bold text-white mb-4">Links</h2>
           <div className="space-y-2">
             {[
-              { label: 'Privacy Policy', href: '#' },
-              { label: 'Terms of Service', href: '#' },
-              { label: 'Open Source Licenses', href: '#' },
+              { label: 'Privacy Policy', href: '/privacy' },
+              { label: 'Terms of Service', href: '/terms' },
+              { label: 'Open Source Licenses', href: '/licenses' },
             ].map((link) => (
               <a
                 key={link.label}
