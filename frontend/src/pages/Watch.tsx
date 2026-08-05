@@ -21,6 +21,7 @@ export default function Watch() {
   const type = searchParams.get('type') || 'movie';
   const season = searchParams.get('season');
   const episode = searchParams.get('episode');
+  const streamUrl = searchParams.get('stream');
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -98,6 +99,17 @@ export default function Watch() {
 
   const torrent = useTorrentPlayer();
   const lastTorrentHash = useRef<string | null>(null);
+
+  // Auto-select the specific stream if URL param provided
+  useEffect(() => {
+    if (streamUrl && enrichedStreams.length > 0 && !player.selectedStream) {
+      const decoded = decodeURIComponent(streamUrl);
+      const match = enrichedStreams.find(
+        (s) => s.url === decoded || s.proxiedUrl === decoded
+      );
+      if (match) player.selectStream(match);
+    }
+  }, [streamUrl, enrichedStreams, player]);
 
   const isTorrentStream = useCallback((stream: PlayerStream | null) => {
     return stream && stream.infoHash && (!stream.url || stream.url === '');
