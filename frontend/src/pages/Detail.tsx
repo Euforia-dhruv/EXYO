@@ -292,7 +292,7 @@ export default function Detail() {
                 {isSignedIn && (
                   <button
                     onClick={toggleWatchlist}
-                    disabled={addToWatchlist.isPending || removeFromWatchlist.isPending}
+                    disabled={convexAddToWatchlist.isPending || convexRemoveFromWatchlist.isPending}
                     className={cn(
                       'inline-flex items-center gap-2 px-5 py-3.5 rounded-xl font-medium text-[14px] transition-all duration-200 border',
                       isWatchlisted

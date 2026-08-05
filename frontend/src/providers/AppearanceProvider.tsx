@@ -19,9 +19,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
+  const store = useAppearanceStore();
   if (!ctx) {
-    // Fallback: use the store directly (for components outside the provider)
-    const store = useAppearanceStore();
     return {
       theme: store.theme,
       setTheme: store.setTheme,

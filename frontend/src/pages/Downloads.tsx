@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { ArrowDownTrayIcon, TrashIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { useDownloadStore } from '../store/downloadStore';
-import { cn, formatTime } from '../utils/helpers';
 
 export default function Downloads() {
   const downloads = useDownloadStore((s) => s.downloads);

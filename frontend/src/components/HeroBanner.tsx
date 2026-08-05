@@ -27,6 +27,13 @@ function HeroBanner({ items, autoPlayInterval = 8000 }: Props) {
 
   const currentItem = visibleItems[currentIndex];
 
+  // Clamp currentIndex when visibleItems shrinks
+  useEffect(() => {
+    if (visibleItems.length > 0 && currentIndex >= visibleItems.length) {
+      setCurrentIndex(0);
+    }
+  }, [visibleItems.length, currentIndex]);
+
   // Preload next image
   useEffect(() => {
     if (visibleItems.length <= 1) return;

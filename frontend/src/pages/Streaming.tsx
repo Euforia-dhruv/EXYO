@@ -24,7 +24,9 @@ export default function Streaming() {
     const savedCustom = localStorage.getItem('exyo-custom-proxy');
     if (savedCustom) setCustomProxy(savedCustom);
     const savedAddons = localStorage.getItem('exyo-addons');
-    if (savedAddons) setEnabledAddons(JSON.parse(savedAddons));
+    if (savedAddons) {
+      try { setEnabledAddons(JSON.parse(savedAddons)); } catch { /* ignore corrupted data */ }
+    }
   }, []);
 
   const handleProxyChange = (id: string) => {

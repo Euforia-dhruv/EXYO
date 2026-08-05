@@ -87,13 +87,10 @@ export const contentApi = {
   },
 
   getCatalog: async (type: string, catalogId: string) => {
-    const result = await contentFetch('/catalogs', { type, catalogId }) as Array<{
-      id?: string; imdb_id?: string; name?: string; poster?: string; background?: string;
-      year?: string; imdbRating?: number; description?: string; runtime?: string;
-      genres?: string[]; type?: string;
-    }>;
+    const result = await contentFetch('/catalogs', { type, catalogId });
+    if (!Array.isArray(result)) return { results: [] } as ContentSearchResult;
     return {
-      results: result.map((item) => ({
+      results: result.map((item: any) => ({
         id: item.id || item.imdb_id || '',
         imdbId: item.imdb_id,
         name: item.name,
@@ -118,6 +115,7 @@ export const contentApi = {
   searchByName: async (query: string, options?: { type?: 'movie' | 'tv'; limit?: number }) => {
     const params: Record<string, string> = { q: query };
     if (options?.type) params.type = options.type;
+    if (options?.limit) params.limit = String(options.limit);
     return contentFetch('/search', params) as Promise<ContentSearchResult>;
   },
 

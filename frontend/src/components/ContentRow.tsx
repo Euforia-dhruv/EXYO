@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import type { CatalogItem } from '../types';
 import Thumbnail from './Thumbnail';
@@ -77,12 +78,12 @@ function ContentRow({
           {title}
         </h2>
         {viewAllLink && (
-          <a
-            href={viewAllLink}
+          <Link
+            to={viewAllLink}
             className="text-white/40 hover:text-white text-[13px] font-medium transition-colors duration-200"
           >
             View All →
-          </a>
+          </Link>
         )}
       </div>
 

@@ -11,6 +11,7 @@ export interface PlayerStream {
   quality?: string;
   name?: string;
   description?: string;
+  addon?: string;
   addonName?: string;
   addonUrl?: string;
   provider?: string;

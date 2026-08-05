@@ -4,7 +4,6 @@ import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
@@ -105,48 +104,16 @@ export default function Watch() {
     };
   }, [controlsTimeout]);
 
-  // Keyboard shortcuts
+  // Only handle Escape for back navigation (usePlayer handles all other shortcuts)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-      switch (e.key) {
-        case ' ':
-        case 'k':
-          e.preventDefault();
-          player.togglePlay();
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          player.skip(-10);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          player.skip(10);
-          break;
-        case 'f':
-          e.preventDefault();
-          player.toggleFullscreen();
-          break;
-        case 'm':
-          e.preventDefault();
-          player.toggleMute();
-          break;
-        case 'Escape':
-          handleBack();
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          player.adjustVolume(0.1);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          player.adjustVolume(-0.1);
-          break;
+      if (e.key === 'Escape' && !player.showStreamSelector && !player.showSettings) {
+        handleBack();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [player]);
+  }, [handleBack, player.showStreamSelector, player.showSettings]);
 
   const handleBack = useCallback(() => {
     if (id) {

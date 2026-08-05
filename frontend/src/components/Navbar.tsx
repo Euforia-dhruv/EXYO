@@ -32,7 +32,7 @@ const NAV_LINKS = [
   { path: '/continue-watching', label: 'Continue Watching', icon: PlayIcon },
 ];
 
-const API_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+const API_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
