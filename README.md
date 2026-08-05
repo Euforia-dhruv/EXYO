@@ -6,7 +6,7 @@ A production-ready streaming platform that looks and feels like Netflix, powered
 
 ## Live Demo
 
-- **Frontend**: https://exyo.pp.ua
+- **Frontend**: https://exyo.cc.cd
 - **API**: Backend API (deployed separately)
 
 ## Features

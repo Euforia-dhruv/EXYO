@@ -5,7 +5,7 @@ This guide covers deploying EXYO to DigitalPlat infrastructure.
 ## Prerequisites
 
 - DigitalPlat account with Pages, EdgeTerm, and Mail Relay enabled
-- Domain: exyo.qd.je configured with DigitalPlat nameservers
+- Domain: exyo.cc.cd configured with Vercel nameservers (ns1.vercel-dns.com, ns2.vercel-dns.com)
 - PostgreSQL database (Supabase, Railway, or DigitalPlat Database)
 - Node.js 20+ installed locally
 
