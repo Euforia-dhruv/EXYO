@@ -1,46 +1,49 @@
 import { useQuery } from '@tanstack/react-query';
-import { contentApi } from '../api/content.api';
+import { contentApi, type ContentSearchResult } from '../api/content.api';
 import ContentRow from '../components/ContentRow';
 import { RowSkeleton } from '../components/Skeleton';
 import { FilmIcon } from '@heroicons/react/24/outline';
 import type { CatalogItem } from '../types';
 
-const extractItems = (data: unknown): CatalogItem[] => {
-  if (!data) return [];
-  if (typeof data === 'object' && data !== null && 'results' in data && Array.isArray((data as { results: unknown }).results)) {
-    return ((data as { results: Array<{ id?: string; imdbId?: string; name?: string; title?: string; posterUrl?: string; type?: string; year?: string; rating?: number }> }).results).map((item) => ({
-      id: item.id || item.imdbId || '',
-      imdbId: item.imdbId,
-      name: item.name,
-      title: item.title,
-      posterUrl: item.posterUrl,
-      type: item.type as 'movie' | 'tv' | undefined,
-      year: item.year,
-      rating: item.rating,
-    }));
-  }
-  return [];
+const extractItems = (data: ContentSearchResult | undefined): CatalogItem[] => {
+  if (!data || !data.results) return [];
+  return data.results.map((item) => ({
+    id: item.id || item.imdbId || '',
+    imdbId: item.imdbId,
+    name: item.name,
+    title: item.title,
+    posterUrl: item.posterUrl,
+    backdropUrl: item.backdropUrl,
+    type: (item.type || 'movie') as 'movie' | 'tv' | undefined,
+    year: item.year,
+    rating: item.rating,
+  }));
 };
 
 export default function Movies() {
   const { data: trending, isLoading: trendingLoading } = useQuery({
-    queryKey: ['cinemeta', 'movies', 'trending'],
-    queryFn: () => contentApi.searchByName('trending movies', { type: 'movie', limit: 20 }),
+    queryKey: ['cinemeta-catalog', 'movie', 'trending'],
+    queryFn: () => contentApi.getCatalog('movie', 'trending'),
   });
 
   const { data: popular, isLoading: popularLoading } = useQuery({
-    queryKey: ['cinemeta', 'movies', 'popular'],
-    queryFn: () => contentApi.searchByName('popular movies', { type: 'movie', limit: 20 }),
+    queryKey: ['cinemeta-catalog', 'movie', 'popular'],
+    queryFn: () => contentApi.getCatalog('movie', 'popular'),
   });
 
   const { data: topRated, isLoading: topRatedLoading } = useQuery({
-    queryKey: ['cinemeta', 'movies', 'top-rated'],
-    queryFn: () => contentApi.searchByName('top rated movies', { type: 'movie', limit: 20 }),
+    queryKey: ['cinemeta-catalog', 'movie', 'top_rated'],
+    queryFn: () => contentApi.getCatalog('movie', 'top_rated'),
   });
 
   const { data: latest, isLoading: latestLoading } = useQuery({
-    queryKey: ['cinemeta', 'movies', 'latest'],
-    queryFn: () => contentApi.searchByName('latest movies', { type: 'movie', limit: 20 }),
+    queryKey: ['cinemeta-catalog', 'movie', 'newest'],
+    queryFn: () => contentApi.getCatalog('movie', 'newest'),
+  });
+
+  const { data: genre, isLoading: genreLoading } = useQuery({
+    queryKey: ['cinemeta-catalog', 'movie', 'genre'],
+    queryFn: () => contentApi.getCatalog('movie', 'genre'),
   });
 
   return (
@@ -63,6 +66,9 @@ export default function Movies() {
           )}
           {topRatedLoading ? <RowSkeleton /> : (
             extractItems(topRated).length > 0 && <ContentRow title="Top Rated Movies" items={extractItems(topRated)} size="md" />
+          )}
+          {genreLoading ? <RowSkeleton /> : (
+            extractItems(genre).length > 0 && <ContentRow title="Browse by Genre" items={extractItems(genre)} size="md" />
           )}
         </div>
       </div>

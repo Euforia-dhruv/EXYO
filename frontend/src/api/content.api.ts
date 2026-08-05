@@ -86,6 +86,29 @@ export const contentApi = {
     return contentFetch('/catalogs', { type, catalogId }) as Promise<ContentSearchResult>;
   },
 
+  getCatalog: async (type: string, catalogId: string) => {
+    const result = await contentFetch('/catalogs', { type, catalogId }) as Array<{
+      id?: string; imdb_id?: string; name?: string; poster?: string; background?: string;
+      year?: string; imdbRating?: number; description?: string; runtime?: string;
+      genres?: string[]; type?: string;
+    }>;
+    return {
+      results: result.map((item) => ({
+        id: item.id || item.imdb_id || '',
+        imdbId: item.imdb_id,
+        name: item.name,
+        posterUrl: item.poster,
+        backdropUrl: item.background,
+        year: item.year,
+        rating: item.imdbRating,
+        description: item.description,
+        runtime: item.runtime,
+        genres: item.genres,
+        type: item.type || type,
+      })),
+    } as ContentSearchResult;
+  },
+
   search: async (query: string, type?: string) => {
     const params: Record<string, string> = { q: query };
     if (type) params.type = type;

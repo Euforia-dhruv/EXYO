@@ -47,23 +47,23 @@ export default function Home() {
   const isAnime = catalogId === ANIME_CATALOG_ID;
 
   const { data: trending, isLoading: trendingLoading } = useQuery({
-    queryKey: ['cinemeta', 'trending', isAnime ? 'anime' : 'default'],
-    queryFn: () => contentApi.searchByName(isAnime ? 'anime trending' : 'trending', { limit: 20 }),
+    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'trending'],
+    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'trending'),
   });
 
   const { data: popular, isLoading: popularLoading } = useQuery({
-    queryKey: ['cinemeta', 'popular', isAnime ? 'anime' : 'default'],
-    queryFn: () => contentApi.searchByName(isAnime ? 'anime popular' : 'popular', { limit: 20 }),
+    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'popular'],
+    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'popular'),
   });
 
   const { data: latest, isLoading: latestLoading } = useQuery({
-    queryKey: ['cinemeta', 'latest', isAnime ? 'anime' : 'default'],
-    queryFn: () => contentApi.searchByName(isAnime ? 'anime latest' : 'latest', { limit: 20 }),
+    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'newest'],
+    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'newest'),
   });
 
   const { data: topRated, isLoading: topRatedLoading } = useQuery({
-    queryKey: ['cinemeta', 'top-rated', isAnime ? 'anime' : 'default'],
-    queryFn: () => contentApi.searchByName(isAnime ? 'anime top rated' : 'top rated', { limit: 20 }),
+    queryKey: ['cinemeta-catalog', isAnime ? 'anime' : 'movie', 'top_rated'],
+    queryFn: () => contentApi.getCatalog(isAnime ? 'anime' : 'movie', 'top_rated'),
   });
 
   const extractItems = useCallback((data: ContentSearchResult | undefined): CatalogItem[] => {
