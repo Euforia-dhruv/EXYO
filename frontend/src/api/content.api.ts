@@ -83,7 +83,25 @@ export interface ContentDetailsResult {
 
 export const contentApi = {
   getCatalogs: async (type = 'movie', catalogId = 'top') => {
-    return contentFetch('/catalogs', { type, catalogId }) as Promise<ContentSearchResult>;
+    const result = await contentFetch('/catalogs', { type, catalogId });
+    if (Array.isArray(result)) {
+      return {
+        results: result.map((item: any) => ({
+          id: item.id || item.imdb_id || '',
+          imdbId: item.imdb_id,
+          name: item.name,
+          posterUrl: item.poster,
+          backdropUrl: item.background,
+          year: item.releaseInfo || item.year,
+          rating: item.imdbRating ? Number(item.imdbRating) : undefined,
+          description: item.description,
+          runtime: item.runtime,
+          genres: item.genres || item.genre,
+          type: item.type || type,
+        })),
+      } as ContentSearchResult;
+    }
+    return result as ContentSearchResult;
   },
 
   getCatalog: async (type: string, catalogId: string) => {
@@ -109,14 +127,46 @@ export const contentApi = {
   search: async (query: string, type?: string) => {
     const params: Record<string, string> = { q: query };
     if (type) params.type = type;
-    return contentFetch('/search', params) as Promise<ContentSearchResult>;
+    const result = await contentFetch('/search', params);
+    if (Array.isArray(result)) {
+      return {
+        results: result.map((item: any) => ({
+          id: item.id || item.imdb_id || '',
+          imdbId: item.imdb_id,
+          name: item.name,
+          posterUrl: item.poster,
+          backdropUrl: item.background,
+          year: item.releaseInfo || item.year,
+          rating: item.imdbRating ? Number(item.imdbRating) : undefined,
+          description: item.description,
+          type: item.type || type,
+        })),
+      } as ContentSearchResult;
+    }
+    return result as ContentSearchResult;
   },
 
   searchByName: async (query: string, options?: { type?: 'movie' | 'tv'; limit?: number }) => {
     const params: Record<string, string> = { q: query };
     if (options?.type) params.type = options.type;
     if (options?.limit) params.limit = String(options.limit);
-    return contentFetch('/search', params) as Promise<ContentSearchResult>;
+    const result = await contentFetch('/search', params);
+    if (Array.isArray(result)) {
+      return {
+        results: result.map((item: any) => ({
+          id: item.id || item.imdb_id || '',
+          imdbId: item.imdb_id,
+          name: item.name,
+          posterUrl: item.poster,
+          backdropUrl: item.background,
+          year: item.releaseInfo || item.year,
+          rating: item.imdbRating ? Number(item.imdbRating) : undefined,
+          description: item.description,
+          type: item.type || options?.type,
+        })),
+      } as ContentSearchResult;
+    }
+    return result as ContentSearchResult;
   },
 
   getDetails: async (id: string, type = 'movie') => {
@@ -124,18 +174,62 @@ export const contentApi = {
   },
 
   getStreams: async (id: string, type = 'movie', addonUrls?: string[]) => {
+    let result;
     if (addonUrls && addonUrls.length > 0) {
-      return contentFetch('/streams', { id, type, addons: addonUrls.join(',') }) as Promise<ContentStreamsResult>;
+      result = await contentFetch('/streams', { id, type, addons: addonUrls.join(',') });
+    } else {
+      result = await contentFetch('/streams', { id, type });
     }
-    return contentFetch('/streams', { id, type }) as Promise<ContentStreamsResult>;
+    if (Array.isArray(result)) {
+      return {
+        streams: result.map((item: any) => ({
+          url: item.url,
+          name: item.name,
+          title: item.title || item.name,
+          quality: item.quality || item.description,
+          videoCodec: item.videoCodec || item.codec,
+          audioCodec: item.audioCodec,
+          codec: item.codec,
+          addon: item.addon,
+          addonName: item.addonName,
+          addonUrl: item.addonUrl,
+          description: item.description,
+          behaviorHints: item.behaviorHints,
+        })),
+      } as ContentStreamsResult;
+    }
+    return result as ContentStreamsResult;
   },
 
   getStreamFromAddon: async (id: string, type = 'movie', addonUrl: string) => {
-    return contentFetch('/stream', { id, type, addon: addonUrl }) as Promise<ContentStreamsResult>;
+    const result = await contentFetch('/stream', { id, type, addon: addonUrl });
+    if (Array.isArray(result)) {
+      return {
+        streams: result.map((item: any) => ({
+          url: item.url,
+          name: item.name,
+          title: item.title || item.name,
+          quality: item.quality || item.description,
+          videoCodec: item.videoCodec || item.codec,
+          audioCodec: item.audioCodec,
+          codec: item.codec,
+          addon: item.addon,
+          addonName: item.addonName,
+          addonUrl: item.addonUrl,
+          description: item.description,
+          behaviorHints: item.behaviorHints,
+        })),
+      } as ContentStreamsResult;
+    }
+    return result as ContentStreamsResult;
   },
 
   getSubtitles: async (id: string, type = 'movie') => {
-    return contentFetch('/subtitles', { id, type });
+    const result = await contentFetch('/subtitles', { id, type });
+    if (Array.isArray(result)) {
+      return { subtitles: result };
+    }
+    return result;
   },
 
   getManifest: async (addon?: string) => {
