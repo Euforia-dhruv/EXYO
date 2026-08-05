@@ -205,6 +205,13 @@ export default function Watch() {
         onClick={player.togglePlay}
       />
 
+      <canvas
+        ref={player.canvasRef}
+        className="w-full h-full object-contain absolute inset-0"
+        style={{ display: 'none' }}
+        onClick={player.togglePlay}
+      />
+
       {remuxStatus && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="text-center">

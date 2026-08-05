@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
 import { detectFormat, selectDecodeMethod } from '../lib/formatDetector';
 import { remuxToSupported, transcodeForBrowser } from '../lib/browserDecoder';
+import { StreamingPlayer } from '../lib/streamingPlayer';
 
 export interface PlayerStream {
   url: string;
@@ -81,7 +82,9 @@ export function usePlayer({
 }: UsePlayerOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const streamingPlayerRef = useRef<StreamingPlayer | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -99,6 +102,7 @@ export function usePlayer({
   const [showStreamSelector, setShowStreamSelector] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [activeSubtitleUrl, setActiveSubtitleUrl] = useState<string | null>(null);
+  const [isStreamingPlayer, setIsStreamingPlayer] = useState(false);
 
   const streams = useMemo(() => sortStreamsByQuality(rawStreams), [rawStreams]);
 
@@ -158,8 +162,13 @@ export function usePlayer({
     let hls: Hls | null = null;
     let cancelled = false;
     let blobUrl: string | null = null;
+    let tryingFFmpeg = false;
     setVideoError(null);
     setIsBuffering(true);
+
+    const playUrl = selectedStream?.proxiedUrl || url;
+    const fmt = detectFormat(playUrl, selectedStream.title, selectedStream.description);
+    console.log('[Player] Stream:', selectedStream.name, '| codec:', fmt.codec, '| format:', fmt.format, '| URL:', playUrl.substring(0, 100));
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
@@ -193,19 +202,23 @@ export function usePlayer({
     }
 
     const handleError = () => {
+      if (cancelled) return;
       const err = video.error;
       const errMsg = err?.message || 'Unknown playback error';
-      const currentStreams = streamsRef.current;
-      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
-      const nextIdx = currentIdx + 1;
-      if (nextIdx < currentStreams.length) {
-        setSelectedStream(currentStreams[nextIdx]);
-        setVideoError(null);
-      } else {
-        setVideoError(errMsg);
-        setIsBuffering(false);
-        onStreamErrorRef.current?.(errMsg, selectedStream);
+      console.log('[Player] Native error:', errMsg, '| format:', fmt.format, '| codec:', fmt.codec);
+
+      // For MKV/HEVC/AVI, try WebCodecs streaming player before moving to next stream
+      if (!tryingFFmpeg && (fmt.format === 'mkv' || fmt.format === 'avi' || fmt.codec === 'hevc')) {
+        tryingFFmpeg = true;
+        console.log('[Player] Launching streaming player for', fmt.format, fmt.codec);
+        launchStreamingPlayer(playUrl).catch(e => {
+          console.error('[Player] Streaming player failed:', e);
+          tryNextStreamPlayback();
+        });
+        return;
       }
+
+      tryNextStreamPlayback();
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -216,10 +229,6 @@ export function usePlayer({
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('error', handleError);
-
-    const playUrl = selectedStream?.proxiedUrl || url;
-    const fmt = detectFormat(playUrl, selectedStream.title, selectedStream.description);
-    console.log('[Player] Stream:', selectedStream.name, '| codec:', fmt.codec, '| format:', fmt.format, '| URL:', playUrl.substring(0, 100));
 
     function playWithHls(sourceUrl: string) {
       if (cancelled || !video) return;
@@ -293,6 +302,62 @@ export function usePlayer({
       }
     }
 
+    async function launchStreamingPlayer(sourceUrl: string) {
+      if (cancelled) return;
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        console.error('[Player] No canvas element for streaming player');
+        tryNextStreamPlayback();
+        return;
+      }
+
+      // Hide video, show canvas
+      video.style.display = 'none';
+      canvas.style.display = 'block';
+      setIsStreamingPlayer(true);
+      setIsBuffering(true);
+
+      const player = new StreamingPlayer({
+        url: sourceUrl,
+        canvas,
+        onTimeUpdate: (time, dur) => {
+          setCurrentTime(time);
+          if (dur > 0) setDuration(dur);
+        },
+        onStateChange: (state) => {
+          if (state === 'playing') setIsBuffering(false);
+          if (state === 'ended') setIsBuffering(false);
+        },
+        onProgress: (stage, pct) => {
+          onRemuxProgressRef.current?.(stage, pct / 100);
+        },
+        onError: (err) => {
+          console.error('[Player] Streaming player error:', err);
+          if (!cancelled) {
+            video.style.display = '';
+            canvas.style.display = 'none';
+            setIsStreamingPlayer(false);
+            tryNextStreamPlayback();
+          }
+        },
+      });
+
+      streamingPlayerRef.current = player;
+
+      try {
+        await player.load();
+        if (!cancelled) player.play();
+      } catch (e: any) {
+        if (!cancelled) {
+          console.error('[Player] Streaming player load failed:', e);
+          video.style.display = '';
+          canvas.style.display = 'none';
+          setIsStreamingPlayer(false);
+          tryNextStreamPlayback();
+        }
+      }
+    }
+
     (async () => {
       const method = await selectDecodeMethod(fmt.format, fmt.codec);
 
@@ -321,6 +386,14 @@ export function usePlayer({
       video.removeEventListener('error', handleError);
       if (hls) hls.destroy();
       if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.destroy();
+        streamingPlayerRef.current = null;
+      }
+      // Reset streaming player UI state
+      video.style.display = '';
+      if (canvasRef.current) canvasRef.current.style.display = 'none';
+      setIsStreamingPlayer(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStream]);
@@ -374,17 +447,28 @@ export function usePlayer({
   }, [isPlaying, showStreamSelector]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const togglePlay = useCallback(() => {
+    if (streamingPlayerRef.current && isStreamingPlayer) {
+      const sp = streamingPlayerRef.current;
+      sp.getState() === 'playing' ? sp.pause() : sp.play();
+      setIsPlaying(sp.getState() === 'playing');
+      return;
+    }
     const video = videoRef.current;
     if (!video) return;
     video.paused ? video.play().catch(() => {}) : video.pause();
-  }, []);
+  }, [isStreamingPlayer]);
 
   const seekTo = useCallback((time: number) => {
+    if (streamingPlayerRef.current && isStreamingPlayer) {
+      streamingPlayerRef.current.seek(time * 1000);
+      setCurrentTime(time);
+      return;
+    }
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = time;
     setCurrentTime(time);
-  }, []);
+  }, [isStreamingPlayer]);
 
   const adjustVolume = useCallback((delta: number) => {
     const video = videoRef.current;
@@ -468,6 +552,8 @@ export function usePlayer({
   return {
     videoRef,
     containerRef,
+    canvasRef,
+    isStreamingPlayer,
     streams,
     streamsByAddon,
     addonNames,
