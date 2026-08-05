@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
 import { detectFormat, selectDecodeMethod } from '../lib/formatDetector';
 import { remuxToSupported, transcodeForBrowser } from '../lib/browserDecoder';
-import { StreamingPlayer } from '../lib/streamingPlayer';
+import { MoviPlayer } from 'movi-player/player';
 
 export interface PlayerStream {
   url: string;
@@ -84,7 +84,7 @@ export function usePlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const streamingPlayerRef = useRef<StreamingPlayer | null>(null);
+  const streamingPlayerRef = useRef<MoviPlayer | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -311,45 +311,47 @@ export function usePlayer({
         return;
       }
 
-      // Hide video, show canvas
       video.style.display = 'none';
       canvas.style.display = 'block';
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
-      const player = new StreamingPlayer({
-        url: sourceUrl,
+      const player = new MoviPlayer({
+        source: { type: 'url', url: sourceUrl },
+        renderer: 'canvas',
         canvas,
-        onTimeUpdate: (time, dur) => {
-          setCurrentTime(time);
-          if (dur > 0) setDuration(dur);
-        },
-        onStateChange: (state) => {
-          if (state === 'playing') setIsBuffering(false);
-          if (state === 'ended') setIsBuffering(false);
-        },
-        onProgress: (stage, pct) => {
-          onRemuxProgressRef.current?.(stage, pct / 100);
-        },
-        onError: (err) => {
-          console.error('[Player] Streaming player error:', err);
-          if (!cancelled) {
-            video.style.display = '';
-            canvas.style.display = 'none';
-            setIsStreamingPlayer(false);
-            tryNextStreamPlayback();
-          }
-        },
       });
 
       streamingPlayerRef.current = player;
 
+      player.on('timeupdate', (t: number) => {
+        setCurrentTime(t);
+      });
+      player.on('statechange', (state: string) => {
+        if (state === 'playing') setIsBuffering(false);
+        if (state === 'ended') setIsBuffering(false);
+        if (state === 'buffering') setIsBuffering(true);
+      });
+      player.on('error', (err: any) => {
+        console.error('[Player] MoviPlayer error:', err);
+        if (!cancelled) {
+          video.style.display = '';
+          canvas.style.display = 'none';
+          setIsStreamingPlayer(false);
+          tryNextStreamPlayback();
+        }
+      });
+
       try {
         await player.load();
-        if (!cancelled) player.play();
-      } catch (e: any) {
         if (!cancelled) {
-          console.error('[Player] Streaming player load failed:', e);
+          const dur = player.getDuration();
+          if (dur > 0) setDuration(dur);
+          player.play();
+        }
+      } catch (e: any) {
+        console.error('[Player] MoviPlayer load failed:', e);
+        if (!cancelled) {
           video.style.display = '';
           canvas.style.display = 'none';
           setIsStreamingPlayer(false);
@@ -449,7 +451,11 @@ export function usePlayer({
   const togglePlay = useCallback(() => {
     if (streamingPlayerRef.current && isStreamingPlayer) {
       const sp = streamingPlayerRef.current;
-      sp.getState() === 'playing' ? sp.pause() : sp.play();
+      if (sp.getState() === 'playing') {
+        sp.pause();
+      } else {
+        sp.play();
+      }
       setIsPlaying(sp.getState() === 'playing');
       return;
     }
