@@ -120,30 +120,9 @@ export async function selectDecodeMethod(
 ): Promise<DecodeMethod> {
   if (format === 'hls') return 'hls.js';
 
-  // Always try native for MP4/WebM/OGG — the video element will fire
-  // an error event if the codec isn't supported, triggering fallback
-  // to the next stream. This avoids ffmpeg trying to download entire files.
-  if (format === 'mp4' || format === 'webm' || format === 'ogg') return 'native';
-
-  if (canPlayNatively(format, codec)) return 'native';
-
-  if (format === 'mkv' || format === 'avi' || format === 'flv' || format === 'ts') {
-    return 'ffmpeg-remux';
-  }
-
-  if (typeof VideoDecoder !== 'undefined') {
-    try {
-      const config: VideoDecoderConfig = {
-        codec: codec === 'h264' ? 'avc1.640028' :
-               codec === 'hevc' ? 'hev1.1.6.L93.B0' :
-               codec === 'vp9' ? 'vp09.00.10.08' :
-               codec === 'av1' ? 'av01.0.08M.08' : '',
-      };
-      const supported = await VideoDecoder.isConfigSupported(config);
-      if (supported.supported) return 'webcodecs';
-    } catch { /* ignore */ }
-  }
-
+  // Always try native first. The video element will fire an error event
+  // if the codec/container isn't supported, triggering fallback to the
+  // next stream. This avoids ffmpeg trying to download entire multi-GB files.
   return 'native';
 }
 
