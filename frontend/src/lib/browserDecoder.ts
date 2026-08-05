@@ -1,14 +1,13 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { toBlobURL } from '@ffmpeg/util';
+let ffmpegInstance: any | null = null;
+let ffmpegPromise: Promise<any> | null = null;
 
-let ffmpegInstance: FFmpeg | null = null;
-let ffmpegPromise: Promise<FFmpeg> | null = null;
-
-async function getFFmpeg(): Promise<FFmpeg> {
+async function getFFmpeg(): Promise<any> {
   if (ffmpegInstance) return ffmpegInstance;
   if (ffmpegPromise) return ffmpegPromise;
 
   ffmpegPromise = (async () => {
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+    const { toBlobURL } = await import('@ffmpeg/util');
     const ffmpeg = new FFmpeg();
     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
     await ffmpeg.load({

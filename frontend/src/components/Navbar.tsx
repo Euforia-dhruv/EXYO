@@ -18,6 +18,7 @@ import {
   HomeModernIcon,
   FilmIcon,
   TvIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { useQueryClient } from '@tanstack/react-query';
 import Logo from './Logo';
@@ -26,6 +27,7 @@ const NAV_LINKS = [
   { path: '/home', label: 'Home', icon: HomeModernIcon },
   { path: '/movies', label: 'Movies', icon: FilmIcon },
   { path: '/tv', label: 'TV Shows', icon: TvIcon },
+  { path: '/home?catalogId=anime', label: 'Anime', icon: SparklesIcon },
   { path: '/my-list', label: 'My List', icon: ListBulletIcon },
   { path: '/continue-watching', label: 'Continue Watching', icon: PlayIcon },
 ];

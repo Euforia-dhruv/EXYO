@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
 import { detectFormat, selectDecodeMethod } from '../lib/formatDetector';
 import { remuxToSupported, transcodeForBrowser } from '../lib/browserDecoder';
-import { MoviPlayer } from 'movi-player/player';
 
 export interface PlayerStream {
   url: string;
@@ -84,7 +83,7 @@ export function usePlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const streamingPlayerRef = useRef<MoviPlayer | null>(null);
+  const streamingPlayerRef = useRef<any | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -321,6 +320,7 @@ export function usePlayer({
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
+      const { MoviPlayer } = await import('movi-player/player');
       const player = new MoviPlayer({
         source: { type: 'url', url: sourceUrl },
         renderer: 'canvas',
