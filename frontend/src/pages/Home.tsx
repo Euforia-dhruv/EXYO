@@ -44,22 +44,31 @@ function ConnectionError({ onRetry }: { onRetry: () => void }) {
 export default function Home() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'movie';
+  const catalogId = searchParams.get('catalogId');
+
+  const isAnime = catalogId === 'anime';
 
   const { data: trending = [], isLoading: loadingTrending, isError: trendingError, refetch } = useQuery<CatalogItem[]>({
-    queryKey: ['trending', type],
-    queryFn: () => contentApi.getCatalogs(type, 'trending'),
+    queryKey: ['trending', type, catalogId || ''],
+    queryFn: () => isAnime
+      ? contentApi.getCatalogs('series', 'anime')
+      : contentApi.getCatalogs(type, 'trending'),
     retry: 2,
   });
 
   const { data: popular = [], isLoading: loadingPopular } = useQuery<CatalogItem[]>({
-    queryKey: ['popular', type],
-    queryFn: () => contentApi.getCatalogs(type, 'popular'),
+    queryKey: ['popular', type, catalogId || ''],
+    queryFn: () => isAnime
+      ? contentApi.getCatalogs('series', 'popular')
+      : contentApi.getCatalogs(type, 'popular'),
     retry: 2,
   });
 
   const { data: top = [], isLoading: loadingTop } = useQuery<CatalogItem[]>({
-    queryKey: ['top', type],
-    queryFn: () => contentApi.getCatalogs(type, 'top'),
+    queryKey: ['top', type, catalogId || ''],
+    queryFn: () => isAnime
+      ? contentApi.getCatalogs('series', 'top')
+      : contentApi.getCatalogs(type, 'top'),
     retry: 2,
   });
 

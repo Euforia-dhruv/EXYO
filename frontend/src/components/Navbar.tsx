@@ -6,8 +6,9 @@ import { useDownloadStore } from '../store/downloadStore';
 
 const NAV_LINKS = [
   { label: 'Home', path: '/' },
-  { label: 'TV Shows', path: '/?type=tv' },
+  { label: 'TV Shows', path: '/?type=series' },
   { label: 'Movies', path: '/?type=movie' },
+  { label: 'Anime', path: '/?type=series&catalogId=anime' },
   { label: 'My List', path: '/my-list' },
   { label: 'Downloads', path: '/settings/downloads' },
 ];

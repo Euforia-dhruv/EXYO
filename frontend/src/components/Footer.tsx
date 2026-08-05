@@ -17,7 +17,8 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li><Link to="/" className="text-sm text-gray-400 hover:text-white transition-colors">Home</Link></li>
               <li><Link to="/?type=movie" className="text-sm text-gray-400 hover:text-white transition-colors">Movies</Link></li>
-              <li><Link to="/?type=tv" className="text-sm text-gray-400 hover:text-white transition-colors">TV Shows</Link></li>
+              <li><Link to="/?type=series" className="text-sm text-gray-400 hover:text-white transition-colors">TV Shows</Link></li>
+              <li><Link to="/?type=series&catalogId=anime" className="text-sm text-gray-400 hover:text-white transition-colors">Anime</Link></li>
               <li><Link to="/my-list" className="text-sm text-gray-400 hover:text-white transition-colors">My List</Link></li>
             </ul>
           </div>

@@ -34,7 +34,13 @@ export default function Search() {
 
   const { data: results = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ['search', query],
-    queryFn: () => contentApi.search(query),
+    queryFn: async () => {
+      const [movies, series] = await Promise.all([
+        contentApi.search(query, 'movie'),
+        contentApi.search(query, 'series'),
+      ]);
+      return [...(movies || []), ...(series || [])];
+    },
     enabled: !!query,
   });
 
