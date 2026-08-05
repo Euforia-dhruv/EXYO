@@ -136,7 +136,9 @@ export default function Navbar() {
   }, []);
 
   const isActive = (path: string) => {
-    if (path === '/home') return location.pathname === '/home' || location.pathname === '/';
+    const full = location.pathname + location.search;
+    if (path === '/home') return (location.pathname === '/home' || location.pathname === '/') && !location.search.includes('catalogId=anime');
+    if (path.includes('?')) return full === path;
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
