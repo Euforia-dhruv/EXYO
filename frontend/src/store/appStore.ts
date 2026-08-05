@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Theme = 'oled' | 'midnight' | 'graphite';
-export type AccentColor = 'red' | 'blue' | 'purple' | 'green' | 'orange' | 'pink';
+export type Theme = 'dark' | 'light' | 'system';
+export type AccentColor = string;
 export type PosterSize = 'small' | 'medium' | 'large';
 
 interface AppearanceState {
@@ -29,8 +29,8 @@ interface AppearanceState {
 export const useAppearanceStore = create<AppearanceState>()(
   persist(
     (set) => ({
-      theme: 'midnight',
-      accentColor: 'red',
+      theme: 'dark',
+      accentColor: '#E50914',
       glassMode: true,
       reduceMotion: false,
       posterSize: 'medium',

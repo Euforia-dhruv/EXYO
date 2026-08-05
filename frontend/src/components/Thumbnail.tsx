@@ -1,196 +1,230 @@
-import { useState, useRef, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import type { CatalogItem, WatchHistory, WatchlistItem } from '../types';
+import { PlayIcon, PlusIcon, CheckIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { StarIcon } from '@heroicons/react/24/outline';
+import { useUser } from '@clerk/clerk-react';
+import type { CatalogItem } from '../types';
+import { cn } from '../utils/helpers';
 
-interface ThumbnailProps {
-  item: CatalogItem | WatchHistory | WatchlistItem;
+interface Props {
+  item: CatalogItem;
+  index?: number;
+  size?: 'sm' | 'md' | 'lg';
+  showOverlay?: boolean;
   showProgress?: boolean;
-  onAddToList?: (item: CatalogItem) => void;
+  progress?: number;
+  isWatchlisted?: boolean;
+  onToggleWatchlist?: (id: string) => void;
+  className?: string;
 }
 
-function isCatalogItem(item: CatalogItem | WatchHistory | WatchlistItem): item is CatalogItem {
-  return 'name' in item && 'type' in item;
-}
+const PosterImage = memo(function PosterImage({
+  src,
+  alt,
+  isLarge,
+}: {
+  src?: string;
+  alt: string;
+  isLarge: boolean;
+}) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={cn(
+        'absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out',
+        isLarge ? 'scale-100 group-hover:scale-105' : 'scale-100 group-hover:scale-110'
+      )}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+});
 
-function isWatchHistory(item: CatalogItem | WatchHistory | WatchlistItem): item is WatchHistory {
-  return 'progress' in item;
-}
-
-function getItemId(item: CatalogItem | WatchHistory | WatchlistItem): string {
-  if ('contentId' in item) return item.contentId;
-  return item.id;
-}
-
-function getItemTitle(item: CatalogItem | WatchHistory | WatchlistItem): string {
-  if ('name' in item) return item.name;
-  if ('title' in item) return item.title;
-  return '';
-}
-
-function getItemType(item: CatalogItem | WatchHistory | WatchlistItem): string {
-  if ('type' in item) return item.type;
-  if ('contentType' in item) return item.contentType;
-  return 'movie';
-}
-
-function getItemPoster(item: CatalogItem | WatchHistory | WatchlistItem): string | undefined {
-  if ('poster' in item) return item.poster;
-  if ('posterUrl' in item) return item.posterUrl;
-  return undefined;
-}
-
-function getGenres(item: CatalogItem | WatchHistory | WatchlistItem): string[] {
-  if ('genres' in item && Array.isArray(item.genres)) return item.genres;
-  return [];
-}
-
-export default function Thumbnail({ item, showProgress }: ThumbnailProps) {
-  const [isHovered, setIsHovered] = useState(false);
+function Thumbnail({
+  item,
+  index = 0,
+  size = 'md',
+  showOverlay = true,
+  showProgress = false,
+  progress = 0,
+  isWatchlisted = false,
+  onToggleWatchlist,
+  className,
+}: Props) {
   const navigate = useNavigate();
-  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { isSignedIn } = useUser();
+  const itemId = item.id || item.imdbId || '';
 
-  const progress = isWatchHistory(item) ? item.progress : undefined;
-  const contentId = getItemId(item);
-  const type = getItemType(item);
-  const title = getItemTitle(item);
-  const poster = getItemPoster(item);
-  const genres = getGenres(item);
+  const isLarge = size === 'lg';
+  const isSmall = size === 'sm';
 
-  const year = isCatalogItem(item) ? item.year : undefined;
-  const imdbRating = isCatalogItem(item) ? item.imdbRating : undefined;
+  const backdropUrl = useMemo(() => {
+    if (!item.backdropUrl) return null;
+    return item.backdropUrl.replace('/w780', '/w1280').replace('/w500', '/w780');
+  }, [item.backdropUrl]);
 
-  const matchScore = useMemo(() => {
-    const r = parseFloat(imdbRating || '0');
-    return r > 0 ? Math.min(Math.round(r * 10), 99) : null;
-  }, [imdbRating]);
+  const posterUrl = useMemo(() => {
+    if (!item.posterUrl) return null;
+    return item.posterUrl.replace('/w342', '/w500');
+  }, [item.posterUrl]);
 
-  const handleMouseEnter = () => {
-    hoverTimeout.current = setTimeout(() => setIsHovered(true), 300);
-  };
+  const displayImage = backdropUrl || posterUrl;
 
-  const handleMouseLeave = () => {
-    clearTimeout(hoverTimeout.current);
-    setIsHovered(false);
-  };
+  const handlePlay = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (item.type === 'tv' || item.type === 'series') {
+      navigate(`/series/${itemId}`);
+    } else {
+      navigate(`/movie/${itemId}`);
+    }
+  }, [item.type, itemId, navigate]);
+
+  const handleWatchlist = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSignedIn && onToggleWatchlist) {
+      onToggleWatchlist(itemId);
+    }
+  }, [isSignedIn, itemId, onToggleWatchlist]);
+
+  const handleClick = useCallback(() => {
+    if (item.type === 'tv' || item.type === 'series') {
+      navigate(`/series/${itemId}`);
+    } else {
+      navigate(`/movie/${itemId}`);
+    }
+  }, [item.type, itemId, navigate]);
 
   return (
     <div
-      className="relative flex-shrink-0 w-[240px] md:w-[280px] lg:w-[320px] cursor-pointer group"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className={cn(
+        'poster-card group relative cursor-pointer select-none',
+        isLarge ? 'aspect-[16/9]' : isSmall ? 'aspect-[2/3]' : 'aspect-[2/3]',
+        className
+      )}
+      onClick={handleClick}
+      role="article"
+      aria-label={`${item.name || item.title || 'Untitled'} — ${item.year || ''}`}
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') handleClick(); }}
     >
-      <motion.div
-        className={`poster-card relative aspect-video rounded-xl overflow-hidden bg-exyo-surface ${isHovered ? 'shadow-[0_25px_80px_rgba(0,0,0,0.9)]' : ''}`}
-        animate={{
-          scale: isHovered ? 1.08 : 1,
-          zIndex: isHovered ? 40 : 1,
-          y: isHovered ? -12 : 0,
-        }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {/* Poster */}
-        <img
-          src={poster || '/placeholder.svg'}
-          alt={title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
+      {/* Image */}
+      {displayImage ? (
+        <PosterImage src={displayImage} alt={item.name || item.title || 'Untitled'} isLarge={isLarge} />
+      ) : (
+        <div className="absolute inset-0 bg-exyo-elevated flex items-center justify-center">
+          <span className="text-white/20 text-[11px] font-medium uppercase tracking-wider">No Image</span>
+        </div>
+      )}
 
-        {/* Hover overlay */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/30"
+      {/* Gradient overlay */}
+      {showOverlay && !isLarge && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      )}
+
+      {/* Hover action buttons */}
+      {showOverlay && (
+        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 flex items-end justify-between opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePlay}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-white/90 transition-all duration-200 shadow-lg"
+              aria-label={`Play ${item.name || item.title}`}
             >
-              {/* Top: Title + Metadata */}
-              <div className="absolute top-0 left-0 right-0 p-3.5 pb-0">
-                <p className="text-[13px] font-bold text-white truncate leading-tight">{title}</p>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {matchScore !== null && <span className="text-[11px] font-bold text-green-400">{matchScore}% Match</span>}
-                  {year && <span className="text-[10px] text-gray-300 font-medium">{year}</span>}
-                  {type === 'series' && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 border border-gray-500 rounded text-gray-400">Series</span>
-                  )}
-                  {imdbRating && (
-                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-yellow-400">
-                      <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                      {imdbRating}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Center: Play button */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.button
-                  initial={{ scale: 0.3, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.06, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/watch/${contentId}?type=${type}`);
-                  }}
-                  className="w-14 h-14 bg-white/95 hover:bg-white rounded-full flex items-center justify-center shadow-2xl shadow-white/20 transition-all duration-200 hover:scale-110"
-                >
-                  <svg className="w-7 h-7 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </motion.button>
-              </div>
-
-              {/* Bottom: Genres + Actions */}
-              <div className="absolute bottom-0 left-0 right-0 p-3.5 pt-0">
-                <div className="flex items-center gap-1.5 mb-2">
-                  {genres.slice(0, 3).map((genre, i) => (
-                    <span key={i} className="text-[9px] font-medium text-gray-300 flex items-center gap-1">
-                      {i > 0 && <span className="text-gray-600">•</span>}
-                      {genre}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/detail/${contentId}?type=${type}`);
-                    }}
-                    aria-label="Add to My List"
-                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/detail/${contentId}?type=${type}`);
-                    }}
-                    aria-label="More info"
-                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-md flex items-center justify-center transition-colors border border-white/10"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Progress bar */}
-        {showProgress && progress !== undefined && progress > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-10">
-            <div className="h-full bg-exyo-red" style={{ width: `${progress}%` }} />
+              <PlayIcon className="w-5 h-5 text-black ml-0.5" />
+            </button>
+            {isSignedIn && onToggleWatchlist && (
+              <button
+                onClick={handleWatchlist}
+                className={cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 border-2 shadow-lg',
+                  isWatchlisted
+                    ? 'bg-white/20 border-white/40 text-white'
+                    : 'bg-black/40 border-white/30 text-white/70 hover:border-white/60 hover:text-white'
+                )}
+                aria-label={isWatchlisted ? 'Remove from My List' : 'Add to My List'}
+              >
+                {isWatchlisted ? (
+                  <CheckIcon className="w-5 h-5" />
+                ) : (
+                  <PlusIcon className="w-5 h-5" />
+                )}
+              </button>
+            )}
           </div>
-        )}
-      </motion.div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {showProgress && progress > 0 && (
+        <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10">
+          <div
+            className="h-full bg-exyo-red transition-all duration-500"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      )}
+
+      {/* Type badge */}
+      {!isLarge && item.year && (
+        <div className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-white text-[11px] font-medium">
+            {item.type === 'tv' || item.type === 'series' ? 'TV' : 'Movie'}
+          </span>
+        </div>
+      )}
+
+      {/* Rating badge */}
+      {!isLarge && item.rating && (
+        <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-yellow-400 text-[11px] font-semibold">
+            <StarIcon className="w-3 h-3 fill-current" />
+            {item.rating}
+          </span>
+        </div>
+      )}
+
+      {/* Bottom info strip (always visible for non-large) */}
+      {!isLarge && (
+        <div className="absolute bottom-0 inset-x-0 p-3 pt-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+          <h3 className="text-white text-[13px] font-semibold line-clamp-1 leading-tight">
+            {item.name || item.title || 'Untitled'}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-1">
+            {item.year && (
+              <span className="text-white/50 text-[11px]">{item.year}</span>
+            )}
+            {item.rating && (
+              <>
+                <span className="text-white/20">·</span>
+                <span className="text-yellow-400/80 text-[11px] font-medium flex items-center gap-0.5">
+                  <StarIcon className="w-2.5 h-2.5 fill-current" />
+                  {item.rating}
+                </span>
+              </>
+            )}
+            {item.runtime && (
+              <>
+                <span className="text-white/20">·</span>
+                <span className="text-white/40 text-[11px] flex items-center gap-0.5">
+                  <ClockIcon className="w-2.5 h-2.5" />
+                  {item.runtime}m
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Focus ring */}
+      <div className="absolute inset-0 rounded-[inherit] ring-2 ring-exyo-red ring-offset-2 ring-offset-exyo-bg opacity-0 group-focus-visible:opacity-100 transition-opacity pointer-events-none" />
     </div>
   );
 }
+
+export default memo(Thumbnail);

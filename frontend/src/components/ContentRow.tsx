@@ -1,110 +1,163 @@
-import { useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import type { CatalogItem } from '../types';
 import Thumbnail from './Thumbnail';
-import type { CatalogItem, WatchHistory } from '../types';
+import { cn } from '../utils/helpers';
 
-interface ContentRowProps {
+interface Props {
   title: string;
-  items: (CatalogItem | WatchHistory)[];
-  showProgress?: boolean;
-  onAddToList?: (item: CatalogItem) => void;
+  items: CatalogItem[];
+  size?: 'sm' | 'md' | 'lg';
+  viewAllLink?: string;
+  onItemView?: (item: CatalogItem) => void;
+  isWatchlisted?: (id: string) => boolean;
+  onToggleWatchlist?: (id: string) => void;
+  watchHistory?: Record<string, { progress?: number; position?: number; duration?: number }>;
+  className?: string;
 }
 
-export default function ContentRow({ title, items, showProgress, onAddToList }: ContentRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
+function ContentRow({
+  title,
+  items,
+  size = 'md',
+  viewAllLink,
+  onItemView,
+  isWatchlisted,
+  onToggleWatchlist,
+  watchHistory,
+  className,
+}: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleScroll = useCallback(() => {
-    if (!rowRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-    setShowLeftArrow(scrollLeft > 20);
-    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 10);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
   }, []);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll, items]);
+
   const scroll = useCallback((direction: 'left' | 'right') => {
-    if (!rowRef.current) return;
-    const amount = rowRef.current.clientWidth * 0.85;
-    rowRef.current.scrollBy({
-      left: direction === 'left' ? -amount : amount,
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollAmount = el.clientWidth * 0.85;
+    el.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
     });
   }, []);
 
-  if (!items.length) return null;
+  const visibleItems = useMemo(() => items.filter(Boolean), [items]);
+
+  if (visibleItems.length === 0) return null;
 
   return (
-    <div className="mb-10 md:mb-14 group/row">
-      {/* Row header */}
-      <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 mb-4">
-        <h2 className="text-[20px] md:text-[24px] font-bold text-white tracking-tight">
+    <div
+      className={cn('relative group/row', className)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h2 className="text-white text-[18px] sm:text-[20px] font-semibold tracking-tight">
           {title}
         </h2>
-        <button
-          onClick={() => navigate(`/search?q=${encodeURIComponent(title)}`)}
-          className="text-[13px] font-semibold text-gray-500 hover:text-white transition-colors duration-200"
-        >
-          See All
-        </button>
+        {viewAllLink && (
+          <a
+            href={viewAllLink}
+            className="text-white/40 hover:text-white text-[13px] font-medium transition-colors duration-200"
+          >
+            View All →
+          </a>
+        )}
       </div>
 
+      {/* Scroll container */}
       <div className="relative">
-        {/* Left fade edge */}
-        {showLeftArrow && (
-          <>
-            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[var(--exyo-bg,#0A0A0A)] to-transparent z-10 pointer-events-none" />
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={() => scroll('left')}
-              className="absolute left-0 top-0 bottom-0 w-16 md:w-20 z-20 flex items-center justify-start pl-3 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
-            >
-              <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-all duration-200 border border-white/5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </div>
-            </motion.button>
-          </>
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll('left')}
+            className={cn(
+              'absolute left-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center',
+              'bg-gradient-to-r from-exyo-bg/95 to-transparent',
+              'opacity-0 group-hover/row:opacity-100 transition-opacity duration-200',
+              'cursor-pointer'
+            )}
+            aria-label="Scroll left"
+          >
+            <div className="w-10 h-10 rounded-full bg-exyo-elevated/80 backdrop-blur-sm flex items-center justify-center border border-white/[0.06] hover:bg-exyo-hover hover:border-white/[0.1] transition-all duration-200">
+              <ChevronLeftIcon className="w-5 h-5 text-white" />
+            </div>
+          </button>
         )}
 
-        {/* Content scroll */}
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll('right')}
+            className={cn(
+              'absolute right-0 top-0 bottom-0 z-20 w-14 flex items-center justify-center',
+              'bg-gradient-to-l from-exyo-bg/95 to-transparent',
+              'opacity-0 group-hover/row:opacity-100 transition-opacity duration-200',
+              'cursor-pointer'
+            )}
+            aria-label="Scroll right"
+          >
+            <div className="w-10 h-10 rounded-full bg-exyo-elevated/80 backdrop-blur-sm flex items-center justify-center border border-white/[0.06] hover:bg-exyo-hover hover:border-white/[0.1] transition-all duration-200">
+              <ChevronRightIcon className="w-5 h-5 text-white" />
+            </div>
+          </button>
+        )}
+
+        {/* Items */}
         <div
-          ref={rowRef}
-          onScroll={handleScroll}
-          className="flex gap-3 md:gap-4 overflow-x-auto hide-scrollbar px-6 md:px-12 lg:px-16 py-2"
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto overflow-y-visible scroll-smooth hide-scrollbar py-1 -mx-1 px-1"
         >
-          {items.map((item, index) => (
-            <Thumbnail
-              key={`${('contentId' in item ? item.contentId : item.id) || index}-${index}`}
-              item={item}
-              showProgress={showProgress}
-              onAddToList={onAddToList}
-            />
-          ))}
-        </div>
+          {visibleItems.map((item, i) => {
+            const key = item.id || item.imdbId || `row-${title}-${i}`;
+            const id = item.id || item.imdbId || '';
+            const progress = watchHistory?.[id]?.progress;
 
-        {/* Right fade edge */}
-        {showRightArrow && (
-          <>
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[var(--exyo-bg,#0A0A0A)] to-transparent z-10 pointer-events-none" />
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={() => scroll('right')}
-              className="absolute right-0 top-0 bottom-0 w-16 md:w-20 z-20 flex items-center justify-end pr-3 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
-            >
-              <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-all duration-200 border border-white/5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+            return (
+              <div
+                key={key}
+                className={cn(
+                  'flex-none',
+                  size === 'sm' ? 'w-[130px] sm:w-[150px]' : 'w-[180px] sm:w-[220px] md:w-[240px]'
+                )}
+              >
+                <Thumbnail
+                  item={item}
+                  index={i}
+                  size={size}
+                  showProgress={!!progress && progress > 0}
+                  progress={progress || 0}
+                  isWatchlisted={isWatchlisted?.(id)}
+                  onToggleWatchlist={onToggleWatchlist}
+                />
               </div>
-            </motion.button>
-          </>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+
+export default memo(ContentRow);

@@ -1,71 +1,113 @@
-import { SignUp } from '@clerk/clerk-react';
-import { Link } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSignUp } from '@clerk/clerk-react';
+import { UserIcon, EnvelopeIcon, LockClosedIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import Logo from '../components/Logo';
 
 export default function Register() {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signUp, isLoaded } = useSignUp();
+  const navigate = useNavigate();
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoaded || loading) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signUp.create({
+        username,
+        emailAddress: email,
+        password,
+      });
+      if (result.status === 'complete') {
+        navigate('/home');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [username, email, password, isLoaded, loading, signUp, navigate]);
+
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Cinematic background */}
-      <div className="absolute inset-0 bg-exyo-black">
-        <img
-          src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&q=80"
-          alt=""
-          className="w-full h-full object-cover opacity-25 blur-[2px]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-exyo-black via-exyo-black/85 to-exyo-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-t from-exyo-black via-exyo-black/40 to-exyo-black/70" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-lg px-5">
-        {/* Logo */}
-        <div className="text-center mb-12">
-          <img
-            src="/Exyologo-Photoroom.png"
-            alt="EXYO"
-            className="h-auto w-48 mx-auto mb-5"
-            draggable={false}
-          />
-          <p className="text-gray-400 text-lg font-medium tracking-wide">Unlimited Entertainment</p>
+    <main className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-[400px] animate-fade-in-up">
+        <div className="text-center mb-10">
+          <Logo size="lg" className="justify-center mb-6" />
+          <h1 className="text-white text-[28px] font-bold tracking-tight mb-2">Create account</h1>
+          <p className="text-white/40 text-[14px]">Start streaming in seconds</p>
         </div>
 
-        {/* Glass panel */}
-        <div className="bg-black/50 backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-10 shadow-2xl shadow-black/60">
-          <h2 className="text-[28px] font-bold text-white mb-1.5 tracking-tight">Create an account</h2>
-          <p className="text-gray-400 text-[15px] mb-8">Start your streaming journey</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              required
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white text-[14px] placeholder-white/30 focus:outline-none focus:border-exyo-red/40 focus:ring-1 focus:ring-exyo-red/20 transition-all"
+            />
+          </div>
 
-          <SignUp
-            routing="path"
-            path="/register"
-            signInUrl="/login"
-            appearance={{
-              elements: {
-                rootBox: 'mx-auto',
-                card: 'bg-transparent border-none shadow-none',
-                headerTitle: 'text-white text-xl font-bold',
-                headerSubtitle: 'text-gray-400',
-                socialButtonsBlockButton: 'bg-white/[0.06] border border-white/[0.08] text-white hover:bg-white/[0.1] rounded-2xl transition-colors',
-                socialButtonsBlockButtonText: 'text-white font-medium text-[15px]',
-                dividerLine: 'bg-white/[0.08]',
-                dividerText: 'text-gray-500',
-                formFieldLabel: 'text-gray-400 text-[14px] font-medium',
-                formFieldInput: 'bg-white/[0.06] border border-white/[0.08] text-white placeholder-gray-500 focus:border-exyo-red/50 rounded-2xl text-[15px] h-14',
-                formButtonPrimary: 'bg-exyo-red hover:bg-exyo-red-dark text-white font-bold rounded-2xl transition-colors h-14 text-[15px]',
-                footerActionLink: 'text-exyo-red hover:text-exyo-red-hover transition-colors',
-                identityPreviewEditButton: 'text-exyo-red',
-                formFieldInputShowPasswordButton: 'text-gray-400 hover:text-white',
-              },
-            }}
-          />
-        </div>
+          <div className="relative">
+            <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              required
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white text-[14px] placeholder-white/30 focus:outline-none focus:border-exyo-red/40 focus:ring-1 focus:ring-exyo-red/20 transition-all"
+            />
+          </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-[15px] text-gray-500">
+          <div className="relative">
+            <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white text-[14px] placeholder-white/30 focus:outline-none focus:border-exyo-red/40 focus:ring-1 focus:ring-exyo-red/20 transition-all"
+            />
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-[13px] text-center">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-exyo-red hover:bg-exyo-red-hover text-white font-semibold text-[14px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-exyo-red/20"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                Create Account
+                <ArrowRightIcon className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-white/30 text-[13px] mt-6">
           Already have an account?{' '}
-          <Link to="/login" className="text-white hover:text-exyo-red transition-colors font-semibold">
-            Sign in
+          <Link to="/login" className="text-exyo-red hover:text-exyo-red-hover font-medium transition-colors">
+            Sign In
           </Link>
-        </div>
+        </p>
       </div>
-    </div>
+    </main>
   );
 }

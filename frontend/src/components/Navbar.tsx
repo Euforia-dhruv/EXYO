@@ -1,386 +1,492 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useUser, useClerk } from '@clerk/clerk-react';
-import { useDownloadStore } from '../store/downloadStore';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useUser, useClerk, SignOutButton } from '@clerk/clerk-react';
+import { useTheme } from '../providers/AppearanceProvider';
+import {
+  UserCircleIcon,
+  ArrowRightOnRectangleIcon,
+  Cog6ToothIcon,
+  SunIcon,
+  MoonIcon,
+  ComputerDesktopIcon,
+  MagnifyingGlassIcon,
+  Bars3Icon,
+  XMarkIcon,
+  ArrowUpTrayIcon,
+  TrashIcon,
+  ExclamationTriangleIcon,
+  PlayIcon,
+  ListBulletIcon,
+  HomeModernIcon,
+  FilmIcon,
+  TvIcon,
+} from '@heroicons/react/24/outline';
+import { useQueryClient } from '@tanstack/react-query';
+import Logo from './Logo';
 
 const NAV_LINKS = [
-  { label: 'Home', path: '/' },
-  { label: 'TV Shows', path: '/?type=series' },
-  { label: 'Movies', path: '/?type=movie' },
-  { label: 'Anime', path: '/?type=series&catalogId=anime' },
-  { label: 'My List', path: '/my-list' },
-  { label: 'Downloads', path: '/settings/downloads' },
+  { path: '/home', label: 'Home', icon: HomeModernIcon },
+  { path: '/movies', label: 'Movies', icon: FilmIcon },
+  { path: '/tv', label: 'TV Shows', icon: TvIcon },
+  { path: '/my-list', label: 'My List', icon: ListBulletIcon },
+  { path: '/continue-watching', label: 'Continue Watching', icon: PlayIcon },
 ];
 
+const API_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+
 export default function Navbar() {
-  const [showBackground, setShowBackground] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileHoverTimeout, setProfileHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [navVisible, setNavVisible] = useState(true);
-  const lastScrollY = useRef(0);
+  const [clearHistoryModalOpen, setClearHistoryModalOpen] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
+  const [clearHistoryConfirmText, setClearHistoryConfirmText] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user } = useUser();
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  const { user, isSignedIn } = useUser();
   const { signOut } = useClerk();
-  const navigate = useNavigate();
   const location = useLocation();
-  const activeDownloads = useDownloadStore((s) => s.getActiveDownloads().length);
-  const totalDownloads = useDownloadStore((s) => s.downloads.filter((d) => d.status !== 'completed').length);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowSearch(true);
-      }
-      if (e.key === 'Escape') {
-        setShowSearch(false);
-        setShowMobileMenu(false);
-        setShowDropdown(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const onScroll = () => setIsScrolled(window.scrollY > 16);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      setShowBackground(currentScrollY > 50);
-
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100 && !showDropdown) {
-        setNavVisible(false);
-      } else {
-        setNavVisible(true);
-      }
-      lastScrollY.current = currentScrollY;
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [showDropdown]);
+    if (location.pathname === '/search') setSearchOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
-    setShowDropdown(false);
-    setShowSearch(false);
-    setShowMobileMenu(false);
-  }, [location]);
-
-  useEffect(() => {
-    if (showSearch) searchInputRef.current?.focus();
-  }, [showSearch]);
+    if (searchOpen && searchInputRef.current) searchInputRef.current.focus();
+  }, [searchOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+    setSearchOpen(false);
+    setClearHistoryModalOpen(false);
+    setClearHistoryConfirmText('');
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
+        setMobileOpen(false);
+        setProfileOpen(false);
+        setClearHistoryModalOpen(false);
+        setClearHistoryConfirmText('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSearch(false);
+    const q = searchQuery.trim();
+    if (q) {
+      navigate(`/search?q=${encodeURIComponent(q)}`);
+      setSearchOpen(false);
       setSearchQuery('');
     }
   }, [searchQuery, navigate]);
 
-  const handleLogout = useCallback(async () => {
-    await signOut();
-    navigate('/login');
-  }, [signOut, navigate]);
+  const handleProfileEnter = useCallback(() => {
+    if (profileHoverTimeout) {
+      clearTimeout(profileHoverTimeout);
+      setProfileHoverTimeout(null);
+    }
+    setProfileOpen(true);
+  }, [profileHoverTimeout]);
+
+  const handleProfileLeave = useCallback(() => {
+    const timeout = setTimeout(() => setProfileOpen(false), 200);
+    setProfileHoverTimeout(timeout);
+  }, []);
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    if (path === '/home') return location.pathname === '/home' || location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!user || deleteConfirmText !== user.username) return;
+    setIsDeleting(true);
+    try {
+      const token = await user.getToken({ template: 'convex' });
+      if (!token) throw new Error('Failed to get authentication token');
+      const response = await fetch(`${API_URL}/delete-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clerkId: user.id }),
+      });
+      if (!response.ok) throw new Error('Failed to delete user data');
+      await user.delete();
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Delete account error:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [user, deleteConfirmText]);
+
+  const handleClearHistory = useCallback(async () => {
+    if (!user || clearHistoryConfirmText !== 'CLEAR ALL') return;
+    setIsClearingHistory(true);
+    try {
+      const token = await user.getToken({ template: 'convex' });
+      if (!token) throw new Error('Failed to get authentication token');
+      const response = await fetch(`${API_URL}/clear-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clerkId: user.id }),
+      });
+      if (!response.ok) throw new Error('Failed to clear history');
+      setClearHistoryModalOpen(false);
+      setClearHistoryConfirmText('');
+      await queryClient.invalidateQueries({ queryKey: ['watchHistory'] });
+    } catch (err) {
+      console.error('Clear history error:', err);
+    } finally {
+      setIsClearingHistory(false);
+    }
+  }, [user, clearHistoryConfirmText, queryClient]);
 
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          navVisible ? 'translate-y-0' : '-translate-y-full'
-        } ${
-          showBackground
-            ? 'bg-exyo-black/95 backdrop-blur-xl shadow-2xl shadow-black/50'
-            : 'bg-gradient-to-b from-exyo-black/80 via-exyo-black/40 to-transparent'
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out ${
+          isScrolled
+            ? 'glass shadow-elevated py-2.5'
+            : 'bg-gradient-to-b from-black/60 to-transparent py-3.5'
         }`}
-        role="navigation"
-        aria-label="Main navigation"
       >
-        <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 h-[72px]">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between h-12">
           {/* Left */}
-          <div className="flex items-center gap-10">
-            <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-300">
-              <img
-                src="/Exyologo-Photoroom.png"
-                alt="EXYO"
-                className="h-10 w-auto"
-                draggable={false}
-              />
-            </Link>
-
-            <div className="hidden lg:flex items-center gap-0.5">
-              {NAV_LINKS.map(({ label, path }) => (
+          <div className="flex items-center gap-8">
+            <Logo size="sm" />
+            {/* Desktop nav */}
+            <div className="hidden lg:flex items-center gap-1">
+              {NAV_LINKS.map(({ path, label }) => (
                 <Link
                   key={path}
                   to={path}
-                  className={`relative px-3.5 py-2 text-[14px] font-medium transition-colors duration-200 ${
+                  className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                     isActive(path)
                       ? 'text-white'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
                   {label}
-                  {isActive(path) && (
-                    <motion.div
-                      layoutId="navIndicator"
-                      className="absolute bottom-0 left-3.5 right-3.5 h-[2px] bg-exyo-red rounded-full"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
                 </Link>
               ))}
             </div>
           </div>
 
           {/* Right */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Search */}
+            <Link
+              to="/search"
+              className="hidden sm:flex items-center gap-2 pl-3 pr-4 py-2 rounded-full bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.06] text-white/60 hover:text-white transition-all duration-200 text-[13px] min-w-[160px]"
+            >
+              <MagnifyingGlassIcon className="w-4 h-4 shrink-0" />
+              <span>Search...</span>
+            </Link>
             <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="p-2.5 hover:bg-white/10 rounded-full transition-colors duration-200"
+              onClick={() => navigate('/search')}
+              className="sm:hidden p-2.5 rounded-full hover:bg-white/[0.08] text-white/60 hover:text-white transition-all duration-200"
               aria-label="Search"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
+              <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
 
-            {/* Downloads indicator */}
-            <Link
-              to="/settings/downloads"
-              className="relative p-2.5 hover:bg-white/10 rounded-full transition-colors duration-200"
-              aria-label="Downloads"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-              </svg>
-              {totalDownloads > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-exyo-red text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {totalDownloads}
-                </span>
-              )}
-            </Link>
+            {isSignedIn ? (
+              <>
+                {/* Profile */}
+                <div
+                  ref={profileRef}
+                  className="relative hidden sm:block"
+                  onMouseEnter={handleProfileEnter}
+                  onMouseLeave={handleProfileLeave}
+                >
+                  <button
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    className="flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-full hover:bg-white/[0.08] transition-all duration-200"
+                    aria-expanded={profileOpen}
+                    aria-haspopup="true"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-exyo-red to-exyo-red-dark flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                      {user?.imageUrl ? (
+                        <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (user?.username?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0] || 'U').toUpperCase()
+                      )}
+                    </div>
+                  </button>
 
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden p-2.5 hover:bg-white/10 rounded-full transition-colors duration-200"
-              aria-label="Menu"
-              aria-expanded={showMobileMenu}
-            >
-              {showMobileMenu ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-
-            {/* Profile */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 p-1 pl-1 pr-2 hover:bg-white/10 rounded-full transition-colors duration-200"
-                aria-label="User menu"
-                aria-expanded={showDropdown}
-                aria-haspopup="true"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-exyo-red">
-                  {user?.imageUrl ? (
-                    <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs">
-                      {(user?.fullName || 'U')[0]}
+                  {profileOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-2 w-64 glass rounded-2xl shadow-elevated overflow-hidden animate-fade-in-down py-2"
+                      onMouseEnter={handleProfileEnter}
+                      onMouseLeave={handleProfileLeave}
+                    >
+                      <div className="px-5 py-3.5 border-b border-white/[0.06]">
+                        <p className="text-white text-[13px] font-medium truncate">{user?.username || 'User'}</p>
+                        <p className="text-white/40 text-[12px] truncate mt-0.5">
+                          {user?.emailAddresses?.[0]?.emailAddress}
+                        </p>
+                      </div>
+                      <div className="py-1.5">
+                        <Link
+                          to="/settings"
+                          className="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.06] transition-all duration-150 text-[13px]"
+                        >
+                          <Cog6ToothIcon className="w-[18px] h-[18px]" />
+                          Settings
+                        </Link>
+                        <button
+                          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                          className="w-full flex items-center gap-3 px-5 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.06] transition-all duration-150 text-[13px]"
+                        >
+                          {theme === 'dark' ? (
+                            <SunIcon className="w-[18px] h-[18px]" />
+                          ) : (
+                            <MoonIcon className="w-[18px] h-[18px]" />
+                          )}
+                          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                        </button>
+                        <button
+                          onClick={() => setTheme('system')}
+                          className="w-full flex items-center gap-3 px-5 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.06] transition-all duration-150 text-[13px]"
+                        >
+                          <ComputerDesktopIcon className="w-[18px] h-[18px]" />
+                          System Theme
+                        </button>
+                        <div className="my-1.5 border-t border-white/[0.06]" />
+                        <button
+                          onClick={() => setClearHistoryModalOpen(true)}
+                          className="w-full flex items-center gap-3 px-5 py-2.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-150 text-[13px]"
+                        >
+                          <TrashIcon className="w-[18px] h-[18px]" />
+                          Clear History
+                        </button>
+                        <div className="my-1.5 border-t border-white/[0.06]" />
+                        <button
+                          onClick={() => setDeleteModalOpen(true)}
+                          className="w-full flex items-center gap-3 px-5 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-150 text-[13px]"
+                        >
+                          <ExclamationTriangleIcon className="w-[18px] h-[18px]" />
+                          Delete Account
+                        </button>
+                      </div>
+                      <div className="border-t border-white/[0.06] pt-1.5 px-3">
+                        <SignOutButton>
+                          <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white transition-all duration-200 text-[13px] font-medium">
+                            <ArrowRightOnRectangleIcon className="w-[18px] h-[18px]" />
+                            Sign Out
+                          </button>
+                        </SignOutButton>
+                      </div>
                     </div>
                   )}
                 </div>
-                <motion.svg
-                  animate={{ rotate: showDropdown ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-3.5 h-3.5 hidden sm:block text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
+
+                {/* Mobile menu toggle */}
+                <button
+                  onClick={() => setMobileOpen(!mobileOpen)}
+                  className="lg:hidden p-2.5 rounded-full hover:bg-white/[0.08] text-white/60 hover:text-white transition-all duration-200"
+                  aria-label="Menu"
+                  aria-expanded={mobileOpen}
                 >
-                  <path d="M19 9l-7 7-7-7" />
-                </motion.svg>
-              </button>
+                  {mobileOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
+                </button>
+              </>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2.5">
+                <Link
+                  to="/login"
+                  className="px-5 py-2 text-[13px] font-medium text-white/70 hover:text-white rounded-full hover:bg-white/[0.06] transition-all duration-200"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-5 py-2 text-[13px] font-semibold text-white bg-exyo-red hover:bg-exyo-red-hover rounded-full transition-all duration-200 shadow-lg shadow-exyo-red/20 hover:shadow-exyo-red/30"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
 
-              <AnimatePresence>
-                {showDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-3 w-64 bg-exyo-surface/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
-                  >
-                    {/* User info */}
-                    <div className="px-4 py-3.5 border-b border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-exyo-red">
-                          {user?.imageUrl ? (
-                            <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
-                              {(user?.fullName || 'U')[0]}
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-white truncate">
-                            {user?.fullName || user?.username || 'User'}
-                          </p>
-                          <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                            {user?.primaryEmailAddress?.emailAddress}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Links */}
-                    <div className="py-1.5">
-                      {[
-                        { label: 'My List', path: '/my-list', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' },
-                        { label: 'Continue Watching', path: '/continue-watching', icon: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-                        { label: 'Downloads', path: '/settings/downloads', icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3' },
-                        { label: 'Settings', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-                        { label: 'Extensions', path: '/settings/streaming', icon: 'M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25' },
-                      ].map(({ label, path, icon }) => (
-                        <Link
-                          key={`${path}-${label}`}
-                          to={path}
-                          className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-400 hover:bg-white/[0.06] hover:text-white transition-colors duration-150"
-                        >
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
-                          </svg>
-                          {label}
-                          {label === 'Downloads' && activeDownloads > 0 && (
-                            <span className="ml-auto bg-exyo-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                              {activeDownloads}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-
-                    {/* Sign out */}
-                    <div className="border-t border-white/[0.06] py-1.5">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-500 hover:bg-white/[0.06] hover:text-exyo-red transition-colors duration-150"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Sign Out
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="absolute top-0 right-0 w-[min(320px,85vw)] h-full glass-heavy shadow-2xl animate-slide-in-left overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 pt-20 flex flex-col gap-1">
+              {NAV_LINKS.map(({ path, label, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium transition-all duration-200 ${
+                    isActive(path)
+                      ? 'text-white bg-white/[0.08]'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {label}
+                </Link>
+              ))}
+              <div className="mt-4 mb-2 border-t border-white/[0.06]" />
+              <Link
+                to="/settings"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-white/60 hover:text-white hover:bg-white/[0.05] transition-all duration-200"
+              >
+                <Cog6ToothIcon className="w-5 h-5" />
+                Settings
+              </Link>
+              <div className="mt-auto pt-4 border-t border-white/[0.06]">
+                <SignOutButton>
+                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white transition-all duration-200 text-[14px] font-medium">
+                    <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                    Sign Out
+                  </button>
+                </SignOutButton>
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {showMobileMenu && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:hidden overflow-hidden border-t border-white/[0.06]"
-            >
-              <div className="px-6 py-4 bg-exyo-black/95 backdrop-blur-xl">
-                {NAV_LINKS.map(({ label, path }) => (
-                  <Link
-                    key={path}
-                    to={path}
-                    className={`block px-4 py-3 text-[14px] font-medium rounded-xl transition-colors duration-150 ${
-                      isActive(path)
-                        ? 'text-white bg-white/[0.06]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Delete Account Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setDeleteModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md bg-[#1A1A1A] rounded-3xl shadow-2xl p-8 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6">
+              <ExclamationTriangleIcon className="w-7 h-7 text-red-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Delete Account</h3>
+            <p className="text-white/50 text-sm mb-6 leading-relaxed">
+              This action is irreversible. All your data including watch history, watchlist, settings, and downloads will be permanently deleted.
+            </p>
+            <p className="text-white/70 text-sm mb-2">
+              Type <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">{user?.username}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="w-full bg-white/[0.06] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30 mb-6 transition-all placeholder-white/30"
+              placeholder="Enter username"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setDeleteModalOpen(false); setDeleteConfirmText(''); }}
+                className="flex-1 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white transition-all text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== user?.username || isDeleting}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white transition-all text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-600"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {/* Search overlay */}
-        <AnimatePresence>
-          {showSearch && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden border-t border-white/[0.06]"
-            >
-              <div className="px-6 md:px-12 lg:px-16 py-4 bg-exyo-black/95 backdrop-blur-xl">
-                <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
-                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Titles, genres, people"
-                    className="w-full bg-white/[0.06] border border-white/[0.08] rounded-full pl-12 pr-14 py-3 text-[14px] text-white placeholder-gray-500 focus:outline-none focus:border-exyo-red/40 focus:bg-white/[0.08] transition-all duration-300"
-                    aria-label="Search"
-                  />
-                  <kbd className="absolute right-14 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-medium text-gray-500 bg-white/[0.06] border border-white/[0.08] rounded-lg">
-                    ⌘K
-                  </kbd>
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </form>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      {/* Clear History Modal */}
+      {clearHistoryModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setClearHistoryModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md bg-[#1A1A1A] rounded-3xl shadow-2xl p-8 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+              <TrashIcon className="w-7 h-7 text-amber-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Clear Watch History</h3>
+            <p className="text-white/50 text-sm mb-6 leading-relaxed">
+              This will remove all your watch progress. You will need to restart from the beginning for all titles.
+            </p>
+            <p className="text-white/70 text-sm mb-2">
+              Type <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">CLEAR ALL</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={clearHistoryConfirmText}
+              onChange={(e) => setClearHistoryConfirmText(e.target.value)}
+              className="w-full bg-white/[0.06] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 mb-6 transition-all placeholder-white/30"
+              placeholder="Type CLEAR ALL"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setClearHistoryModalOpen(false); setClearHistoryConfirmText(''); }}
+                className="flex-1 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white transition-all text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearHistory}
+                disabled={clearHistoryConfirmText !== 'CLEAR ALL' || isClearingHistory}
+                className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white transition-all text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-600"
+              >
+                {isClearingHistory ? 'Clearing...' : 'Clear History'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer */}
+      <div className="h-16" />
     </>
   );
 }

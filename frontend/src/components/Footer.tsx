@@ -1,56 +1,110 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
+import Logo from './Logo';
 
-export default function Footer() {
+const Footer = memo(function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="mt-16 pb-10 px-6 md:px-12 lg:px-16">
-      <div className="max-w-6xl mx-auto">
-        <img
-          src="/logo-Photoroom.png"
-          alt="EXYO"
-          className="h-8 opacity-20 mb-8"
-          draggable={false}
-        />
+    <footer className="relative mt-32 border-t border-white/[0.04]">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <Logo size="sm" />
+            <p className="text-white/30 text-[13px] mt-4 leading-relaxed max-w-[240px]">
+              Stream movies, TV shows, and anime in your browser. Powered by community addons.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          {/* Browse */}
           <div>
-            <h3 className="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-widest">Browse</h3>
+            <h4 className="text-white/50 text-[11px] font-semibold uppercase tracking-[0.16em] mb-4">Browse</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/" className="text-sm text-gray-400 hover:text-white transition-colors">Home</Link></li>
-              <li><Link to="/?type=movie" className="text-sm text-gray-400 hover:text-white transition-colors">Movies</Link></li>
-              <li><Link to="/?type=series" className="text-sm text-gray-400 hover:text-white transition-colors">TV Shows</Link></li>
-              <li><Link to="/?type=series&catalogId=anime" className="text-sm text-gray-400 hover:text-white transition-colors">Anime</Link></li>
-              <li><Link to="/my-list" className="text-sm text-gray-400 hover:text-white transition-colors">My List</Link></li>
+              {[
+                { to: '/home', label: 'Home' },
+                { to: '/movies', label: 'Movies' },
+                { to: '/tv', label: 'TV Shows' },
+                { to: '/search?type=anime', label: 'Anime' },
+              ].map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-white/35 hover:text-white text-[13px] transition-colors duration-200"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
+
+          {/* Account */}
           <div>
-            <h3 className="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-widest">Account</h3>
+            <h4 className="text-white/50 text-[11px] font-semibold uppercase tracking-[0.16em] mb-4">Account</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/settings" className="text-sm text-gray-400 hover:text-white transition-colors">Settings</Link></li>
-              <li><Link to="/settings/streaming" className="text-sm text-gray-400 hover:text-white transition-colors">Extensions</Link></li>
+              {[
+                { to: '/settings', label: 'Settings' },
+                { to: '/my-list', label: 'My List' },
+                { to: '/continue-watching', label: 'Continue Watching' },
+                { to: '/downloads', label: 'Downloads' },
+              ].map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-white/35 hover:text-white text-[13px] transition-colors duration-200"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
+
+          {/* Legal */}
           <div>
-            <h3 className="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-widest">Legal</h3>
+            <h4 className="text-white/50 text-[11px] font-semibold uppercase tracking-[0.16em] mb-4">Legal</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/continue-watching" className="text-sm text-gray-400 hover:text-white transition-colors">Continue Watching</Link></li>
-              <li><Link to="/settings/downloads" className="text-sm text-gray-400 hover:text-white transition-colors">Downloads</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-widest">Legal</h3>
-            <ul className="space-y-2.5">
-              <li><span className="text-sm text-gray-400">Privacy Policy</span></li>
-              <li><span className="text-sm text-gray-400">Terms of Service</span></li>
+              {[
+                { to: '/settings/about', label: 'About EXYO' },
+                { to: 'https://github.com/Euforia-dhruv/EXYO', label: 'GitHub', external: true },
+              ].map((link) => (
+                <li key={link.to}>
+                  {link.external ? (
+                    <a
+                      href={link.to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/35 hover:text-white text-[13px] transition-colors duration-200"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      to={link.to}
+                      className="text-white/35 hover:text-white text-[13px] transition-colors duration-200"
+                    >
+                      {link.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-white/5 pt-6">
-          <p className="text-[12px] text-gray-500">
-            &copy; {new Date().getFullYear()} EXYO. Stream Everything.
+        {/* Bottom */}
+        <div className="pt-8 border-t border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-white/20 text-[12px]">
+            &copy; {currentYear} EXYO. All rights reserved.
+          </p>
+          <p className="text-white/15 text-[11px]">
+            EXYO does not host any content. All media is provided by third-party addons.
           </p>
         </div>
       </div>
     </footer>
   );
-}
+});
+
+export default Footer;

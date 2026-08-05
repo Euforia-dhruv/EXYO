@@ -1,61 +1,56 @@
-import SettingsLayout from '../components/SettingsLayout';
+import { HeartIcon, CodeBracketIcon } from '@heroicons/react/24/outline';
 
 export default function About() {
   return (
-    <SettingsLayout title="About" subtitle="Information about EXYO.">
-      <div className="space-y-6">
-        {/* Logo + Version */}
-        <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 text-center">
-          <img src="/Exyologo-Photoroom.png" alt="EXYO" className="h-16 mx-auto mb-4" draggable={false} />
-          <p className="text-[13px] text-gray-400">Version 1.0.0</p>
-          <p className="text-[12px] text-gray-600 mt-1">Built with React, Vite, Tailwind CSS, Convex & Clerk</p>
-        </section>
+    <div className="animate-fade-in-up">
+      <h2 className="text-white text-[20px] font-semibold tracking-tight mb-6">About EXYO</h2>
 
-        {/* Credits */}
-        <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-          <h2 className="text-[15px] font-bold text-white mb-4">Technology</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { name: 'React 19', desc: 'UI framework' },
-              { name: 'Vite 8', desc: 'Build tool' },
-              { name: 'Tailwind CSS 4', desc: 'Styling' },
-              { name: 'Convex', desc: 'Backend & database' },
-              { name: 'Clerk', desc: 'Authentication' },
-              { name: 'Framer Motion', desc: 'Animations' },
-              { name: 'HLS.js', desc: 'Video streaming' },
-              { name: 'Stremio', desc: 'Addon protocol' },
-            ].map((tech) => (
-              <div key={tech.name} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
-                <p className="text-[13px] font-semibold text-white">{tech.name}</p>
-                <p className="text-[11px] text-gray-500">{tech.desc}</p>
-              </div>
-            ))}
+      <div className="bg-exyo-card rounded-2xl border border-white/[0.04] p-6 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-exyo-red to-exyo-red-dark flex items-center justify-center">
+            <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+              <path d="M10 8L24 16L10 24V8Z" fill="white" />
+            </svg>
           </div>
-        </section>
-
-        {/* Links */}
-        <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-          <h2 className="text-[15px] font-bold text-white mb-4">Links</h2>
-          <div className="space-y-2">
-            {[
-              { label: 'Privacy Policy', href: '/privacy' },
-              { label: 'Terms of Service', href: '/terms' },
-              { label: 'Open Source Licenses', href: '/licenses' },
-            ].map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-white/[0.04] transition-colors group"
-              >
-                <span className="text-[13px] text-gray-400 group-hover:text-white transition-colors">{link.label}</span>
-                <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </a>
-            ))}
+          <div>
+            <h3 className="text-white text-[18px] font-bold">EXYO</h3>
+            <p className="text-white/40 text-[12px]">Version 1.0.0</p>
           </div>
-        </section>
+        </div>
+        <p className="text-white/50 text-[13px] leading-relaxed">
+          EXYO is a modern streaming platform that lets you watch movies, TV shows, and anime directly in your browser.
+          Powered by community-built addons, EXYO aggregates content from multiple sources for a seamless viewing experience.
+        </p>
       </div>
-    </SettingsLayout>
+
+      {/* Tech Stack */}
+      <div className="bg-exyo-card rounded-2xl border border-white/[0.04] p-5 mb-6">
+        <h3 className="text-white text-[14px] font-semibold mb-3">Built With</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {['React 19', 'Vite', 'Tailwind CSS', 'Convex', 'Clerk', 'HLS.js', 'movi-player', 'WebCodecs'].map((tech) => (
+            <span key={tech} className="px-3 py-2 rounded-lg bg-white/[0.03] text-white/50 text-[12px] font-medium text-center border border-white/[0.03]">
+              {tech}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Links */}
+      <div className="flex gap-3">
+        <a
+          href="https://github.com/Euforia-dhruv/EXYO"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white text-[13px] font-medium transition-all duration-200 border border-white/[0.06]"
+        >
+          <CodeBracketIcon className="w-4 h-4" />
+          GitHub
+        </a>
+      </div>
+
+      <p className="text-center text-white/15 text-[11px] mt-8">
+        Made with <HeartIcon className="w-3 h-3 inline text-exyo-red fill-current" /> for streaming enthusiasts
+      </p>
+    </div>
   );
 }

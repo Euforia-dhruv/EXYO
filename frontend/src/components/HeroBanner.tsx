@@ -1,231 +1,233 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { useDownloadStore } from '../store/downloadStore';
-import { useAppearanceStore } from '../store/appStore';
-import { useToast } from './Toast';
+import { PlayIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { StarIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import type { CatalogItem } from '../types';
+import { cn, prefersReducedMotion } from '../utils/helpers';
 
-interface HeroBannerProps {
+interface Props {
   items: CatalogItem[];
+  autoPlayInterval?: number;
 }
 
-export default function HeroBanner({ items }: HeroBannerProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(1);
+function HeroBanner({ items, autoPlayInterval = 8000 }: Props) {
   const navigate = useNavigate();
-  const { showToast } = useToast();
-  const addDownload = useDownloadStore((s) => s.addDownload);
-  const addToWatchlist = useMutation(api.watchlist.addToWatchlist);
-  const autoplayTrailers = useAppearanceStore((s) => s.autoplayTrailers);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reducedMotion = useRef(prefersReducedMotion());
 
-  const goTo = useCallback((index: number) => {
-    setDirection(index > currentIndex ? 1 : -1);
-    setCurrentIndex(index);
+  const visibleItems = items.filter(
+    (item) => item.backdropUrl && item.description && item.backdropUrl.trim() !== ''
+  );
+
+  const currentItem = visibleItems[currentIndex];
+
+  // Preload next image
+  useEffect(() => {
+    if (visibleItems.length <= 1) return;
+    const nextIndex = (currentIndex + 1) % visibleItems.length;
+    const nextItem = visibleItems[nextIndex];
+    if (nextItem?.backdropUrl) {
+      const img = new Image();
+      img.src = nextItem.backdropUrl;
+    }
+  }, [currentIndex, visibleItems]);
+
+  // Reset image loaded state on index change
+  useEffect(() => {
+    setImageLoaded(false);
   }, [currentIndex]);
 
-  const next = useCallback(() => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % items.length);
-  }, [items.length]);
-
+  // Mark loaded after a brief delay to prevent flash
   useEffect(() => {
-    if (items.length <= 1 || !autoplayTrailers) return;
-    const interval = setInterval(next, 7000);
-    return () => clearInterval(interval);
-  }, [items.length, next, autoplayTrailers]);
+    if (imageLoaded) return;
+    const timer = setTimeout(() => setImageLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, [imageLoaded]);
 
-  if (!items.length) return null;
+  const goToSlide = useCallback((index: number) => {
+    if (isTransitioning || index === currentIndex) return;
+    setIsTransitioning(true);
+    setProgress(0);
+    setTimeout(() => {
+      setCurrentIndex(index);
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 200);
+  }, [isTransitioning, currentIndex]);
 
-  const item = items[currentIndex];
-  if (!item) return null;
+  const goNext = useCallback(() => {
+    if (visibleItems.length <= 1) return;
+    goToSlide((currentIndex + 1) % visibleItems.length);
+  }, [currentIndex, visibleItems.length, goToSlide]);
 
-  const bgVariants = {
-    enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? '-15%' : '15%', opacity: 0 }),
-  };
+  // Progress bar
+  useEffect(() => {
+    if (isPaused || reducedMotion.current || visibleItems.length <= 1) return;
+    setProgress(0);
+    const startTime = Date.now();
+    progressRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setProgress((elapsed / autoPlayInterval) * 100);
+    }, 50);
+    return () => {
+      if (progressRef.current) clearInterval(progressRef.current);
+    };
+  }, [currentIndex, isPaused, autoPlayInterval, visibleItems.length]);
 
-  const handleDownload = () => {
-    addDownload({
-      contentId: item.id,
-      title: item.name,
-      posterUrl: item.poster,
-      type: (item.type as 'movie' | 'series') || 'movie',
-      size: 'Unknown',
-      downloaded: '0 MB',
-    });
-    showToast('Download queued', 'success');
-  };
+  // Auto-advance
+  useEffect(() => {
+    if (isPaused || reducedMotion.current || visibleItems.length <= 1) return;
+    autoPlayRef.current = setInterval(goNext, autoPlayInterval);
+    return () => {
+      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    };
+  }, [goNext, isPaused, autoPlayInterval, visibleItems.length]);
+
+  const handlePlay = useCallback(() => {
+    if (!currentItem) return;
+    const id = currentItem.id || currentItem.imdbId || '';
+    if (currentItem.type === 'tv' || currentItem.type === 'series') {
+      navigate(`/series/${id}`);
+    } else {
+      navigate(`/movie/${id}`);
+    }
+  }, [currentItem, navigate]);
+
+  const handleDetails = useCallback(() => {
+    if (!currentItem) return;
+    const id = currentItem.id || currentItem.imdbId || '';
+    if (currentItem.type === 'tv' || currentItem.type === 'series') {
+      navigate(`/series/${id}`);
+    } else {
+      navigate(`/movie/${id}`);
+    }
+  }, [currentItem, navigate]);
+
+  if (visibleItems.length === 0) return null;
 
   return (
-    <div className="relative h-[85vh] min-h-[560px] max-h-[880px] w-full overflow-hidden">
-      {/* Background with slow zoom */}
-      <AnimatePresence custom={direction} mode="popLayout">
-        <motion.div
-          key={currentIndex}
-          custom={direction}
-          variants={bgVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
-          className="absolute inset-0"
+    <div
+      className="relative w-full h-[55vh] sm:h-[65vh] lg:h-[75vh] min-h-[400px] max-h-[800px] overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      role="region"
+      aria-label="Featured content"
+      aria-roledescription="carousel"
+    >
+      {/* Background image */}
+      {visibleItems.map((item, i) => (
+        <div
+          key={item.id || item.imdbId || i}
+          className={cn(
+            'absolute inset-0 transition-opacity duration-700 ease-in-out',
+            i === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          )}
         >
-          <div
-            className="absolute inset-0 bg-cover bg-center animate-slowZoom"
-            style={{
-              backgroundImage: `url(${item.background || item.poster})`,
-            }}
-          />
-        </motion.div>
-      </AnimatePresence>
+          {item.backdropUrl && (
+            <img
+              src={item.backdropUrl}
+              alt=""
+              className={cn(
+                'w-full h-full object-cover transition-transform duration-[25s] ease-out',
+                i === currentIndex && !reducedMotion.current ? 'scale-100' : 'scale-105'
+              )}
+            />
+          )}
+        </div>
+      ))}
 
       {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-hero-gradient-left pointer-events-none" />
-      <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
-      <div className="absolute inset-0 bg-hero-gradient-top pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-exyo-black via-exyo-black/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-20">
+        <div className="absolute inset-0 bg-gradient-to-t from-exyo-bg via-exyo-bg/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-exyo-bg/80 via-exyo-bg/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-exyo-bg to-transparent" />
+      </div>
 
       {/* Content */}
-      <div className="absolute bottom-[12%] left-0 right-0 px-6 md:px-12 lg:px-16">
-        <div className="max-w-3xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* Genre pills */}
-              {item.genres && item.genres.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  {item.genres.slice(0, 3).map((genre, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-[11px] font-semibold text-white/90 border border-white/10"
-                    >
-                      {genre}
-                    </span>
-                  ))}
-                </div>
+      <div className="absolute inset-0 z-30 flex items-end pb-16 sm:pb-20 lg:pb-24">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 w-full">
+          <div className="max-w-[540px]">
+            {/* Badges */}
+            <div className="flex items-center gap-2.5 mb-4">
+              {currentItem?.rating && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-yellow-500/15 text-yellow-400 text-[12px] font-semibold border border-yellow-500/20">
+                  <StarIcon className="w-3 h-3 fill-current" />
+                  {currentItem.rating}
+                </span>
               )}
+              {currentItem?.year && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.06] text-white/60 text-[12px] font-medium border border-white/[0.06]">
+                  <CalendarIcon className="w-3 h-3" />
+                  {currentItem.year}
+                </span>
+              )}
+              {currentItem?.runtime && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.06] text-white/60 text-[12px] font-medium border border-white/[0.06]">
+                  <ClockIcon className="w-3 h-3" />
+                  {currentItem.runtime}m
+                </span>
+              )}
+            </div>
 
-              {/* Title */}
-              <h1 className="text-[2.5rem] md:text-[3.5rem] lg:text-[4.5rem] font-black mb-4 tracking-tight leading-[0.9] text-white">
-                {item.name}
-              </h1>
+            {/* Title */}
+            <h1 className="text-white text-[32px] sm:text-[44px] lg:text-[56px] font-bold leading-[1.05] tracking-tight mb-3 text-shadow-hero">
+              {currentItem?.name || currentItem?.title || 'Untitled'}
+            </h1>
 
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-2.5 mb-4 text-[13px]">
-                {item.imdbRating && (
-                  <span className="flex items-center gap-1 text-yellow-400 font-bold">
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                    {item.imdbRating}
-                  </span>
-                )}
-                {item.year && <span className="text-gray-300 font-medium">{item.year}</span>}
-                {item.runtime && <span className="text-gray-300 font-medium">{item.runtime}</span>}
-              </div>
-
-              {/* Description */}
-              <p className="text-[15px] md:text-[16px] text-gray-300/90 line-clamp-3 mb-6 leading-relaxed max-w-2xl">
-                {item.description}
+            {/* Description */}
+            {currentItem?.description && (
+              <p className="text-white/65 text-[14px] sm:text-[15px] leading-relaxed line-clamp-3 mb-6">
+                {currentItem.description}
               </p>
+            )}
 
-              {/* Action buttons - pill shaped */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  onClick={() => navigate(`/watch/${item.id}?type=${item.type}`)}
-                  className="flex items-center gap-2 bg-white hover:bg-white/90 text-black px-7 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 shadow-2xl shadow-black/30"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  Play
-                </button>
-
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-6 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 border border-white/20"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg>
-                  Download
-                </button>
-
-                <button
-                  onClick={async () => {
-                    try {
-                      await addToWatchlist({
-                        contentId: item.id,
-                        title: item.name,
-                        posterUrl: item.poster,
-                        backdropUrl: item.background,
-                        contentType: (item.type as 'movie' | 'series') || 'movie',
-                      });
-                      showToast('Added to My List', 'success');
-                    } catch {
-                      showToast('Failed to add to list', 'error');
-                    }
-                  }}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-6 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 border border-white/20"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  My List
-                </button>
-
-                <button
-                  onClick={() => navigate(`/detail/${item.id}?type=${item.type}`)}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-6 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 border border-white/20"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                  More Info
-                </button>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePlay}
+                className="group/btn inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white text-black font-semibold text-[15px] hover:bg-white/90 transition-all duration-200 shadow-lg shadow-white/10 hover:shadow-white/20"
+              >
+                <PlayIcon className="w-5 h-5 fill-black" />
+                <span>Play</span>
+              </button>
+              <button
+                onClick={handleDetails}
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.08] text-white font-medium text-[15px] hover:bg-white/[0.14] border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200 backdrop-blur-sm"
+              >
+                <InformationCircleIcon className="w-5 h-5" />
+                <span>Details</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Slide indicators */}
-      {items.length > 1 && (
-        <div className="absolute bottom-[5%] right-6 md:right-12 lg:right-16 flex gap-2">
-          {items.slice(0, 10).map((_, index) => (
+      {visibleItems.length > 1 && (
+        <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          {visibleItems.map((_, i) => (
             <button
-              key={index}
-              onClick={() => goTo(index)}
-              className={`h-[3px] rounded-full transition-all duration-500 ${
-                index === currentIndex ? 'bg-white w-10' : 'bg-white/25 w-4 hover:bg-white/40'
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
+              key={i}
+              onClick={() => goToSlide(i)}
+              className={cn(
+                'transition-all duration-300 rounded-full',
+                i === currentIndex
+                  ? 'w-8 h-2 bg-white'
+                  : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+              )}
+              aria-label={`Go to slide ${i + 1}`}
+              aria-current={i === currentIndex}
             />
           ))}
-        </div>
-      )}
-
-      {/* Auto-rotate progress */}
-      {items.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5">
-          <motion.div
-            key={currentIndex}
-            className="h-full bg-exyo-red"
-            initial={{ width: '0%' }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 7, ease: 'linear' }}
-          />
         </div>
       )}
     </div>
   );
 }
+
+export default memo(HeroBanner);

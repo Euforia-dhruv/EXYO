@@ -1,516 +1,336 @@
-import { useState, useMemo } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { useQuery as useConvexQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  PlayIcon,
+  PlusIcon,
+  CheckIcon,
+  StarIcon,
+  ClockIcon,
+  CalendarIcon,
+  ArrowLeftIcon,
+  ShareIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  PlayCircleIcon,
+} from '@heroicons/react/24/outline';
 import { contentApi } from '../api/content.api';
-import ShareButton from '../components/ShareButton';
-import { SkeletonDetail } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
-import { useDownloadStore } from '../store/downloadStore';
+import { DetailSkeleton } from '../components/Skeleton';
+import { toast } from '../components/Toast';
+import type { Stream, CatalogItem } from '../types';
 import { cn } from '../utils/helpers';
-import type { Stream } from '../types';
 
-interface Episode {
-  id?: string;
-  number: number;
-  name: string;
-  description?: string;
-  runtime?: string;
-  season?: number;
-  poster?: string;
-  thumbnail?: string;
-  firstAired?: string;
-}
-
-interface SeasonData {
-  season: number;
-  name?: string;
-  episodes: Episode[];
-}
+const API_URL = import.meta.env.VITE_CONVEX_SITE_URL;
 
 export default function Detail() {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const type = searchParams.get('type') || 'movie';
   const navigate = useNavigate();
-  const { showToast } = useToast();
-  const addDownload = useDownloadStore((s) => s.addDownload);
+  const { isSignedIn, user } = useUser();
+  const queryClient = useQueryClient();
 
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [episodeSearch, setEpisodeSearch] = useState('');
+  const [showEpisodes, setShowEpisodes] = useState(true);
 
-  const { data: content, isLoading } = useQuery({
-    queryKey: ['content', id, type],
-    queryFn: () => contentApi.getDetails(id!, type),
+  // Fetch details (handles both movies and series with episode IDs)
+  const { data: details, isLoading: detailsLoading } = useQuery({
+    queryKey: ['contentDetails', id],
+    queryFn: () => contentApi.getDetails(id!),
     enabled: !!id,
   });
 
-  const watchlistData = useConvexQuery(api.watchlist.checkInWatchlist, { contentId: id || '' });
-  const isInWatchlist = watchlistData?.isInWatchlist || false;
-
-  const { data: streams = [], isLoading: streamsLoading } = useQuery<Stream[]>({
-    queryKey: ['streams', id, type],
-    queryFn: () => contentApi.getStreams(id!, type),
+  // Fetch streams for this content
+  const { data: streamsData, isLoading: streamsLoading } = useQuery({
+    queryKey: ['contentStreams', id],
+    queryFn: () => contentApi.getStreams(id!),
     enabled: !!id,
   });
 
-  const addToWatchlist = useMutation(api.watchlist.addToWatchlist);
-  const removeFromWatchlist = useMutation(api.watchlist.removeFromWatchlist);
-  const watchlistItems = useConvexQuery(api.watchlist.getWatchlist);
+  // Watchlist
+  const { data: watchlist } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: () => contentApi.getWatchlist(user!.id),
+    enabled: isSignedIn,
+  });
 
-  const seasonsData = useMemo<SeasonData[]>(() => {
-    if (!content) return [];
-    const c = content as Record<string, unknown>;
-    const videos = (c.videos || c.episodes) as Record<string, unknown>[] | undefined;
-    if (!videos || !Array.isArray(videos) || videos.length === 0) return [];
+  const addToWatchlist = useMutation({
+    mutationFn: (data: { userId: string; contentId: string; type: string }) =>
+      contentApi.addToWatchlist(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      toast.success('Added to My List');
+    },
+  });
 
-    const seasonMap = new Map<number, Episode[]>();
-    for (const v of videos) {
-      const seasonNum = (v.season as number) || 1;
-      if (!seasonMap.has(seasonNum)) seasonMap.set(seasonNum, []);
-      seasonMap.get(seasonNum)!.push({
-        id: v.id as string | undefined,
-        number: (v.number as number) || (v.episode as number) || seasonMap.get(seasonNum)!.length + 1,
-        name: (v.name as string) || (v.title as string) || `Episode ${(v.number as number) || ''}`,
-        description: (v.description as string) || (v.overview as string) || undefined,
-        runtime: v.runtime as string | undefined,
-        season: seasonNum,
-        poster: (v.poster as string) || (v.thumbnail as string) || undefined,
-        thumbnail: (v.thumbnail as string) || undefined,
-        firstAired: (v.firstAired as string) || (v.released as string) || undefined,
+  const removeFromWatchlist = useMutation({
+    mutationFn: (data: { userId: string; contentId: string }) =>
+      contentApi.removeFromWatchlist(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      toast.success('Removed from My List');
+    },
+  });
+
+  const isWatchlisted = useMemo(() => {
+    if (!watchlist || !Array.isArray(watchlist) || !id) return false;
+    return watchlist.some((item: { contentId?: string }) => item.contentId === id);
+  }, [watchlist, id]);
+
+  const toggleWatchlist = useCallback(() => {
+    if (!user || !details) return;
+    if (isWatchlisted) {
+      removeFromWatchlist.mutate({ userId: user.id, contentId: id! });
+    } else {
+      addToWatchlist.mutate({
+        userId: user.id,
+        contentId: id!,
+        type: details.type === 'tv' || details.type === 'series' ? 'tv' : 'movie',
       });
     }
+  }, [user, details, isWatchlisted, id, addToWatchlist, removeFromWatchlist]);
 
+  // Parse seasons from episodes
+  const seasons = useMemo(() => {
+    if (!details?.episodes) return [];
+    const seasonMap = new Map<number, typeof details.episodes>();
+    for (const ep of details.episodes) {
+      const season = ep.seasonNumber || 1;
+      if (!seasonMap.has(season)) seasonMap.set(season, []);
+      seasonMap.get(season)!.push(ep);
+    }
     return Array.from(seasonMap.entries())
       .sort(([a], [b]) => a - b)
-      .map(([season, episodes]) => ({
-        season,
-        name: `Season ${season}`,
-        episodes,
-      }));
-  }, [content]);
-
-  const hasEpisodes = seasonsData.length > 0;
+      .map(([season, eps]) => ({ season, episodes: eps }));
+  }, [details?.episodes]);
 
   const currentSeasonEpisodes = useMemo(() => {
-    if (!hasEpisodes) return [];
-    const s = seasonsData.find((s) => s.season === selectedSeason);
-    const eps = s?.episodes || seasonsData[0]?.episodes || [];
-    if (!episodeSearch.trim()) return eps;
+    if (!seasons.length) return [];
+    const found = seasons.find((s) => s.season === selectedSeason);
+    return found?.episodes || seasons[0]?.episodes || [];
+  }, [seasons, selectedSeason]);
+
+  const filteredEpisodes = useMemo(() => {
+    if (!episodeSearch.trim()) return currentSeasonEpisodes;
     const q = episodeSearch.toLowerCase();
-    return eps.filter(
+    return currentSeasonEpisodes.filter(
       (ep) =>
-        ep.name.toLowerCase().includes(q) ||
-        String(ep.number).includes(q) ||
-        (ep.description || '').toLowerCase().includes(q)
+        ep.title?.toLowerCase().includes(q) ||
+        ep.name?.toLowerCase().includes(q) ||
+        ep.episodeNumber?.toString().includes(q)
     );
-  }, [seasonsData, selectedSeason, hasEpisodes, episodeSearch]);
+  }, [currentSeasonEpisodes, episodeSearch]);
 
-  const sortedStreams = useMemo(() => {
-    const qRank: Record<string, number> = {
-      '2160p': 6, '4k': 6, '1080p': 5, '720p': 4, '480p': 3,
-    };
+  const sortedStreams: Stream[] = useMemo(() => {
+    const streams = streamsData?.streams || [];
     return [...streams].sort((a, b) => {
-      const aRank = a.infoHash ? 1 : 0;
-      const bRank = b.infoHash ? 1 : 0;
-      if (aRank !== bRank) return aRank - bRank;
-      return (qRank[b.quality || ''] || 0) - (qRank[a.quality || ''] || 0);
+      const qA = parseInt(a.quality || '0') || 0;
+      const qB = parseInt(b.quality || '0') || 0;
+      return qB - qA;
     });
-  }, [streams]);
+  }, [streamsData?.streams]);
 
-  const handleWatchlistToggle = () => {
-    if (isInWatchlist && watchlistItems) {
-      const item = watchlistItems.find((w) => w.contentId === id);
-      if (item) {
-        removeFromWatchlist({ id: item._id }).then(() => {
-          showToast('Removed from My List', 'success');
-        });
-      }
-    } else if (content) {
-      addToWatchlist({
-        contentId: content.id,
-        title: content.name,
-        posterUrl: content.poster,
-        backdropUrl: content.background,
-        contentType: content.type,
-      }).then(() => {
-        showToast('Added to My List', 'success');
+  const handleStreamSelect = useCallback(
+    (stream: Stream) => {
+      if (!details) return;
+      const titleSlug = (details.name || details.title || 'untitled')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      navigate(`/watch/${titleSlug}?id=${id}&stream=${encodeURIComponent(stream.url)}`, {
+        state: {
+          title: details.name || details.title,
+          stream,
+          backdropUrl: details.backdropUrl,
+        },
       });
-    }
-  };
+    },
+    [details, id, navigate]
+  );
 
-  const handlePlayStream = (stream: Stream) => {
-    const url = stream.proxiedUrl || stream.url;
-    if (!url) return;
-    navigate(`/watch/${id}?type=${type}&stream=${encodeURIComponent(url)}`);
-  };
+  const handleEpisodeClick = useCallback(
+    (episode: { id?: string; videoId?: string }) => {
+      if (!details) return;
+      const episodeId = episode.videoId || episode.id || id;
+      const titleSlug = (details.name || details.title || 'untitled')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      navigate(`/watch/${titleSlug}?id=${episodeId}`, {
+        state: {
+          title: details.name || details.title,
+          backdropUrl: details.backdropUrl,
+        },
+      });
+    },
+    [details, id, navigate]
+  );
 
-  const handlePlayEpisode = (ep: Episode) => {
-    const epId = ep.id || `${id}:${ep.season || selectedSeason}:${ep.number}`;
-    navigate(`/watch/${epId}?type=series&season=${ep.season || selectedSeason}&episode=${ep.number}`);
-  };
-
-  const handlePlay = () => {
-    if (type === 'series' && hasEpisodes) {
-      const firstEp = seasonsData[0]?.episodes[0];
-      if (firstEp) {
-        handlePlayEpisode(firstEp);
-        return;
-      }
-    }
+  const handlePlay = useCallback(() => {
     if (sortedStreams.length > 0) {
-      handlePlayStream(sortedStreams[0]);
-      return;
+      handleStreamSelect(sortedStreams[0]);
+    } else if (details?.episodes?.length) {
+      handleEpisodeClick(details.episodes[0]);
     }
-    navigate(`/watch/${id}?type=${type}`);
-  };
+  }, [sortedStreams, details, handleStreamSelect, handleEpisodeClick]);
 
-  if (isLoading) return <SkeletonDetail />;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
-  if (!content) {
+  if (detailsLoading) return <DetailSkeleton />;
+
+  if (!details) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-exyo-black">
-        <div className="text-center max-w-md px-6">
-          <p className="text-gray-300 text-lg mb-2 font-medium">Content not found</p>
-          <p className="text-gray-500 text-sm mb-6">This title may no longer be available.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-exyo-red text-white px-7 py-3 rounded-full font-bold text-sm hover:bg-exyo-red-dark transition-colors"
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white/50 text-[15px] mb-4">Content not found</p>
+          <Link
+            to="/home"
+            className="inline-flex items-center gap-2 text-exyo-red hover:text-exyo-red-hover text-[14px] font-medium transition-colors"
           >
-            Go Home
-          </button>
+            <ArrowLeftIcon className="w-4 h-4" />
+            Back to Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  const yearStr = content.year || content.releaseInfo || '';
-  const runtimeStr = content.runtime || '';
-  const ratingStr = content.imdbRating || '';
-  const isSeries = type === 'series' || content.type === 'series';
-
   return (
-    <div className="min-h-screen bg-exyo-black">
-      {/* Full-screen backdrop */}
-      <div className="relative min-h-screen flex">
-        {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${content.background || content.poster})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-exyo-black via-exyo-black/80 to-exyo-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-exyo-black via-transparent to-exyo-black/40" />
+    <main className="min-h-screen">
+      {/* Hero backdrop */}
+      <div className="relative h-[60vh] sm:h-[70vh] overflow-hidden">
+        {details.backdropUrl && (
+          <img
+            src={details.backdropUrl}
+            alt=""
+            className="w-full h-full object-cover animate-ken-burns"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-exyo-bg via-exyo-bg/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-exyo-bg/80 to-transparent" />
 
         {/* Back button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute top-6 left-5 md:left-10 p-2.5 hover:bg-white/10 rounded-full transition-colors z-30"
-        >
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        <div className="absolute top-6 left-6 z-20">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2.5 rounded-xl bg-black/40 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/60 border border-white/[0.06] transition-all duration-200"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+        </div>
 
-        {/* Main content area */}
-        <div className="relative z-10 flex w-full pt-20 pb-10 px-5 md:px-10 gap-8">
-          {/* Left side — Info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-end max-w-2xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {/* Title */}
-              <h1 className="text-[2.2rem] md:text-[3rem] lg:text-[3.8rem] font-black mb-4 tracking-tight leading-[0.9] text-white">
-                {content.name}
-              </h1>
+        {/* Content info overlay */}
+        <div className="absolute bottom-0 inset-x-0 z-20 px-6 lg:px-10 pb-8 max-w-[1440px] mx-auto">
+          <div className="flex flex-col lg:flex-row gap-6 lg:items-end">
+            {/* Poster */}
+            {details.posterUrl && (
+              <div className="hidden lg:block w-44 shrink-0">
+                <img
+                  src={details.posterUrl}
+                  alt={details.name || details.title}
+                  className="w-full aspect-[2/3] object-cover rounded-2xl shadow-2xl"
+                />
+              </div>
+            )}
 
-              {/* Metadata row */}
-              <div className="flex flex-wrap items-center gap-3 mb-4 text-[13px]">
-                {ratingStr && (
-                  <span className="flex items-center gap-1 font-bold">
-                    <span className="bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[11px] font-black">IMDb</span>
-                    <span className="text-white">{ratingStr}</span>
+            {/* Info */}
+            <div className="flex-1 max-w-[700px]">
+              {/* Type badge */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-exyo-red text-[12px] font-bold uppercase tracking-wider">
+                  {details.type === 'tv' || details.type === 'series' ? 'TV Series' : 'Movie'}
+                </span>
+                {details.rating && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400 text-[12px] font-semibold">
+                    <StarIcon className="w-3 h-3 fill-current" />
+                    {details.rating}
                   </span>
                 )}
-                {runtimeStr && <span className="text-gray-300">{runtimeStr}</span>}
-                {yearStr && <span className="text-gray-300">{yearStr}</span>}
-                <span className="px-2 py-0.5 text-[10px] font-bold border border-white/20 rounded uppercase tracking-wider text-gray-300">
-                  {isSeries ? 'Series' : 'Movie'}
-                </span>
               </div>
 
-              {/* Genres */}
-              {content.genres && content.genres.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider self-center mr-1">Genres</span>
-                  {content.genres.map((genre: string, i: number) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-[12px] font-medium text-white/90 border border-white/10"
-                    >
-                      {genre}
-                    </span>
-                  ))}
-                </div>
+              {/* Title */}
+              <h1 className="text-white text-[32px] sm:text-[44px] lg:text-[52px] font-bold leading-[1.05] tracking-tight mb-3">
+                {details.name || details.title || 'Untitled'}
+              </h1>
+
+              {/* Meta */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                {details.year && (
+                  <span className="inline-flex items-center gap-1 text-white/60 text-[13px]">
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    {details.year}
+                  </span>
+                )}
+                {details.runtime && (
+                  <span className="inline-flex items-center gap-1 text-white/60 text-[13px]">
+                    <ClockIcon className="w-3.5 h-3.5" />
+                    {details.runtime}m
+                  </span>
+                )}
+                {details.genres?.slice(0, 3).map((genre) => (
+                  <span
+                    key={genre}
+                    className="px-2.5 py-1 rounded-lg bg-white/[0.06] text-white/50 text-[12px] font-medium border border-white/[0.04]"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+
+              {/* Description */}
+              {details.description && (
+                <p className="text-white/60 text-[14px] leading-relaxed line-clamp-3 mb-6">
+                  {details.description}
+                </p>
               )}
 
-              {/* Cast */}
-              {content.cast && content.cast.length > 0 && (
-                <div className="mb-4">
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Cast</span>
-                  <div className="flex flex-wrap gap-2">
-                    {content.cast.slice(0, 5).map((actor: { name: string; role: string }, i: number) => (
-                      <span key={i} className="text-[13px] text-gray-300">
-                        {actor.name}{i < Math.min(content.cast.length, 5) - 1 ? ',' : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Summary */}
-              {content.description && (
-                <div className="mb-6">
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Summary</span>
-                  <p className="text-[14px] text-gray-300/90 leading-relaxed">
-                    {content.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2.5">
+              {/* Actions */}
+              <div className="flex items-center gap-3">
                 <button
                   onClick={handlePlay}
-                  className="flex items-center gap-2 bg-white hover:bg-white/90 text-black px-7 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 shadow-2xl shadow-black/30"
+                  disabled={sortedStreams.length === 0 && (!details.episodes || details.episodes.length === 0)}
+                  className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white text-black font-semibold text-[15px] hover:bg-white/90 transition-all duration-200 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  Play
+                  <PlayIcon className="w-5 h-5 fill-black" />
+                  <span>Play</span>
                 </button>
 
-                <button
-                  onClick={handleWatchlistToggle}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-full font-bold text-[14px] transition-all duration-200 border border-white/20"
-                >
-                  {isInWatchlist ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  )}
-                </button>
-
-                <ShareButton contentId={id!} title={content.name} type={type} />
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right side — Sidebar panel */}
-          <div className="hidden lg:flex w-[380px] flex-shrink-0 flex-col">
-            <div className="bg-exyo-black/70 backdrop-blur-xl border border-white/[0.06] rounded-2xl overflow-hidden max-h-[80vh] flex flex-col">
-              {/* Sidebar header */}
-              <div className="p-4 border-b border-white/[0.06]">
-                {isSeries && hasEpisodes ? (
-                  <div className="flex items-center gap-2">
-                    {/* Season selector */}
-                    {seasonsData.length > 1 && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-[12px] font-semibold text-white transition-colors"
-                        >
-                          Season {selectedSeason}
-                          <svg className={cn('w-3 h-3 transition-transform', showSeasonDropdown && 'rotate-180')} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        <AnimatePresence>
-                          {showSeasonDropdown && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -4 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -4 }}
-                              className="absolute top-full left-0 mt-1 bg-exyo-surface border border-white/[0.08] rounded-xl overflow-hidden shadow-2xl shadow-black/60 min-w-[140px] z-30"
-                            >
-                              {seasonsData.map((s) => (
-                                <button
-                                  key={s.season}
-                                  onClick={() => {
-                                    setSelectedSeason(s.season);
-                                    setShowSeasonDropdown(false);
-                                    setEpisodeSearch('');
-                                  }}
-                                  className={cn(
-                                    'w-full text-left px-4 py-2.5 text-[13px] font-medium transition-colors',
-                                    selectedSeason === s.season
-                                      ? 'bg-exyo-red text-white'
-                                      : 'text-gray-300 hover:bg-white/[0.06]'
-                                  )}
-                                >
-                                  {s.name || `Season ${s.season}`}
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                {isSignedIn && (
+                  <button
+                    onClick={toggleWatchlist}
+                    disabled={addToWatchlist.isPending || removeFromWatchlist.isPending}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-5 py-3.5 rounded-xl font-medium text-[14px] transition-all duration-200 border',
+                      isWatchlisted
+                        ? 'bg-white/[0.08] border-white/[0.12] text-white'
+                        : 'bg-white/[0.04] border-white/[0.08] text-white/70 hover:bg-white/[0.08]'
                     )}
-                    <span className="text-[12px] text-gray-500 ml-auto">
-                      {currentSeasonEpisodes.length} episode{currentSeasonEpisodes.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-white">
-                      {streamsLoading ? 'Loading streams...' : `${sortedStreams.length} stream${sortedStreams.length !== 1 ? 's' : ''}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Episode search for series */}
-              {isSeries && hasEpisodes && (
-                <div className="px-4 pt-3">
-                  <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                      type="text"
-                      value={episodeSearch}
-                      onChange={(e) => setEpisodeSearch(e.target.value)}
-                      placeholder="Search episodes..."
-                      className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-[12px] text-white placeholder-gray-500 focus:outline-none focus:border-white/20 transition-colors"
-                    />
-                    {episodeSearch && (
-                      <button
-                        onClick={() => setEpisodeSearch('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/10 rounded"
-                      >
-                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Scrollable list */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {isSeries && hasEpisodes ? (
-                  /* Episode list */
-                  <div className="p-2">
-                    {currentSeasonEpisodes.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 text-[13px]">No episodes found</div>
+                  >
+                    {isWatchlisted ? (
+                      <>
+                        <CheckIcon className="w-5 h-5 text-exyo-red" />
+                        <span>In My List</span>
+                      </>
                     ) : (
-                      currentSeasonEpisodes.map((ep) => (
-                        <button
-                          key={ep.number}
-                          onClick={() => handlePlayEpisode(ep)}
-                          className="w-full text-left p-2.5 hover:bg-white/[0.06] rounded-xl transition-all duration-150 group flex gap-3"
-                        >
-                          {/* Episode thumbnail */}
-                          <div className="w-[120px] h-[68px] flex-shrink-0 bg-white/[0.03] rounded-lg overflow-hidden relative">
-                            {ep.thumbnail || ep.poster ? (
-                              <img
-                                src={ep.thumbnail || ep.poster}
-                                alt={`E${ep.number}`}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[20px] font-bold text-gray-600">
-                                {ep.number}
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <svg className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
-                          </div>
-                          {/* Episode info */}
-                          <div className="flex-1 min-w-0 py-0.5">
-                            <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white truncate transition-colors">
-                              {ep.number}. {ep.name}
-                            </p>
-                            {ep.firstAired && (
-                              <p className="text-[11px] text-gray-500 mt-0.5">
-                                {new Date(ep.firstAired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </p>
-                            )}
-                            {ep.description && (
-                              <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{ep.description}</p>
-                            )}
-                          </div>
-                        </button>
-                      ))
+                      <>
+                        <PlusIcon className="w-5 h-5" />
+                        <span>My List</span>
+                      </>
                     )}
-                  </div>
-                ) : (
-                  /* Stream list */
-                  <div className="p-2">
-                    {streamsLoading ? (
-                      <div className="space-y-2 p-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <div key={i} className="h-16 bg-white/[0.03] rounded-xl animate-pulse" />
-                        ))}
-                      </div>
-                    ) : sortedStreams.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 text-[13px]">No streams available</div>
-                    ) : (
-                      sortedStreams.map((stream, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handlePlayStream(stream)}
-                          className="w-full text-left p-3 hover:bg-white/[0.06] rounded-xl transition-all duration-150 group"
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Quality badge */}
-                            {stream.quality && (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/[0.08] text-gray-300 whitespace-nowrap">
-                                {stream.quality}
-                              </span>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-medium text-gray-200 group-hover:text-white truncate transition-colors">
-                                {stream.name || stream.title || `Source ${i + 1}`}
-                              </p>
-                              {stream.description && (
-                                <p className="text-[11px] text-gray-500 truncate mt-0.5">{stream.description}</p>
-                              )}
-                            </div>
-                            {stream.addonName && (
-                              <span className="text-[10px] text-gray-600 flex-shrink-0">{stream.addonName}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
+                  </button>
                 )}
-              </div>
 
-              {/* Sidebar footer */}
-              <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
-                <span className="text-[11px] text-gray-500">
-                  {isSeries ? 'Select an episode' : 'Select a source'}
-                </span>
                 <button
-                  onClick={() => navigate('/settings/streaming')}
-                  className="text-[11px] text-gray-500 hover:text-white transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    toast.success('Link copied to clipboard');
+                  }}
+                  className="p-3.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/60 hover:text-white border border-white/[0.06] transition-all duration-200"
                 >
-                  Manage Addons
+                  <ShareIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -518,116 +338,234 @@ export default function Detail() {
         </div>
       </div>
 
-      {/* Mobile: episodes/streams below hero (for non-lg screens) */}
-      <div className="lg:hidden px-5 md:px-10 pb-10">
-        {isSeries && hasEpisodes ? (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              {seasonsData.length > 1 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-[12px] font-semibold text-white transition-colors"
-                  >
-                    Season {selectedSeason}
-                    <svg className={cn('w-3 h-3 transition-transform', showSeasonDropdown && 'rotate-180')} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <AnimatePresence>
-                    {showSeasonDropdown && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="absolute top-full left-0 mt-1 bg-exyo-surface border border-white/[0.08] rounded-xl overflow-hidden shadow-2xl shadow-black/60 min-w-[140px] z-30"
-                      >
-                        {seasonsData.map((s) => (
-                          <button
-                            key={s.season}
-                            onClick={() => {
-                              setSelectedSeason(s.season);
-                              setShowSeasonDropdown(false);
-                              setEpisodeSearch('');
-                            }}
-                            className={cn(
-                              'w-full text-left px-4 py-2.5 text-[13px] font-medium transition-colors',
-                              selectedSeason === s.season
-                                ? 'bg-exyo-red text-white'
-                                : 'text-gray-300 hover:bg-white/[0.06]'
-                            )}
-                          >
-                            {s.name || `Season ${s.season}`}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+      {/* Content section */}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 -mt-8 relative z-10">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left: Main info */}
+          <div className="flex-1 min-w-0">
+            {/* Cast */}
+            {details.cast && details.cast.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.16em] mb-3">
+                  Cast
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {details.cast.slice(0, 8).map((name) => (
+                    <span
+                      key={name}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.04] text-white/60 text-[13px] border border-white/[0.04]"
+                    >
+                      {name}
+                    </span>
+                  ))}
                 </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              {currentSeasonEpisodes.map((ep) => (
-                <button
-                  key={ep.number}
-                  onClick={() => handlePlayEpisode(ep)}
-                  className="w-full text-left p-3 bg-white/[0.02] hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] rounded-xl transition-all duration-200 group flex gap-3"
-                >
-                  <div className="w-[120px] h-[68px] flex-shrink-0 bg-white/[0.03] rounded-lg overflow-hidden relative">
-                    {(ep.thumbnail || ep.poster) ? (
-                      <img src={ep.thumbnail || ep.poster} alt={`E${ep.number}`} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[20px] font-bold text-gray-600">{ep.number}</div>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                    </div>
+              </div>
+            )}
+
+            {/* Trailer */}
+            {details.trailerStreams && details.trailerStreams.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.16em] mb-3">
+                  Trailer
+                </h3>
+                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                  {details.trailerStreams.map((trailer, i) => (
+                    <a
+                      key={`${trailer.url}-${i}`}
+                      href={trailer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-none w-64 aspect-video rounded-xl overflow-hidden relative group bg-exyo-elevated border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200"
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all">
+                        <PlayCircleIcon className="w-12 h-12 text-white/70 group-hover:text-white transition-colors" />
+                      </div>
+                      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                        <span className="text-white text-[12px] font-medium">
+                          {trailer.name || `Trailer ${i + 1}`}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right sidebar: Episodes / Streams */}
+          <div className="w-full lg:w-[380px] shrink-0">
+            <div className="bg-exyo-card rounded-2xl border border-white/[0.04] overflow-hidden">
+              {/* Sidebar header */}
+              <div className="px-5 py-4 border-b border-white/[0.04]">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white text-[15px] font-semibold">
+                    {details.type === 'tv' || details.type === 'series'
+                      ? `Season ${selectedSeason}`
+                      : 'Streams'}
+                  </h3>
+                  <span className="text-white/30 text-[12px]">
+                    {details.type === 'tv' || details.type === 'series'
+                      ? `${filteredEpisodes.length} episodes`
+                      : `${sortedStreams.length} streams`}
+                  </span>
+                </div>
+
+                {/* Season dropdown */}
+                {details.type === 'tv' && seasons.length > 1 && (
+                  <div className="mt-3 relative">
+                    <select
+                      value={selectedSeason}
+                      onChange={(e) => setSelectedSeason(Number(e.target.value))}
+                      className="w-full appearance-none bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-2.5 text-white text-[13px] focus:outline-none focus:border-exyo-red/40 transition-colors cursor-pointer"
+                    >
+                      {seasons.map((s) => (
+                        <option key={s.season} value={s.season} className="bg-exyo-card text-white">
+                          Season {s.season}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                   </div>
-                  <div className="flex-1 min-w-0 py-0.5">
-                    <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white truncate transition-colors">
-                      {ep.number}. {ep.name}
-                    </p>
-                    {ep.firstAired && (
-                      <p className="text-[11px] text-gray-500 mt-0.5">
-                        {new Date(ep.firstAired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                )}
+
+                {/* Episode search (series only) */}
+                {details.type === 'tv' && currentSeasonEpisodes.length > 3 && (
+                  <div className="mt-3 relative">
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      placeholder="Search episodes..."
+                      value={episodeSearch}
+                      onChange={(e) => setEpisodeSearch(e.target.value)}
+                      className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-9 pr-4 py-2.5 text-white text-[13px] placeholder-white/30 focus:outline-none focus:border-exyo-red/40 transition-colors"
+                    />
+                    {episodeSearch && (
+                      <button
+                        onClick={() => setEpisodeSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Episode/stream list */}
+              <div className="max-h-[480px] overflow-y-auto overscroll-contain">
+                {details.type === 'tv' || details.type === 'series' ? (
+                  // Episodes
+                  filteredEpisodes.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <p className="text-white/40 text-[13px]">
+                        {episodeSearch ? 'No episodes match your search' : 'No episodes available'}
                       </p>
-                    )}
-                    {ep.description && (
-                      <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{ep.description}</p>
-                    )}
-                  </div>
-                </button>
-              ))}
+                    </div>
+                  ) : (
+                    filteredEpisodes.map((ep) => {
+                      const epId = ep.videoId || ep.id || id;
+                      const epImage = ep.stillUrl || ep.posterUrl || details.backdropUrl;
+
+                      return (
+                        <button
+                          key={epId}
+                          onClick={() => handleEpisodeClick(ep)}
+                          className="w-full text-left flex gap-3 p-4 hover:bg-white/[0.03] transition-all duration-200 border-b border-white/[0.03] last:border-0 group"
+                        >
+                          {/* Thumbnail */}
+                          <div className="w-28 sm:w-32 aspect-video rounded-lg overflow-hidden bg-exyo-elevated shrink-0 relative">
+                            {epImage && (
+                              <img
+                                src={epImage}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all">
+                              <PlayCircleIcon className="w-8 h-8 text-white/70 group-hover:text-white transition-colors" />
+                            </div>
+                            {ep.runtime && (
+                              <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium">
+                                {ep.runtime}m
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0 py-0.5">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-white/30 text-[11px] font-medium">
+                                E{ep.episodeNumber || '?'}
+                              </span>
+                              {ep.rating && (
+                                <span className="text-yellow-400/70 text-[11px] font-medium flex items-center gap-0.5">
+                                  <StarIcon className="w-2.5 h-2.5 fill-current" />
+                                  {ep.rating}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-white text-[13px] font-medium line-clamp-1 mb-1">
+                              {ep.name || ep.title || `Episode ${ep.episodeNumber}`}
+                            </h4>
+                            <p className="text-white/40 text-[12px] line-clamp-2 leading-relaxed">
+                              {ep.description || 'No description available.'}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )
+                ) : (
+                  // Movie streams
+                  sortedStreams.length === 0 ? (
+                    <div className="p-8 text-center">
+                      {streamsLoading ? (
+                        <div className="flex flex-col items-center">
+                          <div className="w-10 h-10 border-2 border-exyo-red/20 border-t-exyo-red rounded-full animate-spin mb-3" />
+                          <p className="text-white/40 text-[13px]">Loading streams...</p>
+                        </div>
+                      ) : (
+                        <p className="text-white/40 text-[13px]">No streams available</p>
+                      )}
+                    </div>
+                  ) : (
+                    sortedStreams.map((stream, i) => (
+                      <button
+                        key={`${stream.url}-${i}`}
+                        onClick={() => handleStreamSelect(stream)}
+                        className="w-full text-left p-4 hover:bg-white/[0.03] transition-all duration-200 border-b border-white/[0.03] last:border-0 group flex items-center gap-3"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center group-hover:bg-exyo-red/10 transition-colors shrink-0">
+                          <PlayIcon className="w-4 h-4 text-white/40 group-hover:text-exyo-red transition-colors" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-white text-[13px] font-medium truncate">
+                              {stream.name || stream.title || `Stream ${i + 1}`}
+                            </span>
+                            {stream.quality && stream.quality !== 'Unknown' && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-white/50 shrink-0">
+                                {stream.quality}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-white/30 text-[11px]">
+                            {stream.videoCodec && stream.videoCodec !== 'Unknown'
+                              ? stream.videoCodec.toUpperCase()
+                              : 'Auto'}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )
+                )}
+              </div>
             </div>
           </div>
-        ) : (
-          <div>
-            <h3 className="text-[15px] font-bold mb-4">{streamsLoading ? 'Loading streams...' : `Streams (${sortedStreams.length})`}</h3>
-            <div className="space-y-2">
-              {sortedStreams.map((stream, i) => (
-                <button
-                  key={i}
-                  onClick={() => handlePlayStream(stream)}
-                  className="w-full text-left p-3 bg-white/[0.02] hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] rounded-xl transition-all duration-200 group"
-                >
-                  <div className="flex items-center gap-3">
-                    {stream.quality && (
-                      <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/[0.08] text-gray-300 whitespace-nowrap">{stream.quality}</span>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-gray-200 group-hover:text-white truncate transition-colors">
-                        {stream.name || stream.title || `Source ${i + 1}`}
-                      </p>
-                      {stream.description && <p className="text-[11px] text-gray-500 truncate mt-0.5">{stream.description}</p>}
-                    </div>
-                    {stream.addonName && <span className="text-[10px] text-gray-600 flex-shrink-0">{stream.addonName}</span>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

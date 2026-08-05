@@ -1,137 +1,167 @@
+import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
-import { contentApi } from '../api/content.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
-import Footer from '../components/Footer';
-import { SkeletonHero, SkeletonRow } from '../components/Skeleton';
+import { HeroSkeleton, RowSkeleton } from '../components/Skeleton';
+import { contentApi, type ContentSearchResult, type ContentStreamsResult } from '../api/content.api';
 import type { CatalogItem } from '../types';
 
-const GENRES = [
-  { title: 'Action', catalogId: 'action' },
-  { title: 'Comedy', catalogId: 'comedy' },
-  { title: 'Drama', catalogId: 'drama' },
-  { title: 'Horror', catalogId: 'horror' },
-  { title: 'Sci-Fi', catalogId: 'scifi' },
-  { title: 'Anime', catalogId: 'anime' },
-  { title: 'Documentary', catalogId: 'documentary' },
-];
-
-function ConnectionError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-exyo-dark px-6">
-      <div className="max-w-md text-center">
-        <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-exyo-red/10 flex items-center justify-center">
-          <svg className="w-12 h-12 text-exyo-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636a9 9 0 010 12.728m-2.829-2.829a5 5 0 000-7.07m-4.243 2.122a1.5 1.5 0 112.121 2.121 1.5 1.5 0 01-2.121-2.121z" />
-          </svg>
-        </div>
-        <h2 className="text-3xl font-bold mb-4">Unable to connect</h2>
-        <p className="text-gray-400 mb-10 leading-relaxed">
-          We&apos;re having trouble reaching our servers. Please check your connection and try again.
-        </p>
-        <button
-          onClick={onRetry}
-          className="bg-exyo-red hover:bg-exyo-red-dark text-white px-8 py-3.5 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-exyo-red/20"
-        >
-          Try Again
-        </button>
-      </div>
-    </div>
-  );
-}
+const ANIME_CATALOG_ID = 'animestream';
 
 export default function Home() {
   const [searchParams] = useSearchParams();
-  const type = searchParams.get('type') || 'movie';
-  const catalogId = searchParams.get('catalogId');
+  const catalogId = searchParams.get('catalogId') || undefined;
+  const { isSignedIn, user } = useUser();
 
-  const isAnime = catalogId === 'anime';
-
-  const { data: trending = [], isLoading: loadingTrending, isError: trendingError, refetch } = useQuery<CatalogItem[]>({
-    queryKey: ['trending', type, catalogId || ''],
-    queryFn: () => isAnime
-      ? contentApi.getCatalogs('series', 'anime')
-      : contentApi.getCatalogs(type, 'trending'),
-    retry: 2,
+  const { data: watchHistory } = useQuery({
+    queryKey: ['watchHistory'],
+    queryFn: () => contentApi.getWatchHistory(user!.id),
+    enabled: isSignedIn,
   });
 
-  const { data: popular = [], isLoading: loadingPopular } = useQuery<CatalogItem[]>({
-    queryKey: ['popular', type, catalogId || ''],
-    queryFn: () => isAnime
-      ? contentApi.getCatalogs('series', 'popular')
-      : contentApi.getCatalogs(type, 'popular'),
-    retry: 2,
+  const continueWatchingItems = useMemo(() => {
+    if (!watchHistory || !Array.isArray(watchHistory)) return [];
+    return watchHistory
+      .filter((item: { progress?: number; duration?: number }) => item.progress && item.progress > 0 && item.duration && item.duration > 0)
+      .sort((a: { lastWatched?: number }, b: { lastWatched?: number }) => (b.lastWatched || 0) - (a.lastWatched || 0))
+      .slice(0, 20)
+      .map((item: { title?: string; name?: string; posterUrl?: string; id?: string; imdbId?: string; backdropUrl?: string; year?: string; rating?: number; progress?: number; duration?: number; type?: string }) => ({
+        id: item.id || item.imdbId || '',
+        imdbId: item.imdbId,
+        name: item.name,
+        title: item.title,
+        posterUrl: item.posterUrl,
+        backdropUrl: item.backdropUrl,
+        year: item.year,
+        rating: item.rating,
+        type: item.type as 'movie' | 'tv' | undefined,
+        progress: item.progress,
+        duration: item.duration,
+      })) as CatalogItem[];
+  }, [watchHistory]);
+
+  const heroItems = useMemo(() => {
+    return continueWatchingItems.filter((item) => item.backdropUrl).slice(0, 5);
+  }, [continueWatchingItems]);
+
+  const isAnime = catalogId === ANIME_CATALOG_ID;
+
+  const { data: trending, isLoading: trendingLoading } = useQuery({
+    queryKey: ['cinemeta', 'trending', isAnime ? 'anime' : 'default'],
+    queryFn: () => contentApi.searchByName(isAnime ? 'anime trending' : 'trending', { limit: 20 }),
   });
 
-  const { data: top = [], isLoading: loadingTop } = useQuery<CatalogItem[]>({
-    queryKey: ['top', type, catalogId || ''],
-    queryFn: () => isAnime
-      ? contentApi.getCatalogs('series', 'top')
-      : contentApi.getCatalogs(type, 'top'),
-    retry: 2,
+  const { data: popular, isLoading: popularLoading } = useQuery({
+    queryKey: ['cinemeta', 'popular', isAnime ? 'anime' : 'default'],
+    queryFn: () => contentApi.searchByName(isAnime ? 'anime popular' : 'popular', { limit: 20 }),
   });
 
-  const { data: genreData = {} } = useQuery({
-    queryKey: ['genres', type],
-    queryFn: async () => {
-      const results = await Promise.allSettled(
-        GENRES.map(async (genre) => {
-          const items = await contentApi.getCatalogs(type, genre.catalogId);
-          return { key: genre.catalogId, items };
-        })
-      );
-      const map: Record<string, CatalogItem[]> = {};
-      results.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          map[result.value.key] = result.value.items;
-        }
-      });
-      return map;
-    },
+  const { data: latest, isLoading: latestLoading } = useQuery({
+    queryKey: ['cinemeta', 'latest', isAnime ? 'anime' : 'default'],
+    queryFn: () => contentApi.searchByName(isAnime ? 'anime latest' : 'latest', { limit: 20 }),
   });
 
-  const isLoadingAll = loadingTrending && loadingPopular && loadingTop;
+  const { data: topRated, isLoading: topRatedLoading } = useQuery({
+    queryKey: ['cinemeta', 'top-rated', isAnime ? 'anime' : 'default'],
+    queryFn: () => contentApi.searchByName(isAnime ? 'anime top rated' : 'top rated', { limit: 20 }),
+  });
 
-  if (isLoadingAll) {
-    return (
-      <div className="min-h-screen bg-exyo-black">
-        <SkeletonHero />
-        <div className="-mt-32 relative z-10 space-y-0">
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-        </div>
-      </div>
-    );
-  }
+  const extractItems = useCallback((data: ContentSearchResult | ContentStreamsResult | undefined): CatalogItem[] => {
+    if (!data) return [];
+    if ('streams' in data) return [];
+    if ('results' in data && Array.isArray(data.results)) {
+      return data.results.map((item: { id?: string; imdbId?: string; name?: string; title?: string; posterUrl?: string; type?: string; year?: string; rating?: number }) => ({
+        id: item.id || item.imdbId || '',
+        imdbId: item.imdbId,
+        name: item.name,
+        title: item.title,
+        posterUrl: item.posterUrl,
+        type: item.type as 'movie' | 'tv' | undefined,
+        year: item.year,
+        rating: item.rating,
+      }));
+    }
+    return [];
+  }, []);
 
-  if (trendingError && !trending.length && !popular.length && !top.length) {
-    return <ConnectionError onRetry={() => refetch()} />;
-  }
+  const trendingItems = useMemo(() => extractItems(trending), [trending, extractItems]);
+  const popularItems = useMemo(() => extractItems(popular), [popular, extractItems]);
+  const latestItems = useMemo(() => extractItems(latest), [latest, extractItems]);
+  const topRatedItems = useMemo(() => extractItems(topRated), [topRated, extractItems]);
 
   return (
-    <div className="min-h-screen bg-exyo-black">
-      {trending.length > 0 && <HeroBanner items={trending.slice(0, 5)} />}
+    <main className="min-h-screen">
+      {/* Hero */}
+      {heroItems.length > 0 && <HeroBanner items={heroItems} />}
 
-      <div className="-mt-32 relative z-10">
-        <ContentRow title="Trending Now" items={trending} />
-        <ContentRow title="Popular on EXYO" items={popular} />
-        <ContentRow title="Top Picks" items={top} />
+      {/* Content rows */}
+      <div className="relative z-10 -mt-16 sm:-mt-24 lg:-mt-32">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
+          {/* Continue Watching */}
+          {continueWatchingItems.length > 0 && (
+            <ContentRow
+              title="Continue Watching"
+              items={continueWatchingItems}
+              watchHistory={watchHistory}
+              size="md"
+            />
+          )}
 
-        {GENRES.map(
-          (genre) =>
-            genreData[genre.catalogId]?.length > 0 && (
+          {/* Trending */}
+          {trendingLoading ? (
+            <RowSkeleton />
+          ) : (
+            trendingItems.length > 0 && (
               <ContentRow
-                key={genre.catalogId}
-                title={genre.title}
-                items={genreData[genre.catalogId]}
+                title={isAnime ? "Trending Anime" : "Trending Now"}
+                items={trendingItems}
+                size="md"
               />
             )
-        )}
+          )}
 
-        <Footer />
+          {/* Popular */}
+          {popularLoading ? (
+            <RowSkeleton />
+          ) : (
+            popularItems.length > 0 && (
+              <ContentRow
+                title={isAnime ? "Popular Anime" : "Popular"}
+                items={popularItems}
+                size="md"
+              />
+            )
+          )}
+
+          {/* Latest */}
+          {latestLoading ? (
+            <RowSkeleton />
+          ) : (
+            latestItems.length > 0 && (
+              <ContentRow
+                title={isAnime ? "Latest Anime" : "Latest"}
+                items={latestItems}
+                size="md"
+              />
+            )
+          )}
+
+          {/* Top Rated */}
+          {topRatedLoading ? (
+            <RowSkeleton />
+          ) : (
+            topRatedItems.length > 0 && (
+              <ContentRow
+                title={isAnime ? "Top Rated Anime" : "Top Rated"}
+                items={topRatedItems}
+                size="md"
+              />
+            )
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,37 +1,71 @@
-import { useEffect } from 'react';
+import { useEffect, createContext, useContext } from 'react';
 import { useAppearanceStore } from '../store/appStore';
+import type { Theme, AccentColor } from '../store/appStore';
 
-const ACCENT_COLORS: Record<string, string> = {
-  red: '#E50914',
-  blue: '#1DA1F2',
-  purple: '#9333EA',
-  green: '#10B981',
-  orange: '#F97316',
-  pink: '#EC4899',
-};
+interface ThemeContextValue {
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+  accentColor: AccentColor;
+  setAccentColor: (c: AccentColor) => void;
+  glassMode: boolean;
+  setGlassMode: (v: boolean) => void;
+  reduceMotion: boolean;
+  setReduceMotion: (v: boolean) => void;
+  roundedPosters: boolean;
+  setRoundedPosters: (v: boolean) => void;
+}
 
-const THEME_COLORS: Record<string, { bg: string; surface: string; hover: string }> = {
-  oled: { bg: '#000000', surface: '#0A0A0A', hover: '#1A1A1A' },
-  midnight: { bg: '#0A0A0A', surface: '#141414', hover: '#2A2A2A' },
-  graphite: { bg: '#121212', surface: '#1E1E1E', hover: '#2E2E2E' },
-};
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+export function useTheme(): ThemeContextValue {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) {
+    // Fallback: use the store directly (for components outside the provider)
+    const store = useAppearanceStore();
+    return {
+      theme: store.theme,
+      setTheme: store.setTheme,
+      accentColor: store.accentColor,
+      setAccentColor: store.setAccentColor,
+      glassMode: store.glassMode,
+      setGlassMode: store.setGlassMode,
+      reduceMotion: store.reduceMotion,
+      setReduceMotion: store.setReduceMotion,
+      roundedPosters: store.roundedPosters,
+      setRoundedPosters: store.setRoundedPosters,
+    };
+  }
+  return ctx;
+}
 
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
-  const { theme, accentColor, glassMode, reduceMotion, navbarTransparency, roundedPosters } =
+  const { theme, accentColor, glassMode, reduceMotion, roundedPosters } =
     useAppearanceStore();
 
   useEffect(() => {
     const root = document.documentElement;
-    const themeColors = THEME_COLORS[theme] || THEME_COLORS.midnight;
-    const accent = ACCENT_COLORS[accentColor] || ACCENT_COLORS.red;
 
-    root.style.setProperty('--theme-bg', themeColors.bg);
-    root.style.setProperty('--theme-surface', themeColors.surface);
-    root.style.setProperty('--theme-hover', themeColors.hover);
-    root.style.setProperty('--theme-accent', accent);
-    root.style.setProperty('--exyo-navbar-alpha', `${navbarTransparency / 100}`);
+    // Resolve system theme
+    let resolvedTheme = theme;
+    if (theme === 'system') {
+      resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
 
-    root.classList.remove('theme-oled', 'theme-midnight', 'theme-graphite');
+    // Set CSS variables
+    root.style.setProperty('--theme-accent', accentColor);
+
+    if (resolvedTheme === 'light') {
+      root.style.setProperty('--theme-bg', '#FFFFFF');
+      root.style.setProperty('--theme-surface', '#F5F5F5');
+      root.style.setProperty('--theme-hover', '#EBEBEB');
+    } else {
+      root.style.setProperty('--theme-bg', '#080808');
+      root.style.setProperty('--theme-surface', '#121212');
+      root.style.setProperty('--theme-hover', '#1B1B1B');
+    }
+
+    // Apply utility classes
+    root.classList.remove('theme-dark', 'theme-light', 'theme-system');
     root.classList.add(`theme-${theme}`);
 
     if (glassMode) {
@@ -51,7 +85,42 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     } else {
       root.classList.remove('rounded-posters');
     }
-  }, [theme, accentColor, glassMode, reduceMotion, navbarTransparency, roundedPosters]);
 
-  return <>{children}</>;
+    // Listen for system theme changes
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => {
+        if (mq.matches) {
+          root.style.setProperty('--theme-bg', '#080808');
+          root.style.setProperty('--theme-surface', '#121212');
+          root.style.setProperty('--theme-hover', '#1B1B1B');
+        } else {
+          root.style.setProperty('--theme-bg', '#FFFFFF');
+          root.style.setProperty('--theme-surface', '#F5F5F5');
+          root.style.setProperty('--theme-hover', '#EBEBEB');
+        }
+      };
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+  }, [theme, accentColor, glassMode, reduceMotion, roundedPosters]);
+
+  const value: ThemeContextValue = {
+    theme,
+    setTheme: useAppearanceStore.getState().setTheme,
+    accentColor,
+    setAccentColor: useAppearanceStore.getState().setAccentColor,
+    glassMode,
+    setGlassMode: useAppearanceStore.getState().setGlassMode,
+    reduceMotion,
+    setReduceMotion: useAppearanceStore.getState().setReduceMotion,
+    roundedPosters,
+    setRoundedPosters: useAppearanceStore.getState().setRoundedPosters,
+  };
+
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
