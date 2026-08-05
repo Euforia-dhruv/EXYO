@@ -8,6 +8,8 @@ const PROXY_BASE_URL = "https://exyo.vercel.app";
 
 const DEFAULT_STREAM_ADDONS = [
   "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
+  "https://animestream-addon.keypop3750.workers.dev",
+  "https://free.flixnest.app",
 ];
 
 const corsHeaders: Record<string, string> = {
