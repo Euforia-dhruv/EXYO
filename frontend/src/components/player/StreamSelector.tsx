@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { X, Play, Check } from 'lucide-react';
 import type { PlayerStream } from '../../hooks/usePlayer';
 import { cn } from '../../utils/helpers';
+import { ELogo } from '../Logo';
 
 interface Props {
   streams: PlayerStream[];
@@ -60,9 +61,11 @@ export default function StreamSelector({ streams, currentStream, onSelect, onClo
 
         <div className="p-4 space-y-2">
           {loading ? (
-            <div className="flex flex-col items-center py-12">
-              <div className="w-10 h-10 border-2 border-red/20 border-t-red rounded-full animate-spin" />
-              <p className="text-white/40 text-sm mt-4">Loading streams...</p>
+            <div className="flex flex-col items-center py-12 gap-3">
+              <div className="animate-pulse">
+                <ELogo size={40} />
+              </div>
+              <p className="text-white/40 text-sm">Loading streams...</p>
             </div>
           ) : streams.length === 0 ? (
             <div className="py-12 text-center">

@@ -1,23 +1,66 @@
+import { motion } from 'framer-motion';
+
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showWord?: boolean;
   className?: string;
+  animate?: boolean;
 }
 
-export default function Logo({ size = 'md', showWord = true, className = '' }: LogoProps) {
-  const iconSizes = { sm: 'w-7 h-7', md: 'w-9 h-9', lg: 'w-12 h-12' };
-  const textSizes = { sm: 'text-lg', md: 'text-xl', lg: 'text-3xl' };
+export default function Logo({ size = 'md', showWord = true, className = '', animate = false }: LogoProps) {
+  const iconSizes = { sm: 32, md: 40, lg: 56 };
+  const wordSizes = { sm: 'text-lg', md: 'text-xl', lg: 'text-3xl' };
+  const iconPx = iconSizes[size];
+
+  const Wrapper = animate ? motion.div : 'div';
+  const wrapperProps = animate
+    ? { initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.3 } }
+    : {};
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <div className={`${iconSizes[size]} rounded-xl bg-red flex items-center justify-center shadow-lg shadow-red/20`}>
-        <span className="text-white font-extrabold text-sm leading-none">E</span>
-      </div>
+      <Wrapper {...wrapperProps} className="relative shrink-0">
+        <img
+          src="/logo-Photoroom.png"
+          alt="EXYO"
+          width={iconPx}
+          height={iconPx}
+          className="object-contain"
+          style={{ width: iconPx, height: iconPx }}
+        />
+      </Wrapper>
       {showWord && (
-        <span className={`${textSizes[size]} font-extrabold tracking-tight text-white`}>
-          EXYO
-        </span>
+        <img
+          src="/Exyologo-Photoroom.png"
+          alt="EXYO"
+          className={`object-contain h-${size === 'sm' ? 6 : size === 'md' ? 7 : 10}`}
+          style={{ height: size === 'sm' ? 24 : size === 'md' ? 28 : 40 }}
+        />
       )}
     </div>
+  );
+}
+
+export function ELogo({ size = 32, className = '' }: { size?: number; className?: string }) {
+  return (
+    <img
+      src="/logo-Photoroom.png"
+      alt="EXYO"
+      width={size}
+      height={size}
+      className={`object-contain shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+export function Wordmark({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  return (
+    <img
+      src="/Exyologo-Photoroom.png"
+      alt="EXYO"
+      className={`object-contain shrink-0 ${className}`}
+      style={{ height: size === 'sm' ? 24 : size === 'md' ? 28 : 40 }}
+    />
   );
 }

@@ -12,6 +12,7 @@ import {
 import { contentApi } from '../api/content.api';
 import { DetailSkeleton } from '../components/Skeleton';
 import StreamDrawer from '../components/StreamDrawer';
+import { ELogo } from '../components/Logo';
 import { toast } from '../components/Toast';
 import { cn } from '../utils/helpers';
 import type { Stream } from '../types';
@@ -558,8 +559,10 @@ export default function Detail() {
                   {sortedStreams.length === 0 ? (
                     <div className="p-8 text-center">
                       {streamsLoading ? (
-                        <div className="flex flex-col items-center">
-                          <div className="w-10 h-10 border-2 border-red/20 border-t-red rounded-full animate-spin mb-3" />
+                        <div className="flex flex-col items-center gap-3 py-4">
+                          <div className="animate-pulse">
+                            <ELogo size={40} />
+                          </div>
                           <p className="text-white/30 text-sm">Loading streams...</p>
                         </div>
                       ) : (

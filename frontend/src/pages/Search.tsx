@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search as SearchIcon } from 'lucide-react';
+import { ELogo } from '../components/Logo';
 import { contentApi } from '../api/content.api';
 import Card from '../components/Card';
 import { RowSkeleton } from '../components/Skeleton';
@@ -39,8 +40,8 @@ export default function Search() {
           <RowSkeleton />
         ) : results.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-20 h-20 rounded-3xl bg-elevated flex items-center justify-center mb-6">
-              <SearchIcon className="w-10 h-10 text-white/10" />
+            <div className="opacity-20 mb-6">
+              <ELogo size={80} />
             </div>
             <p className="text-white/40 text-lg font-medium mb-2">
               {query ? 'No results found' : 'Start typing to search'}

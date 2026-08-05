@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { motion } from 'framer-motion';
 import { ListOrdered } from 'lucide-react';
 import Card from '../components/Card';
+import { ELogo } from '../components/Logo';
 
 export default function MyList() {
   const watchlist = useConvexQuery(api.watchlist.getWatchlist);
@@ -31,7 +32,7 @@ export default function MyList() {
 
       {items.length === 0 ? (
         <div className="glass glass-border rounded-3xl p-12 text-center">
-          <ListOrdered className="w-12 h-12 text-white/10 mx-auto mb-4" />
+          <div className="opacity-20 mb-4 flex justify-center"><ELogo size={48} /></div>
           <p className="text-white/50 font-medium mb-1">Your list is empty</p>
           <p className="text-white/25 text-sm">Add movies and series to your list</p>
         </div>

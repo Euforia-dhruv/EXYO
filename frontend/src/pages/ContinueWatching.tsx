@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
 import Card from '../components/Card';
+import { ELogo } from '../components/Logo';
 
 export default function ContinueWatching() {
   const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
@@ -36,7 +37,7 @@ export default function ContinueWatching() {
 
       {items.length === 0 ? (
         <div className="glass glass-border rounded-3xl p-12 text-center">
-          <Clock className="w-12 h-12 text-white/10 mx-auto mb-4" />
+          <div className="opacity-20 mb-4 flex justify-center"><ELogo size={48} /></div>
           <p className="text-white/50 font-medium mb-1">Nothing to continue</p>
           <p className="text-white/25 text-sm">Start watching to see your progress here</p>
         </div>

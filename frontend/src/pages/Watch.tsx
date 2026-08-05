@@ -9,6 +9,7 @@ import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import { contentApi } from '../api/content.api';
+import { ELogo } from '../components/Logo';
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
@@ -137,11 +138,11 @@ export default function Watch() {
 
       {player.isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red/20 flex items-center justify-center animate-pulse">
-              <span className="text-white font-extrabold text-lg">E</span>
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-pulse">
+              <ELogo size={48} />
             </div>
-            <div className="w-10 h-10 border-2 border-red/20 border-t-red rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-white/10 border-t-red rounded-full animate-spin" />
           </div>
         </div>
       )}

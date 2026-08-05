@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Check, Shield, Wifi, Film, Music, Globe, HardDrive, Zap } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import type { Stream } from '../types';
+import { ELogo } from './Logo';
 
 interface Props {
   open: boolean;
@@ -217,7 +218,7 @@ export default function StreamDrawer({ open, streams, currentStreamUrl, onSelect
                 </div>
               ) : sorted.length === 0 ? (
                 <div className="py-16 text-center">
-                  <Film className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                  <div className="opacity-20 mb-4 flex justify-center"><ELogo size={48} /></div>
                   <p className="text-white/40 text-sm font-medium">No streams available</p>
                   <p className="text-white/25 text-xs mt-1">Try a different addon or check back later</p>
                 </div>

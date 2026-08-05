@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useUser, SignOutButton } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Menu, X, LogOut, Settings, User, ChevronDown } from 'lucide-react';
-import Logo from './Logo';
+import { Search, Menu, X, LogOut, Settings, ChevronDown } from 'lucide-react';
+import Logo, { ELogo } from './Logo';
 
 const NAV_LINKS = [
   { path: '/home', label: 'Home' },
@@ -136,11 +136,11 @@ export default function Navbar() {
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/[0.06] transition-all"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red/80 to-red flex items-center justify-center overflow-hidden">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
                       {user?.imageUrl ? (
                         <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <User className="w-4 h-4 text-white" />
+                        <ELogo size={32} />
                       )}
                     </div>
                     <ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />

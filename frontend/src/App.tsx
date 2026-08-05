@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
+import { motion } from 'framer-motion';
 import { AppearanceProvider } from './providers/AppearanceProvider';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -8,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 import SettingsLayout from './components/SettingsLayout';
+import { ELogo } from './components/Logo';
 
 const Home = lazy(() => import('./pages/Home'));
 const Movies = lazy(() => import('./pages/Movies'));
@@ -30,12 +32,20 @@ const About = lazy(() => import('./pages/About'));
 function Loading() {
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-red flex items-center justify-center animate-pulse shadow-lg shadow-red/20">
-          <span className="text-white font-extrabold text-lg">E</span>
-        </div>
-        <div className="w-8 h-8 border-2 border-red/20 border-t-red rounded-full animate-spin" />
-      </div>
+      <motion.div
+        className="flex flex-col items-center gap-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+        >
+          <ELogo size={48} />
+        </motion.div>
+        <div className="w-6 h-6 border-2 border-white/10 border-t-red rounded-full animate-spin" />
+      </motion.div>
     </div>
   );
 }
