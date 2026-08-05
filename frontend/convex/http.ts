@@ -143,9 +143,6 @@ http.route({
       const stream = s as Record<string, unknown>;
       const url = (stream.url as string) || "";
       if (!url) return false;
-      if (url.endsWith('.mkv')) return false;
-      if (url.includes('.mkv?')) return false;
-      if (url.includes('content-disposition') && url.includes('.mkv')) return false;
       return true;
     }).map((s: unknown) => {
       const stream = s as Record<string, unknown>;
