@@ -15,7 +15,7 @@ function extractItems(data: ContentSearchResult | undefined): any[] {
 
 export default function Home() {
   const { isSignedIn } = useUser();
-  const watchHistory = useConvexQuery(api.watchHistory.getWatchHistory);
+  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
 
   const { data: trending, isLoading: trendingLoading } = useQuery({
     queryKey: ['cinemeta', 'movie', 'trending'],

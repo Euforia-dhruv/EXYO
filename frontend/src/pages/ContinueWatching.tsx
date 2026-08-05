@@ -6,7 +6,7 @@ import { Clock } from 'lucide-react';
 import Card from '../components/Card';
 
 export default function ContinueWatching() {
-  const watchHistory = useConvexQuery(api.watchHistory.getWatchHistory);
+  const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
 
   const items = useMemo(() => {
     if (!watchHistory || !Array.isArray(watchHistory)) return [];
