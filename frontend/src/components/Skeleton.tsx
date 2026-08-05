@@ -76,3 +76,33 @@ export function DetailSkeleton() {
 export function PosterSkeleton() {
   return <Shimmer className="w-full aspect-[2/3] rounded-2xl" />;
 }
+
+export function SeasonPillsSkeleton() {
+  return (
+    <div className="flex gap-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Shimmer key={i} className="w-24 h-10 rounded-full" />
+      ))}
+    </div>
+  );
+}
+
+export function EpisodeGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="rounded-2xl overflow-hidden bg-card border border-white/[0.04]">
+          <Shimmer className="w-full aspect-video rounded-none" />
+          <div className="p-4 space-y-2">
+            <Shimmer className="h-4 w-24 rounded-lg" />
+            <Shimmer className="h-5 w-3/4 rounded-lg" />
+            <div className="space-y-1.5">
+              <Shimmer className="h-3 w-full rounded-lg" />
+              <Shimmer className="h-3 w-2/3 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
