@@ -309,7 +309,7 @@ export function usePlayer({
       }
     }
 
-    async function launchStreamingPlayer(sourceUrl: string) {
+    async function launchStreamingPlayer(sourceUrl: string): Promise<void> {
       if (cancelled) return;
       const canvas = canvasRef.current;
       if (!canvas) {
@@ -324,9 +324,11 @@ export function usePlayer({
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
-      // Try direct URL first (many addons have CORS), fall back to proxied
+      // For addons with CORS (like NoTorrent), try direct first. For auth-gated addons (PenguPlay), use proxy.
       const directUrl = selectedStream?.url || sourceUrl;
-      const urlsToTry = sourceUrl !== directUrl ? [directUrl, sourceUrl] : [sourceUrl];
+      const isDirectUrl = directUrl !== sourceUrl;
+      const needsProxy = sourceUrl.includes('pengu.uk');
+      const urlsToTry = isDirectUrl && !needsProxy ? [directUrl, sourceUrl] : [sourceUrl];
 
       const { MoviPlayer } = await import('movi-player/player');
 
@@ -334,42 +336,42 @@ export function usePlayer({
         if (cancelled) return;
         console.log('[Player] MoviPlayer trying URL:', tryUrl.substring(0, 100));
 
-        const player = new MoviPlayer({
+        const moviPlayer = new MoviPlayer({
           source: { type: 'url', url: tryUrl },
           renderer: 'canvas',
           canvas,
         });
 
-        streamingPlayerRef.current = player;
+        streamingPlayerRef.current = moviPlayer;
 
-        player.on('timeupdate', (t: number) => {
+        moviPlayer.on('timeupdate', (t: number) => {
           setCurrentTime(t);
         });
-        player.on('statechange', (state: string) => {
+        moviPlayer.on('statechange', (state: string) => {
           if (state === 'playing') setIsBuffering(false);
           if (state === 'ended') setIsBuffering(false);
           if (state === 'buffering') setIsBuffering(true);
         });
 
         let playerFailed = false;
-        player.on('error', (err: any) => {
+        moviPlayer.on('error', (err: any) => {
           console.error('[Player] MoviPlayer error on', tryUrl.substring(0, 60), ':', err?.message || err);
           playerFailed = true;
         });
 
         try {
-          await player.load();
+          await moviPlayer.load();
           if (cancelled || playerFailed) {
-            player.destroy().catch(() => {});
+            try { await moviPlayer.destroy(); } catch {}
             continue;
           }
-          const dur = player.getDuration();
+          const dur = moviPlayer.getDuration();
           if (dur > 0) setDuration(dur);
-          player.play();
+          moviPlayer.play();
           return; // Success
         } catch (e: any) {
           console.error('[Player] MoviPlayer load failed:', e?.message || e);
-          player.destroy().catch(() => {});
+          try { await moviPlayer.destroy(); } catch {}
           continue;
         }
       }
@@ -393,10 +395,14 @@ export function usePlayer({
         setSourceAndPlay(playUrl);
       } else if (method === 'webcodecs') {
         // MKV/AVI/FLV — go straight to streaming player, skip native
-        launchStreamingPlayer(playUrl).catch(e => {
-          console.error('[Player] Streaming player failed:', e?.message || e);
-          if (!cancelled) tryNextStreamPlayback();
-        });
+        (async () => {
+          try {
+            await launchStreamingPlayer(playUrl);
+          } catch (e: any) {
+            console.error('[Player] Streaming player failed:', e?.message || e);
+            if (!cancelled) tryNextStreamPlayback();
+          }
+        })();
       } else if (method === 'native') {
         setSourceAndPlay(playUrl);
       } else {

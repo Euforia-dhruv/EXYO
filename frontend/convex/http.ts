@@ -84,6 +84,25 @@ async function fetchJsonWithTimeout(url: string, timeoutMs = 8000): Promise<unkn
   }
 }
 
+async function resolveRedirect(url: string, timeoutMs = 8000): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      },
+    });
+    clearTimeout(timer);
+    return res.url || url;
+  } catch {
+    return url;
+  }
+}
+
 function extractCatalogsFromManifest(manifest: Record<string, unknown>, addonBase: string) {
   const catalogs = manifest.catalogs as Array<Record<string, unknown>> | undefined;
   if (!catalogs || !Array.isArray(catalogs)) return [];
@@ -292,15 +311,18 @@ http.route({
             if (!contentType.includes("json")) continue;
             const data = await res.json();
             for (const s of (data.streams || []) as Record<string, unknown>[]) {
-              const streamUrl = s.url as string;
+              const rawUrl = s.url as string;
               const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
               const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
               const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
+              // Resolve redirect URLs (e.g. PenguPlay returns 307 redirects)
+              const streamUrl = rawUrl ? await resolveRedirect(rawUrl) : rawUrl;
               const proxiedUrl = streamUrl
                 ? buildProxiedUrl(streamUrl, referer, addonUrl)
                 : undefined;
               allStreams.push({
                 ...s,
+                url: streamUrl,
                 addonName: addonUrl.split("/")[2] || addonUrl,
                 addonUrl: base,
                 proxiedUrl,
