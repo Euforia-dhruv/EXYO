@@ -19,7 +19,6 @@ A production-ready streaming platform that looks and feels like Netflix, powered
 - **Stremio Integration**: Access content from Torrentio, Cinemeta, and more
 - **Video Player**: Custom player with HLS support, subtitles, quality selection
 - **Responsive Design**: Works on desktop, tablet, and mobile
-- **Email Notifications**: Welcome emails and password reset via DigitalPlat Mail Relay
 - **Share Functionality**: Share content via clipboard or native share
 
 ## Tech Stack
@@ -42,10 +41,9 @@ A production-ready streaming platform that looks and feels like Netflix, powered
 - bcrypt
 
 ### Infrastructure
-- DigitalPlat Pages (Frontend)
-- DigitalPlat EdgeTerm (Backend)
-- DigitalPlat Mail Relay (Email)
-- PostgreSQL (Supabase/Railway)
+- Vercel (Frontend)
+- Convex (Backend)
+- PostgreSQL (Railway)
 
 ## Quick Start
 
@@ -127,10 +125,6 @@ JWT_REFRESH_SECRET="your-refresh-secret-key"
 JWT_ACCESS_EXPIRY=1h
 JWT_REFRESH_EXPIRY=7d
 CORS_ORIGIN=http://localhost:5173
-EMAIL_HOST=smtp.digitalplat.org
-EMAIL_PORT=587
-EMAIL_USER=admin@exyo.qd.je
-EMAIL_PASS=your-password
 ```
 
 ### Frontend (.env)

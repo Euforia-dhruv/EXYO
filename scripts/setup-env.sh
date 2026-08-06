@@ -48,13 +48,6 @@ JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET"
 JWT_ACCESS_EXPIRY=1h
 JWT_REFRESH_EXPIRY=7d
 
-# Email (DigitalPlat Mail Relay)
-EMAIL_HOST=smtp.digitalplat.org
-EMAIL_PORT=587
-EMAIL_USER=admin@exyo.qd.je
-EMAIL_PASS=your-password-here
-EMAIL_FROM="EXYO <admin@exyo.qd.je>"
-
 # CORS
 CORS_ORIGIN=http://localhost:5173
 ADDITIONAL_ORIGINS=
@@ -83,15 +76,8 @@ JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET"
 JWT_ACCESS_EXPIRY=1h
 JWT_REFRESH_EXPIRY=7d
 
-# Email (DigitalPlat Mail Relay)
-EMAIL_HOST=smtp.digitalplat.org
-EMAIL_PORT=587
-EMAIL_USER=admin@exyo.qd.je
-EMAIL_PASS=your-digitalplat-password
-EMAIL_FROM="EXYO <admin@exyo.qd.je>"
-
 # CORS
-CORS_ORIGIN=https://exyo.qd.je
+CORS_ORIGIN=https://exyo.cc.cd
 ADDITIONAL_ORIGINS=
 
 # Stremio Addons
@@ -114,9 +100,9 @@ success "frontend/.env created"
 log "Creating frontend .env.production..."
 cat > frontend/.env.production << EOF
 # EXYO Frontend Production Environment
-VITE_API_URL=https://api.exyo.qd.je/api
-VITE_APP_URL=https://exyo.qd.je
-VITE_ADDON_URL=https://api.exyo.qd.je/api/content
+VITE_API_URL=https://api.exyo.cc.cd/api
+VITE_APP_URL=https://exyo.cc.cd
+VITE_ADDON_URL=https://api.exyo.cc.cd/api/content
 EOF
 success "frontend/.env.production created"
 
@@ -133,8 +119,7 @@ echo "  - frontend/.env.production"
 echo ""
 echo "⚠️  IMPORTANT:"
 echo "  1. Update DATABASE_URL in backend/.env.production"
-echo "  2. Update EMAIL_PASS in backend/.env.production"
-echo "  3. Never commit .env files to git"
+echo "  2. Never commit .env files to git"
 echo ""
 echo "JWT Secrets (save these securely):"
 echo "  ACCESS: $JWT_ACCESS_SECRET"

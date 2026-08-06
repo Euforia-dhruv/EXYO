@@ -1,4 +1,4 @@
-name: Deploy EXYO
+name: CI
 
 on:
   push:
@@ -32,76 +32,9 @@ jobs:
 
       - name: Build frontend
         run: cd frontend && npm run build
+        env:
+          VITE_API_URL: https://api.exyo.cc.cd/api
+          VITE_APP_URL: https://exyo.cc.cd
 
       - name: Build backend
         run: cd backend && npm run build
-
-  deploy-frontend:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: cd frontend && npm ci
-
-      - name: Build for production
-        run: cd frontend && npm run build
-        env:
-          VITE_API_URL: https://api.exyo.qd.je/api
-          VITE_APP_URL: https://exyo.qd.je
-
-      - name: Deploy to DigitalPlat Pages
-        uses: digitalplat/deploy-pages@v1
-        with:
-          api-key: ${{ secrets.DIGITALPLAT_API_KEY }}
-          project-id: ${{ secrets.DIGITALPLAT_PAGES_PROJECT_ID }}
-          directory: frontend/dist
-
-  deploy-backend:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: cd backend && npm ci
-
-      - name: Generate Prisma Client
-        run: cd backend && npx prisma generate
-
-      - name: Build for production
-        run: cd backend && npm run build
-
-      - name: Deploy to DigitalPlat EdgeTerm
-        uses: digitalplat/deploy-edgeterm@v1
-        with:
-          api-key: ${{ secrets.DIGITALPLAT_API_KEY }}
-          project-id: ${{ secrets.DIGITALPLAT_EDGETERM_PROJECT_ID }}
-          directory: backend
-          start-command: "node dist/server.js"
-        env:
-          NODE_ENV: production
-          PORT: 5000
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          CORS_ORIGIN: https://exyo.qd.je
-          EMAIL_HOST: smtp.digitalplat.org
-          EMAIL_PORT: 587
-          EMAIL_USER: admin@exyo.qd.je
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}

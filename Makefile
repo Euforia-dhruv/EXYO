@@ -1,5 +1,4 @@
 .PHONY: build build-frontend build-backend dev dev-frontend dev-backend db-studio \
-       deploy deploy-pages deploy-edgeterm deploy-all update-dns check-deploy \
        check-health lint lint-fix typecheck clean install
 
 # Build
@@ -22,24 +21,6 @@ dev-backend:
 
 db-studio:
 	cd backend && npx prisma studio
-
-# Deployment
-deploy: deploy-all
-
-deploy-pages:
-	@bash scripts/deploy-pages.sh
-
-deploy-edgeterm:
-	@bash scripts/deploy-edgeterm.sh
-
-deploy-all:
-	@bash scripts/deploy-all.sh
-
-update-dns:
-	@bash scripts/update-dns.sh
-
-check-deploy:
-	@bash scripts/check-deploy.sh
 
 # Health
 check-health:

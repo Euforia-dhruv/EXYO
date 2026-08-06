@@ -10,8 +10,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-FRONTEND_URL="${VITE_APP_URL:-https://exyo.qd.je}"
-BACKEND_URL="${VITE_API_URL:-https://api.exyo.qd.je/api}"
+FRONTEND_URL="${VITE_APP_URL:-https://exyo.cc.cd}"
+BACKEND_URL="${VITE_API_URL:-https://api.exyo.cc.cd/api}"
 HEALTH_ENDPOINT="$BACKEND_URL/health"
 
 CONTINUOUS=false
@@ -103,25 +103,25 @@ run_checks() {
     # DNS check
     echo ""
     log "DNS Resolution..."
-    if host exyo.qd.je >/dev/null 2>&1; then
-        ip=$(dig +short exyo.qd.je | head -1)
-        success "exyo.qd.je resolves to $ip"
+    if host exyo.cc.cd >/dev/null 2>&1; then
+        ip=$(dig +short exyo.cc.cd | head -1)
+        success "exyo.cc.cd resolves to $ip"
     else
-        warn "DNS not yet propagated for exyo.qd.je"
+        warn "DNS not yet propagated for exyo.cc.cd"
     fi
 
-    if host api.exyo.qd.je >/dev/null 2>&1; then
-        ip=$(dig +short api.exyo.qd.je | head -1)
-        success "api.exyo.qd.je resolves to $ip"
+    if host api.exyo.cc.cd >/dev/null 2>&1; then
+        ip=$(dig +short api.exyo.cc.cd | head -1)
+        success "api.exyo.cc.cd resolves to $ip"
     else
-        warn "DNS not yet propagated for api.exyo.qd.je"
+        warn "DNS not yet propagated for api.exyo.cc.cd"
     fi
 
     # SSL check
     echo ""
     log "SSL Certificate..."
-    if echo | openssl s_client -connect exyo.qd.je:443 -servername exyo.qd.je 2>/dev/null | grep -q "BEGIN CERTIFICATE"; then
-        expiry=$(echo | openssl s_client -connect exyo.qd.je:443 -servername exyo.qd.je 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+    if echo | openssl s_client -connect exyo.cc.cd:443 -servername exyo.cc.cd 2>/dev/null | grep -q "BEGIN CERTIFICATE"; then
+        expiry=$(echo | openssl s_client -connect exyo.cc.cd:443 -servername exyo.cc.cd 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
         success "SSL certificate valid (expires: $expiry)"
     else
         warn "SSL certificate not yet provisioned"
