@@ -130,6 +130,8 @@ export default function Detail() {
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);
   }, [details, id, openStreamDrawer]);
 
+  const isTv = details?.type === 'tv' || details?.type === 'series';
+
   const handlePlay = useCallback(() => {
     if (isTv) {
       if (currentEpisodes.length > 0) {
@@ -166,8 +168,6 @@ export default function Detail() {
       </div>
     );
   }
-
-  const isTv = details.type === 'tv' || details.type === 'series';
 
   return (
     <main className="min-h-screen bg-bg">
