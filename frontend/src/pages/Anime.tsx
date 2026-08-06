@@ -13,18 +13,26 @@ export default function Anime() {
   const { data: topRated, isLoading: l1 } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-top-rated'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-top-rated'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: airing, isLoading: l2 } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-airing'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-airing'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: seasonReleases, isLoading: l3 } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-season-releases'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-season-releases'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: animeMovies, isLoading: l4 } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-movies'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-movies'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   return (

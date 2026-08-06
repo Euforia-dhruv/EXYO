@@ -20,36 +20,50 @@ export default function Home() {
   const { data: trending, isLoading: trendingLoading } = useQuery({
     queryKey: ['cinemeta', 'movie', 'trending'],
     queryFn: () => contentApi.getCatalog('movie', 'trending'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: popular } = useQuery({
     queryKey: ['cinemeta', 'movie', 'popular'],
     queryFn: () => contentApi.getCatalog('movie', 'popular'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: topRated } = useQuery({
     queryKey: ['cinemeta', 'movie', 'top_rated'],
     queryFn: () => contentApi.getCatalog('movie', 'top_rated'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: tvTrending } = useQuery({
     queryKey: ['cinemeta', 'series', 'trending'],
     queryFn: () => contentApi.getCatalog('series', 'trending'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: tvPopular } = useQuery({
     queryKey: ['cinemeta', 'series', 'popular'],
     queryFn: () => contentApi.getCatalog('series', 'popular'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: anime } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-top-rated'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-top-rated'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: animeAiring } = useQuery({
     queryKey: ['catalog', 'anime', 'anime-airing'],
     queryFn: () => contentApi.getCatalog('anime', 'anime-airing'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const historyMap = useMemo(() => {

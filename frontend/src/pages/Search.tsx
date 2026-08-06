@@ -16,6 +16,8 @@ export default function Search() {
     queryKey: ['search', query],
     queryFn: () => contentApi.search(query),
     enabled: query.length >= 2,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
   const results = useMemo(() => data?.results || [], [data]);

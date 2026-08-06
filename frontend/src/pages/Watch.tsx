@@ -28,12 +28,16 @@ export default function Watch() {
     queryKey: ['contentStreams', id, streamType],
     queryFn: () => contentApi.getStreams(id!, streamType),
     enabled: !!id,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: subtitlesData } = useQuery({
     queryKey: ['contentSubtitles', id, streamType],
     queryFn: () => contentApi.getSubtitles(id!, streamType),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const rawStreams: PlayerStream[] = useMemo(() => {

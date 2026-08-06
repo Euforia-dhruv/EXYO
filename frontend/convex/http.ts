@@ -6,13 +6,22 @@ const http = httpRouter();
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const PROXY_BASE_URL = "https://exyo.vercel.app";
 
+const TMDB_ADDON_URL = "https://94c8cb9f702d-tmdb-addon.baby-beamup.club";
+
 const ALL_ADDON_URLS = [
   CINEMETA_URL,
+  TMDB_ADDON_URL,
   "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
   "https://animestream-addon.keypop3750.workers.dev",
   "https://free.flixnest.app",
   "https://addon.notorrent2.workers.dev",
   "https://aio.pantelx.com",
+  "https://nuviostreams.hayd.uk",
+];
+
+const METADATA_ADDON_URLS = [
+  TMDB_ADDON_URL,
+  CINEMETA_URL,
 ];
 
 const STREAM_ADDON_URLS = [
@@ -20,6 +29,7 @@ const STREAM_ADDON_URLS = [
   "https://animestream-addon.keypop3750.workers.dev",
   "https://free.flixnest.app",
   "https://addon.notorrent2.workers.dev",
+  "https://nuviostreams.hayd.uk",
 ];
 
 function extractAddonAuth(addonUrl: string): string {
@@ -55,11 +65,10 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
-  });
+function json(data: unknown, status = 200, cacheControl?: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...corsHeaders };
+  if (cacheControl) headers["Cache-Control"] = cacheControl;
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 function parseAddonUrls(addonsParam: string | null): string[] {
@@ -222,7 +231,7 @@ http.route({
       return true;
     });
 
-    return json(deduped);
+    return json(deduped, 200, "public, max-age=300");
   }),
 });
 
@@ -493,14 +502,13 @@ http.route({
     if (!id) return json({ error: "id required" }, 400);
 
     const userAddonUrls = parseAddonUrls(addonsParam);
-    const addonUrls = mergeAddonUrls(userAddonUrls);
-
     const seriesId = id.includes(":") ? id.split(":")[0] : id;
-
     const typesToTry = type === "anime" ? ["anime", "series"] : [type];
 
-    const results = await Promise.allSettled(
-      addonUrls.map(async (addonUrl) => {
+    // Phase 1: Try metadata-rich addons first (TMDB, Cinemeta) — fast, good data
+    const metadataUrls = [...new Set([...METADATA_ADDON_URLS, ...userAddonUrls])];
+    const metadataResults = await Promise.allSettled(
+      metadataUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
         for (const tryType of typesToTry) {
           const metaUrl = `${base}/meta/${tryType}/${seriesId}.json`;
@@ -515,48 +523,82 @@ http.route({
       })
     );
 
-    const addonResults = results
+    const metadataAddonResults = metadataResults
       .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
       .map((r) => r.value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
+
+    // Phase 2: If no metadata found, try all remaining addons
+    let addonResults = metadataAddonResults;
+    if (addonResults.length === 0) {
+      const allUrls = [...new Set([...ALL_ADDON_URLS, ...userAddonUrls])];
+      const allResults = await Promise.allSettled(
+        allUrls.map(async (addonUrl) => {
+          const base = addonUrl.replace(/\/$/, "");
+          for (const tryType of typesToTry) {
+            const metaUrl = `${base}/meta/${tryType}/${seriesId}.json`;
+            const data = await fetchJsonWithTimeout(metaUrl);
+            if (!data || typeof data !== "object") continue;
+            const raw = data as Record<string, unknown>;
+            const meta = (raw.meta as Record<string, unknown>) || raw;
+            if (!meta || !meta.name) continue;
+            return { meta, addonUrl: base, addonName: addonUrl.split("/")[2] || base, resolvedType: tryType };
+          }
+          return null;
+        })
+      );
+      addonResults = allResults
+        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
+        .map((r) => r.value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
+    }
 
     if (addonResults.length === 0) {
       return json({ error: "Not found" }, 404);
     }
 
-    const primary = addonResults[0];
-    const meta = primary.meta;
+    // Merge metadata from multiple addons for richer data
+    let mergedMeta: Record<string, unknown> = {};
+    for (const result of addonResults) {
+      const m = result.meta;
+      // Prefer non-empty fields from each source
+      for (const [key, value] of Object.entries(m)) {
+        if (value && (!mergedMeta[key] || mergedMeta[key] === "")) {
+          mergedMeta[key] = value;
+        }
+      }
+    }
 
-    if (id.includes(":") && meta.videos) {
+    // For series episode requests, extract the specific episode
+    if (id.includes(":") && mergedMeta.videos) {
       const parts = id.split(":");
       const seasonNum = parseInt(parts[1]);
       const epNum = parseInt(parts[2]);
-      const episode = (meta.videos as Array<Record<string, unknown>>).find(
+      const episode = (mergedMeta.videos as Array<Record<string, unknown>>).find(
         (v) => v.season === seasonNum && (v.number === epNum || v.episode === epNum)
       );
       if (episode) {
         return json({
-          ...meta,
+          ...mergedMeta,
           ...episode,
           id: id,
           type: "series",
-          name: `${meta.name} — S${String(seasonNum).padStart(2, "0")}E${String(epNum).padStart(2, "0")} ${episode.name || ""}`,
-          background: meta.background || meta.poster,
+          name: `${mergedMeta.name} — S${String(seasonNum).padStart(2, "0")}E${String(epNum).padStart(2, "0")} ${episode.name || ""}`,
+          background: mergedMeta.background || mergedMeta.poster,
         });
       }
     }
 
-    const episodes = extractMetaVideos(meta, seriesId);
+    const episodes = extractMetaVideos(mergedMeta, seriesId);
     if (episodes) {
-      meta.episodes = episodes;
+      mergedMeta.episodes = episodes;
     }
 
     const normalized: Record<string, unknown> = {
-      ...meta,
-      backdropUrl: meta.background || meta.poster || meta.backgroundImage || null,
-      posterUrl: meta.poster || meta.background || null,
+      ...mergedMeta,
+      backdropUrl: mergedMeta.background || mergedMeta.poster || mergedMeta.backgroundImage || null,
+      posterUrl: mergedMeta.poster || mergedMeta.background || null,
     };
 
-    return json(normalized);
+    return json(normalized, 200, "public, max-age=600");
   }),
 });
 

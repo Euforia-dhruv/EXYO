@@ -39,12 +39,16 @@ export default function Detail() {
     queryKey: ['contentDetails', id, contentType],
     queryFn: () => contentApi.getDetails(id!, contentType),
     enabled: !!id,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', streamEpisodeId || id, contentType],
     queryFn: () => contentApi.getStreams(streamEpisodeId || id!, contentType),
     enabled: !!(streamEpisodeId || id),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const watchlist = useConvexQuery(api.watchlist.getWatchlist);

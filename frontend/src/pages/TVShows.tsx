@@ -13,18 +13,26 @@ export default function TVShows() {
   const { data: trending, isLoading: l1 } = useQuery({
     queryKey: ['catalog', 'series', 'trending'],
     queryFn: () => contentApi.getCatalog('series', 'trending'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: popular, isLoading: l2 } = useQuery({
     queryKey: ['catalog', 'series', 'popular'],
     queryFn: () => contentApi.getCatalog('series', 'popular'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: topRated, isLoading: l3 } = useQuery({
     queryKey: ['catalog', 'series', 'top_rated'],
     queryFn: () => contentApi.getCatalog('series', 'top_rated'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: newest, isLoading: l4 } = useQuery({
     queryKey: ['catalog', 'series', 'newest'],
     queryFn: () => contentApi.getCatalog('series', 'newest'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   return (

@@ -11,7 +11,8 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
-  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
+  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams (4K/HD)', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
+  { id: 'nuvio', label: 'Nuvio Streams', desc: 'Multi-provider HTTP streams (4K/HD/HDR)', url: 'https://nuviostreams.hayd.uk' },
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
   { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
   { id: 'notorrent', label: 'NoTorrent', desc: 'Movies & series streams (free + premium)', url: 'https://addon.notorrent2.workers.dev' },
@@ -61,7 +62,7 @@ function AddonBadge({ manifest, enabled }: { manifest?: AddonManifest | null; en
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['pengu', 'anime', 'flix']);
+  const [addons, setAddons] = useState(['pengu', 'nuvio', 'anime', 'flix']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');

@@ -13,18 +13,26 @@ export default function Movies() {
   const { data: trending, isLoading: l1 } = useQuery({
     queryKey: ['catalog', 'movie', 'trending'],
     queryFn: () => contentApi.getCatalog('movie', 'trending'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: popular, isLoading: l2 } = useQuery({
     queryKey: ['catalog', 'movie', 'popular'],
     queryFn: () => contentApi.getCatalog('movie', 'popular'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: topRated, isLoading: l3 } = useQuery({
     queryKey: ['catalog', 'movie', 'top_rated'],
     queryFn: () => contentApi.getCatalog('movie', 'top_rated'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
   const { data: newest, isLoading: l4 } = useQuery({
     queryKey: ['catalog', 'movie', 'newest'],
     queryFn: () => contentApi.getCatalog('movie', 'newest'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   return (
