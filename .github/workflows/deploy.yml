@@ -18,23 +18,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install backend dependencies
-        run: cd backend && npm ci
-
-      - name: Check backend TypeScript
-        run: cd backend && npx tsc --noEmit
-
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Check frontend TypeScript
+      - name: Check TypeScript
         run: cd frontend && npx tsc --noEmit
 
-      - name: Build frontend
+      - name: Build
         run: cd frontend && npm run build
         env:
-          VITE_API_URL: https://api.exyo.cc.cd/api
+          VITE_CONVEX_URL: https://canny-akita-674.convex.cloud
+          VITE_CONVEX_SITE_URL: https://canny-akita-674.convex.site
           VITE_APP_URL: https://exyo.cc.cd
-
-      - name: Build backend
-        run: cd backend && npm run build

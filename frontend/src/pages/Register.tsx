@@ -1,39 +1,16 @@
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { useConvex } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useState } from 'react';
 
 export default function Register() {
   const navigate = useNavigate();
+  const convex = useConvex();
   const setAuth = useAuthStore((s) => s.setAuth);
-
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (codeResponse) => {
-      try {
-        const res = await fetch(`${API_URL}/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accessToken: codeResponse.access_token }),
-        });
-
-        if (!res.ok) throw new Error('Auth failed');
-
-        const data = await res.json();
-        setAuth(data.user, data.token);
-        navigate('/home');
-      } catch (error) {
-        console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
-      }
-    },
-    onError: (error) => {
-      console.error('Google login error:', error);
-      alert('Google login failed. Please try again.');
-    },
-    flow: 'implicit',
-  });
+  const [loading, setLoading] = useState(false);
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -80,18 +57,65 @@ export default function Register() {
             <p className="text-white/40 text-sm">Create your account to get started</p>
           </div>
 
-          <button
-            onClick={() => handleGoogleLogin()}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold text-base hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-red/50 focus:ring-offset-2 focus:ring-offset-black"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.51h5.36c-.24 1.28-.93 2.37-1.99 3.09v2.58h3.22c1.89-1.74 2.98-4.3 2.98-7.35z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.22-2.58c-.9.6-2.04.96-3.28.96-2.53 0-4.68-1.71-5.44-4.03H4.87v2.54C6.39 20.78 9.03 23 12 23z"/>
-              <path fill="#FBBC05" d="M6.53 13.7c-.17-.55-.27-1.14-.27-1.75 0-.61.1-1.2.27-1.75L4.87 7.47C3.39 9.45 2.5 11.77 2.5 14.25c0 2.48 1.04 4.8 2.33 6.78l2.76-2.43z"/>
-              <path fill="#EA4335" d="M12 4.75c1.63 0 3.12.56 4.29 1.66l3.21-3.21C17.46 1.16 14.97 0.5 12 0.5 7.04 0.5 3.07 3.38 1.23 7.47l3.28 2.54c.83-2.48 3.12-4.03 5.49-4.03z"/>
-            </svg>
-            Sign up with Google
-          </button>
+          {loading ? (
+            <div className="w-full flex items-center justify-center py-4">
+              <div className="w-6 h-6 border-2 border-white/20 border-t-red rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  const credential = credentialResponse.credential;
+                  if (!credential) return;
+                  setLoading(true);
+                  try {
+                    await convex.setAuth(credential);
+                    const user = await convex.query(api.users.getCurrentUser);
+                    if (user) {
+                      setAuth({
+                        id: user._id,
+                        email: user.email,
+                        username: user.username,
+                        displayName: user.displayName,
+                        avatarUrl: user.avatarUrl,
+                      }, credential);
+                      navigate('/home');
+                    } else {
+                      const result = await convex.mutation(api.users.syncUser);
+                      if (result.ok && result.userId) {
+                        const newUser = await convex.query(api.users.getCurrentUser);
+                        if (newUser) {
+                          setAuth({
+                            id: newUser._id,
+                            email: newUser.email,
+                            username: newUser.username,
+                            displayName: newUser.displayName,
+                            avatarUrl: newUser.avatarUrl,
+                          }, credential);
+                          navigate('/home');
+                          return;
+                        }
+                      }
+                      alert('Failed to create account. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Registration error:', error);
+                    alert('Registration failed. Please try again.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => {
+                  alert('Google login failed. Please try again.');
+                }}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="signup_with"
+                shape="pill"
+              />
+            </div>
+          )}
 
           <motion.p
             initial={{ opacity: 0 }}

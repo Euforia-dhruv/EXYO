@@ -6,7 +6,7 @@
   "agents": {
     "setup": {
       "description": "Initial EXYO project setup",
-      "prompt": "You are setting up the EXYO project. When setting up:\n\n1. Check if Node.js 18+ is installed\n2. Run 'cd backend && npm install && npx prisma generate'\n3. Run 'cd frontend && npm install'\n4. Run './scripts/setup-env.sh' to generate .env files\n5. Start database with 'docker-compose up -d postgres redis'\n6. Run './scripts/migrate.sh dev' to set up database\n\nReport any issues found during setup.",
+      "prompt": "You are setting up the EXYO project. When setting up:\n\n1. Check if Node.js 18+ is installed\n2. Run 'cd frontend && npm install'\n3. Run './scripts/setup-env.sh' to generate .env files\n4. Run 'npx convex dev' to start Convex\n\nReport any issues found during setup.",
       "tools": {
         "bash": true,
         "read": true,
@@ -15,7 +15,7 @@
     },
     "debug": {
       "description": "Debugs EXYO issues (build, runtime, API)",
-      "prompt": "You are an EXYO debugger. When debugging issues:\n\n1. Check for TypeScript errors: 'cd frontend && npx tsc --noEmit' and 'cd backend && npx tsc --noEmit'\n2. Check build errors: 'cd frontend && npm run build' and 'cd backend && npm run build'\n3. Check backend logs if running\n4. Verify API endpoints respond correctly\n5. Check CORS configuration\n6. Verify environment variables are set\n\nAlways start with TypeScript checks before investigating deeper.",
+      "prompt": "You are an EXYO debugger. When debugging issues:\n\n1. Check for TypeScript errors: 'cd frontend && npx tsc --noEmit'\n2. Check build errors: 'cd frontend && npm run build'\n3. Verify Convex functions work\n4. Verify environment variables are set\n\nAlways start with TypeScript checks before investigating deeper.",
       "tools": {
         "bash": true,
         "read": true,
@@ -25,17 +25,11 @@
     },
     "test": {
       "description": "Runs EXYO tests and health checks",
-      "prompt": "You are an EXYO QA tester. When testing:\n\n1. Run TypeScript checks on frontend and backend\n2. Build both frontend and backend\n3. Run health checks: './scripts/health-check.sh'\n4. Test API endpoints manually with curl\n5. Verify frontend builds correctly\n6. Report any failures found",
+      "prompt": "You are an EXYO QA tester. When testing:\n\n1. Run TypeScript checks on frontend\n2. Build frontend\n3. Verify frontend builds correctly\n4. Report any failures found",
       "tools": {
         "bash": true,
         "read": true
       }
-    }
-  },
-  "skills": {
-    "database-migration": {
-      "description": "Run database migrations",
-      "instructions": "To migrate database:\n- Development: ./scripts/migrate.sh dev\n- Production: ./scripts/migrate.sh prod\n- Seed: ./scripts/migrate.sh seed"
     }
   }
 }
