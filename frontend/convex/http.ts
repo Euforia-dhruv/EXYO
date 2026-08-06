@@ -8,7 +8,7 @@ const PROXY_BASE_URL = "https://exyo.vercel.app";
 
 const ALL_ADDON_URLS = [
   CINEMETA_URL,
-  "https://pengu.uk",
+  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
   "https://animestream-addon.keypop3750.workers.dev",
   "https://free.flixnest.app",
 ];
@@ -238,28 +238,34 @@ http.route({
     const userAddonUrls = parseAddonUrls(addonsParam);
     const addonUrls = mergeAddonUrls(userAddonUrls);
 
+    const typesToTry = type === "anime" ? ["anime", "series"] : [type];
+
     const results = await Promise.allSettled(
       addonUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
-        const streamUrl = `${base}/stream/${type}/${id}.json`;
-        const res = await fetch(streamUrl);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data.streams || []).map((s: Record<string, unknown>) => {
-          const streamUrl = s.url as string;
-          const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
-          const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
-          const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
-          const proxiedUrl = streamUrl
-            ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
-            : undefined;
-          return {
-            ...s,
-            addonName: addonUrl.split("/")[2] || addonUrl,
-            addonUrl: base,
-            proxiedUrl,
-          };
-        });
+        const allStreams: Record<string, unknown>[] = [];
+        for (const tryType of typesToTry) {
+          const streamUrl = `${base}/stream/${tryType}/${id}.json`;
+          const res = await fetch(streamUrl);
+          if (!res.ok) continue;
+          const data = await res.json();
+          for (const s of (data.streams || []) as Record<string, unknown>[]) {
+            const streamUrl = s.url as string;
+            const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+            const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
+            const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
+            const proxiedUrl = streamUrl
+              ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+              : undefined;
+            allStreams.push({
+              ...s,
+              addonName: addonUrl.split("/")[2] || addonUrl,
+              addonUrl: base,
+              proxiedUrl,
+            });
+          }
+        }
+        return allStreams;
       })
     );
 
@@ -400,16 +406,21 @@ http.route({
 
     const seriesId = id.includes(":") ? id.split(":")[0] : id;
 
+    const typesToTry = type === "anime" ? ["anime", "series"] : [type];
+
     const results = await Promise.allSettled(
       addonUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
-        const metaUrl = `${base}/meta/${type}/${seriesId}.json`;
-        const data = await fetchJsonWithTimeout(metaUrl);
-        if (!data || typeof data !== "object") return null;
-        const raw = data as Record<string, unknown>;
-        const meta = (raw.meta as Record<string, unknown>) || raw;
-        if (!meta || !meta.name) return null;
-        return { meta, addonUrl: base, addonName: addonUrl.split("/")[2] || base };
+        for (const tryType of typesToTry) {
+          const metaUrl = `${base}/meta/${tryType}/${seriesId}.json`;
+          const data = await fetchJsonWithTimeout(metaUrl);
+          if (!data || typeof data !== "object") continue;
+          const raw = data as Record<string, unknown>;
+          const meta = (raw.meta as Record<string, unknown>) || raw;
+          if (!meta || !meta.name) continue;
+          return { meta, addonUrl: base, addonName: addonUrl.split("/")[2] || base, resolvedType: tryType };
+        }
+        return null;
       })
     );
 

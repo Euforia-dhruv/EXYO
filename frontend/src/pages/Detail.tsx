@@ -20,8 +20,13 @@ import { useAuthStore } from '../stores/authStore';
 export default function Detail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const seasonPillsRef = useRef<HTMLDivElement>(null);
+
+  const contentType = location.pathname.startsWith('/anime/') ? 'anime'
+    : location.pathname.startsWith('/series/') ? 'series'
+    : 'movie';
 
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState<string | null>(null);
@@ -31,14 +36,14 @@ export default function Detail() {
   const [streamTitle, setStreamTitle] = useState('');
 
   const { data: details, isLoading: detailsLoading } = useQuery({
-    queryKey: ['contentDetails', id],
-    queryFn: () => contentApi.getDetails(id!),
+    queryKey: ['contentDetails', id, contentType],
+    queryFn: () => contentApi.getDetails(id!, contentType),
     enabled: !!id,
   });
 
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
-    queryKey: ['contentStreams', streamEpisodeId || id],
-    queryFn: () => contentApi.getStreams(streamEpisodeId || id!),
+    queryKey: ['contentStreams', streamEpisodeId || id, contentType],
+    queryFn: () => contentApi.getStreams(streamEpisodeId || id!, contentType),
     enabled: !!(streamEpisodeId || id),
   });
 
@@ -54,14 +59,14 @@ export default function Detail() {
   const toggleWatchlist = useCallback(async () => {
     if (!user || !details) return;
     const title = details.name || details.title || 'Untitled';
-    const contentType = details.type === 'tv' || details.type === 'series' ? 'series' : 'movie';
+    const contentTypeStr = details.type === 'tv' || details.type === 'series' || details.type === 'anime' ? 'series' : 'movie';
     try {
       if (isWatchlisted) {
         const existing = watchlist?.find((item: any) => item.contentId === id);
         if (existing) await convexRemove({ id: existing._id });
         toast.success('Removed from My List');
       } else {
-        await convexAdd({ contentId: id!, title, posterUrl: details.posterUrl, backdropUrl: details.backdropUrl, contentType });
+        await convexAdd({ contentId: id!, title, posterUrl: details.posterUrl, backdropUrl: details.backdropUrl, contentType: contentTypeStr });
         toast.success('Added to My List');
       }
     } catch {
@@ -119,10 +124,10 @@ export default function Detail() {
     if (!details || !effectiveId) return;
     const slug = (details.name || details.title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     navigate(`/watch/${slug}?id=${effectiveId}&stream=${encodeURIComponent(stream.url)}`, {
-      state: { title: details.name || details.title, stream, backdropUrl: details.backdropUrl },
+      state: { title: details.name || details.title, stream, backdropUrl: details.backdropUrl, contentType },
     });
     setShowStreams(false);
-  }, [details, id, streamEpisodeId, navigate]);
+  }, [details, id, streamEpisodeId, navigate, contentType]);
 
   const handlePlayEpisode = useCallback((ep: any) => {
     if (!details) return;
@@ -130,7 +135,7 @@ export default function Detail() {
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);
   }, [details, id, openStreamDrawer]);
 
-  const isTv = details?.type === 'tv' || details?.type === 'series';
+  const isTv = details?.type === 'tv' || details?.type === 'series' || details?.type === 'anime' || contentType === 'anime';
 
   const handlePlay = useCallback(() => {
     if (isTv) {

@@ -11,7 +11,7 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
-  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams', url: 'https://pengu.uk' },
+  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
   { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
 ];

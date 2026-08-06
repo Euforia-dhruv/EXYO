@@ -74,7 +74,7 @@ function HeroBanner({ items, autoPlayInterval = 8000 }: Props) {
   const handlePlay = useCallback(() => {
     if (!currentItem) return;
     const id = currentItem.id || currentItem.imdbId || '';
-    navigate(currentItem.type === 'tv' || currentItem.type === 'series' ? `/series/${id}` : `/movie/${id}`);
+    navigate(currentItem.type === 'anime' ? `/anime/${id}` : currentItem.type === 'tv' || currentItem.type === 'series' ? `/series/${id}` : `/movie/${id}`);
   }, [currentItem, navigate]);
 
   if (visibleItems.length === 0) return null;

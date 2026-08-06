@@ -92,6 +92,7 @@ export default function App() {
               <Route path="/movies" element={<Movies />} />
               <Route path="/tv" element={<TVShows />} />
               <Route path="/anime" element={<Anime />} />
+              <Route path="/anime/:id" element={<Detail />} />
               <Route path="/movie/:id" element={<Detail />} />
               <Route path="/series/:id" element={<Detail />} />
               <Route path="/search" element={<Search />} />

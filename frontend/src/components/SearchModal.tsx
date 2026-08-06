@@ -30,8 +30,9 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
   const handleSelect = useCallback(
     (item: ContentSearchResult['results'][0]) => {
       const id = item.id || item.imdbId || '';
+      const isAnime = item.type === 'anime';
       const isTv = item.type === 'tv' || item.type === 'series';
-      navigate(isTv ? `/series/${id}` : `/movie/${id}`);
+      navigate(isAnime ? `/anime/${id}` : isTv ? `/series/${id}` : `/movie/${id}`);
       onClose();
       setQuery('');
     },

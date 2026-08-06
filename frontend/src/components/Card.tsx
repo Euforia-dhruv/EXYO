@@ -22,7 +22,8 @@ function Card({ item, index = 0, size = 'md', showProgress, progress = 0, isWatc
   const id = item.id || item.imdbId || '';
   const title = item.name || item.title || 'Untitled';
   const isTv = item.type === 'tv' || item.type === 'series';
-  const route = isTv ? `/series/${id}` : `/movie/${id}`;
+  const isAnime = item.type === 'anime';
+  const route = isAnime ? `/anime/${id}` : isTv ? `/series/${id}` : `/movie/${id}`;
 
   const sizeClasses = {
     sm: 'w-[130px] sm:w-[150px]',

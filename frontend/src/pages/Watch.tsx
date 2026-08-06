@@ -19,17 +19,20 @@ export default function Watch() {
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
   const initialStream = location.state?.stream as PlayerStream | undefined;
+  const contentType = location.state?.contentType as string | undefined;
   const user = useAuthStore((s) => s.user);
 
+  const streamType = contentType || 'movie';
+
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
-    queryKey: ['contentStreams', id],
-    queryFn: () => contentApi.getStreams(id!),
+    queryKey: ['contentStreams', id, streamType],
+    queryFn: () => contentApi.getStreams(id!, streamType),
     enabled: !!id,
   });
 
   const { data: subtitlesData } = useQuery({
-    queryKey: ['contentSubtitles', id],
-    queryFn: () => contentApi.getSubtitles(id!),
+    queryKey: ['contentSubtitles', id, streamType],
+    queryFn: () => contentApi.getSubtitles(id!, streamType),
     enabled: !!id,
   });
 
