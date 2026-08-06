@@ -580,6 +580,7 @@ export function usePlayer({
     isMuted,
     isFullscreen,
     showControls,
+    setShowControls,
     buffered,
     playbackRate,
     isBuffering,
