@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -12,10 +12,14 @@ import { ELogo } from '../components/Logo';
 import { useAuthStore } from '../stores/authStore';
 
 export default function Watch() {
-  const { id } = useParams<{ id: string }>();
+  const { id: slug } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
+  // The actual content ID is passed as a query parameter, not the route param (which is a slug)
+  const id = searchParams.get('id') || slug;
+  
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
   const initialStream = location.state?.stream as PlayerStream | undefined;
