@@ -152,7 +152,7 @@ export default function Watch() {
       onMouseMove={showControlsTemporarily}
       onClick={player.togglePlay}
     >
-      <video ref={player.videoRef} className="w-full h-full object-contain" playsInline autoPlay />
+      <video ref={player.videoRef} className="w-full h-full object-contain" playsInline />
       <canvas
         ref={player.canvasRef}
         className="absolute inset-0 w-full h-full object-contain"

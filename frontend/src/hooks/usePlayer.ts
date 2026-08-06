@@ -421,14 +421,22 @@ export function usePlayer({
 
         case 'native-direct':
           video.src = rawUrl;
-          video.play().catch(() => {});
+          video.muted = false;
+          video.play().catch(() => {
+            video.muted = true;
+            video.play().catch(() => {});
+          });
           break;
 
         case 'native-proxy':
           if (proxyUrl && proxyUrl !== rawUrl) {
             setVideoError(null);
             video.src = proxyUrl;
-            video.play().catch(() => {});
+            video.muted = false;
+            video.play().catch(() => {
+              video.muted = true;
+              video.play().catch(() => {});
+            });
           } else {
             tryNextPhase();
           }
