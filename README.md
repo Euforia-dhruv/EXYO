@@ -42,8 +42,7 @@ A production-ready streaming platform that looks and feels like Netflix, powered
 
 ### Infrastructure
 - Vercel (Frontend)
-- Convex (Backend)
-- PostgreSQL (Railway)
+- Convex (Backend + Database)
 
 ## Quick Start
 
