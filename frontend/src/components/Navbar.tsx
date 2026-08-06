@@ -100,7 +100,7 @@ export default function Navbar() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between h-16 lg:h-[72px]">
             <Link to="/home" className="shrink-0">
-              <Logo size="sm" />
+              <Logo size="md" />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-1">
@@ -133,11 +133,11 @@ export default function Navbar() {
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/[0.06] transition-all"
                   >
-                    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <ELogo size={32} />
+                        <Logo size="sm" showWord={false} />
                       )}
                     </div>
                     <ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
