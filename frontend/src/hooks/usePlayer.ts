@@ -324,11 +324,10 @@ export function usePlayer({
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
-      // For addons with CORS (like NoTorrent), try direct first. For auth-gated addons (PenguPlay), use proxy.
-      const directUrl = selectedStream?.url || sourceUrl;
-      const isDirectUrl = directUrl !== sourceUrl;
-      const needsProxy = sourceUrl.includes('pengu.uk');
-      const urlsToTry = isDirectUrl && !needsProxy ? [directUrl, sourceUrl] : [sourceUrl];
+      // Always use proxiedUrl when available (it handles auth, CORS, redirects)
+      // Only try direct URL when no proxy exists (e.g. HLS from CDN)
+      const hasProxy = !!selectedStream?.proxiedUrl;
+      const urlsToTry = hasProxy ? [sourceUrl] : [sourceUrl];
 
       const { MoviPlayer } = await import('movi-player/player');
 

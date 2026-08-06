@@ -37,20 +37,33 @@ export default function Watch() {
   });
 
   const rawStreams: PlayerStream[] = useMemo(() => {
-    if (initialStream) return [initialStream];
-    if (!streamsData?.streams) return [];
-    return streamsData.streams.map((s) => ({
-      url: s.url,
-      proxiedUrl: s.proxiedUrl || undefined,
-      name: s.name || s.title,
-      title: s.name || s.title,
-      quality: s.quality,
-      codec: s.videoCodec || s.codec,
-      addon: s.addon,
-      addonName: s.addonName,
-      addonUrl: s.addonUrl,
-      behaviorHints: s.behaviorHints as any,
-    }));
+    const fetched = streamsData?.streams
+      ? streamsData.streams.map((s) => ({
+          url: s.url,
+          proxiedUrl: s.proxiedUrl || undefined,
+          name: s.name || s.title,
+          title: s.name || s.title,
+          quality: s.quality,
+          codec: s.videoCodec || s.codec,
+          addon: s.addon,
+          addonName: s.addonName,
+          addonUrl: s.addonUrl,
+          behaviorHints: s.behaviorHints as any,
+        }))
+      : [];
+
+    if (initialStream) {
+      // Put initial stream first, then all others (deduped by URL)
+      const seen = new Set<string>();
+      seen.add(initialStream.url);
+      const rest = fetched.filter((s) => {
+        if (seen.has(s.url)) return false;
+        seen.add(s.url);
+        return true;
+      });
+      return [initialStream, ...rest];
+    }
+    return fetched;
   }, [streamsData, initialStream]);
 
   const subtitleTracks = useMemo(() => {

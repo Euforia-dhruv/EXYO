@@ -44,20 +44,34 @@ export default async function handler(req, res) {
     const range = req.headers.range;
     if (range) headers.Range = range;
 
-    const upstream = await fetch(target, { headers, method: req.method, redirect: "follow" });
+    // Manually follow redirects to preserve headers
+    let currentUrl = target;
+    let upstream;
+    for (let i = 0; i < 5; i++) {
+      upstream = await fetch(currentUrl, { headers, method: req.method, redirect: "manual" });
+      if (upstream.status >= 300 && upstream.status < 400) {
+        const location = upstream.headers.get("location");
+        if (location) {
+          currentUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
+          continue;
+        }
+      }
+      break;
+    }
     if (!upstream.ok) {
       return res.status(upstream.status).send("upstream error " + upstream.status);
     }
 
     const upstreamContentType = upstream.headers.get("content-type") || "application/octet-stream";
     const isM3u8 =
+      currentUrl.endsWith(".m3u8") ||
       target.endsWith(".m3u8") ||
       upstreamContentType.includes("mpegurl") ||
       upstreamContentType.includes("m3u8");
 
     if (isM3u8) {
       const text = await upstream.text();
-      const base = new URL(target);
+      const base = new URL(currentUrl);
       const rewritten = text
         .split("\n")
         .map((line) => {
