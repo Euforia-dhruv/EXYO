@@ -12,7 +12,6 @@
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.49",
     "@prisma/client": "^6.9.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

@@ -1,13 +1,11 @@
 import { Response } from 'express';
-import { getAuth } from '@clerk/express';
 import { UserService } from '../services/user.service';
 import { AuthRequest } from '../types';
 
 export class UserController {
   static async getProfile(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
-      const user = await UserService.getProfile(auth.userId!);
+      const user = await UserService.getProfile(req.userId!);
       res.json(user);
     } catch (error: any) {
       if (error.message === 'User not found') {
@@ -19,8 +17,7 @@ export class UserController {
 
   static async updateProfile(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
-      const user = await UserService.updateProfile(auth.userId!, req.body);
+      const user = await UserService.updateProfile(req.userId!, req.body);
       res.json(user);
     } catch (error: any) {
       if (error.message.includes('already in use')) {
@@ -32,8 +29,7 @@ export class UserController {
 
   static async deleteAccount(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
-      const result = await UserService.deleteAccount(auth.userId!);
+      const result = await UserService.deleteAccount(req.userId!);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete account' });

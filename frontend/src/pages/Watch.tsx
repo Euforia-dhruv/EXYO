@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -10,6 +9,7 @@ import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import { contentApi } from '../api/content.api';
 import { ELogo } from '../components/Logo';
+import { useAuthStore } from '../stores/authStore';
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +19,7 @@ export default function Watch() {
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
   const initialStream = location.state?.stream as PlayerStream | undefined;
-  const { isSignedIn } = useUser();
+  const user = useAuthStore((s) => s.user);
 
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', id],
@@ -61,7 +61,7 @@ export default function Watch() {
   const player = usePlayer({
     streams: rawStreams,
     subtitles: subtitleTracks,
-    onProgress: isSignedIn
+    onProgress: user
       ? (progress: number) => {
           if (id && progress > 0.05) {
             const type = id.includes(':') ? 'series' : 'movie';

@@ -9,7 +9,7 @@ export const getCurrentUser = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_googleId", (q) => q.eq("googleId", identity.subject))
       .unique();
 
     return user;
@@ -26,11 +26,10 @@ export const syncUser = mutation({
 
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_googleId", (q) => q.eq("googleId", identity.subject))
       .unique();
 
     if (existing) {
-      // Update profile data if changed
       const updates: { email?: string; displayName?: string; avatarUrl?: string } = {};
       if (identity.email && String(identity.email) !== existing.email) updates.email = String(identity.email);
       if (identity.name && String(identity.name) !== existing.displayName) updates.displayName = String(identity.name);
@@ -43,7 +42,7 @@ export const syncUser = mutation({
     }
 
     const userId = await ctx.db.insert("users", {
-      clerkId: identity.subject,
+      googleId: identity.subject,
       email: (identity.email as string) ?? "",
       username: (identity.username as string) ?? undefined,
       displayName: (identity.name as string) ?? undefined,
@@ -85,7 +84,7 @@ export const updateProfile = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_googleId", (q) => q.eq("googleId", identity.subject))
       .unique();
 
     if (!user) {

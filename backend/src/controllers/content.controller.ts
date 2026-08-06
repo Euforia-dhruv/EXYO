@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { getAuth } from '@clerk/express';
 import { AddonService } from '../services/addon.service';
 import { UserAddonService } from '../services/user-addon.service';
 import { AuthRequest } from '../types';
@@ -17,13 +16,12 @@ export class ContentController {
     try {
       const type = qs(req.query.type, 'movie');
       const catalogId = qs(req.query.catalogId, 'top');
-      const auth = getAuth(req);
 
       let addonUrl = CINEMETA_URL;
 
-      if (auth.userId) {
+      if (req.userId) {
         try {
-          const addons = await UserAddonService.getAddons(auth.userId);
+          const addons = await UserAddonService.getAddons(req.userId);
           const catalogAddon = addons.find(
             (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
           );
@@ -51,13 +49,12 @@ export class ContentController {
       }
 
       const type = qs(req.query.type, 'movie');
-      const auth = getAuth(req);
 
       let addonUrl = CINEMETA_URL;
 
-      if (auth.userId) {
+      if (req.userId) {
         try {
-          const addons = await UserAddonService.getAddons(auth.userId);
+          const addons = await UserAddonService.getAddons(req.userId);
           const catalogAddon = addons.find(
             (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
           );
@@ -80,13 +77,12 @@ export class ContentController {
     try {
       const { id } = req.params;
       const type = qs(req.query.type, 'movie');
-      const auth = getAuth(req);
 
       let addonUrl = CINEMETA_URL;
 
-      if (auth.userId) {
+      if (req.userId) {
         try {
-          const addons = await UserAddonService.getAddons(auth.userId);
+          const addons = await UserAddonService.getAddons(req.userId);
           const catalogAddon = addons.find(
             (a) => a.active && a.manifest && (a.manifest as any).catalogs?.some((c: any) => c.type === type)
           );
@@ -116,13 +112,12 @@ export class ContentController {
     try {
       const id = String(req.params.id);
       const type = qs(req.query.type, 'movie');
-      const auth = getAuth(req);
 
       let addonUrl = TORRENTIO_URL;
 
-      if (auth.userId) {
+      if (req.userId) {
         try {
-          const addons = await UserAddonService.getAddons(auth.userId);
+          const addons = await UserAddonService.getAddons(req.userId);
           const streamAddon = addons.find(
             (a) => a.active && a.manifest && (a.manifest as any).resources?.some((r: any) =>
               typeof r === 'string' ? r === 'stream' : r.name === 'stream'
@@ -147,13 +142,12 @@ export class ContentController {
     try {
       const id = String(req.params.id);
       const type = qs(req.query.type, 'movie');
-      const auth = getAuth(req);
 
       let addonUrl = CINEMETA_URL;
 
-      if (auth.userId) {
+      if (req.userId) {
         try {
-          const addons = await UserAddonService.getAddons(auth.userId);
+          const addons = await UserAddonService.getAddons(req.userId);
           const subtitleAddon = addons.find(
             (a) => a.active && a.manifest && (a.manifest as any).resources?.some((r: any) =>
               typeof r === 'string' ? r === 'subtitles' : r.name === 'subtitles'

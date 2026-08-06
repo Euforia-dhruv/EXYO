@@ -21,7 +21,7 @@ export default function About() {
         </p>
 
         <div className="grid grid-cols-2 gap-3">
-          {['React 19', 'Vite', 'Tailwind CSS', 'Convex', 'Clerk', 'HLS.js', 'movi-player', 'WebCodecs'].map((tech) => (
+          {['React 19', 'Vite', 'Tailwind CSS', 'Convex', 'Google OAuth', 'HLS.js', 'movi-player', 'WebCodecs'].map((tech) => (
             <div key={tech} className="px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/50 text-sm">
               {tech}
             </div>

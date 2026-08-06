@@ -1,5 +1,5 @@
 import { prisma } from '../server';
-import { ensureUserExists } from './clerk-sync.service';
+import { ensureUserExists } from './user-sync.service';
 import { WatchlistInput } from '../types';
 
 export class WatchlistService {

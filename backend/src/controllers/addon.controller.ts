@@ -1,13 +1,11 @@
 import { Response } from 'express';
-import { getAuth } from '@clerk/express';
 import { UserAddonService } from '../services/user-addon.service';
 import { AuthRequest } from '../types';
 
 export class AddonController {
   static async getAddons(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
-      const addons = await UserAddonService.getAddons(auth.userId!);
+      const addons = await UserAddonService.getAddons(req.userId!);
       res.json(addons);
     } catch (error) {
       res.status(500).json({ error: 'Failed to get addons' });
@@ -16,7 +14,6 @@ export class AddonController {
 
   static async addAddon(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
       const { url } = req.body;
 
       if (!url) {
@@ -29,7 +26,7 @@ export class AddonController {
         return res.status(400).json({ error: 'Invalid URL format' });
       }
 
-      const addon = await UserAddonService.addAddon(auth.userId!, url);
+      const addon = await UserAddonService.addAddon(req.userId!, url);
       res.status(201).json({ success: true, addon });
     } catch (error: any) {
       if (error.message === 'Addon already added') {
@@ -41,9 +38,8 @@ export class AddonController {
 
   static async removeAddon(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
       const id = String(req.params.id);
-      await UserAddonService.removeAddon(auth.userId!, id);
+      await UserAddonService.removeAddon(req.userId!, id);
       res.json({ success: true });
     } catch (error: any) {
       if (error.message === 'Addon not found') {
@@ -58,9 +54,8 @@ export class AddonController {
 
   static async toggleAddon(req: AuthRequest, res: Response) {
     try {
-      const auth = getAuth(req);
       const id = String(req.params.id);
-      const addon = await UserAddonService.toggleAddon(auth.userId!, id);
+      const addon = await UserAddonService.toggleAddon(req.userId!, id);
       res.json(addon);
     } catch (error: any) {
       if (error.message === 'Addon not found') {

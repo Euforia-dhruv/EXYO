@@ -1,6 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 import { AppearanceProvider } from './providers/AppearanceProvider';
 import Navbar from './components/Navbar';
@@ -10,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 import SettingsLayout from './components/SettingsLayout';
 import { ELogo } from './components/Logo';
+import { useAuthStore } from './stores/authStore';
 
 const Home = lazy(() => import('./pages/Home'));
 const Movies = lazy(() => import('./pages/Movies'));
@@ -51,9 +51,14 @@ function Loading() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthStore();
+
+  useEffect(() => {
+    useAuthStore.getState().setLoaded();
+  }, []);
+
   if (!isLoaded) return <Loading />;
-  if (!isSignedIn) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 

@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -7,6 +6,7 @@ import { contentApi, type ContentSearchResult } from '../api/content.api';
 import HeroBanner from '../components/HeroBanner';
 import ContentRow from '../components/ContentRow';
 import { HeroSkeleton, RowSkeleton } from '../components/Skeleton';
+import { useAuthStore } from '../stores/authStore';
 
 function extractItems(data: ContentSearchResult | undefined): any[] {
   if (!data?.results) return [];
@@ -14,7 +14,7 @@ function extractItems(data: ContentSearchResult | undefined): any[] {
 }
 
 export default function Home() {
-  const { isSignedIn } = useUser();
+  const user = useAuthStore((s) => s.user);
   const watchHistory = useConvexQuery(api.watchHistory.getContinueWatching);
 
   const { data: trending, isLoading: trendingLoading } = useQuery({
@@ -65,7 +65,7 @@ export default function Home() {
 
       {/* Content rows */}
       <div className="relative z-10 -mt-20 space-y-10 pb-20">
-        {isSignedIn && Object.keys(historyMap).length > 0 && (
+        {user && Object.keys(historyMap).length > 0 && (
           <ContentRow
             title="Continue Watching"
             items={Object.values(historyMap).map((h: any) => ({

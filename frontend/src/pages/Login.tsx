@@ -1,15 +1,32 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
+import { useAuthStore } from '../stores/authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  
+  const setAuth = useAuthStore((s) => s.setAuth);
+
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: (codeResponse) => {
-      console.log('Google login successful', codeResponse);
-      navigate('/home');
+    onSuccess: async (codeResponse) => {
+      try {
+        const res = await fetch(`${API_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: codeResponse.access_token }),
+        });
+
+        if (!res.ok) throw new Error('Auth failed');
+
+        const data = await res.json();
+        setAuth(data.user, data.token);
+        navigate('/home');
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please try again.');
+      }
     },
     onError: (error) => {
       console.error('Google login error:', error);
@@ -17,7 +34,7 @@ export default function Login() {
     },
     flow: 'implicit',
   });
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
       <div
@@ -64,7 +81,7 @@ export default function Login() {
           </div>
 
           <button
-            onClick={handleGoogleLogin}
+            onClick={() => handleGoogleLogin()}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold text-base hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-red/50 focus:ring-offset-2 focus:ring-offset-black"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">

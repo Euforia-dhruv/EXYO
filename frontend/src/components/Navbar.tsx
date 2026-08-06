@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useUser, SignOutButton } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, LogOut, Settings, ChevronDown } from 'lucide-react';
 import Logo, { ELogo } from './Logo';
+import { useAuthStore } from '../stores/authStore';
 
 const NAV_LINKS = [
   { path: '/home', label: 'Home' },
@@ -13,7 +13,7 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const { isSignedIn, user } = useUser();
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -85,6 +85,11 @@ export default function Navbar() {
     }
   };
 
+  const handleSignOut = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <>
       <motion.header
@@ -97,12 +102,10 @@ export default function Navbar() {
       >
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between h-16 lg:h-[72px]">
-            {/* Logo */}
             <Link to="/home" className="shrink-0">
               <Logo size="sm" />
             </Link>
 
-            {/* Center nav — desktop */}
             <nav className="hidden lg:flex items-center gap-1">
               {NAV_LINKS.map(({ path, label }) => (
                 <Link
@@ -119,9 +122,7 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Right actions */}
             <div className="flex items-center gap-2">
-              {/* Search */}
               <button
                 onClick={() => setSearchOpen(true)}
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
@@ -129,16 +130,15 @@ export default function Navbar() {
                 <Search className="w-5 h-5" />
               </button>
 
-              {/* Profile */}
-              {isSignedIn ? (
+              {user ? (
                 <div ref={profileRef} className="relative">
                   <button
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/[0.06] transition-all"
                   >
                     <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                      {user?.imageUrl ? (
-                        <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <ELogo size={32} />
                       )}
@@ -156,17 +156,15 @@ export default function Navbar() {
                         className="absolute right-0 top-full mt-2 w-56 glass glass-border rounded-2xl p-2 card-shadow"
                       >
                         <div className="px-3 py-2.5 border-b border-white/[0.06] mb-1">
-                          <p className="text-sm font-medium text-white truncate">{user?.username || user?.firstName || 'User'}</p>
-                          <p className="text-xs text-white/40 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                          <p className="text-sm font-medium text-white truncate">{user.displayName || user.username || 'User'}</p>
+                          <p className="text-xs text-white/40 truncate">{user.email}</p>
                         </div>
                         <Link to="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.06] transition-all">
                           <Settings className="w-4 h-4" /> Settings
                         </Link>
-                        <SignOutButton>
-                          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.06] transition-all">
-                            <LogOut className="w-4 h-4" /> Sign Out
-                          </button>
-                        </SignOutButton>
+                        <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.06] transition-all">
+                          <LogOut className="w-4 h-4" /> Sign Out
+                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -180,7 +178,6 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* Mobile menu */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
@@ -192,7 +189,6 @@ export default function Navbar() {
         </div>
       </motion.header>
 
-      {/* Mobile nav drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -229,7 +225,6 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* Search overlay */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div

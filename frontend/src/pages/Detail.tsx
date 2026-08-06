@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
 import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -16,11 +15,12 @@ import { ELogo } from '../components/Logo';
 import { toast } from '../components/Toast';
 import { cn } from '../utils/helpers';
 import type { Stream } from '../types';
+import { useAuthStore } from '../stores/authStore';
 
 export default function Detail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isSignedIn, user } = useUser();
+  const user = useAuthStore((s) => s.user);
   const seasonPillsRef = useRef<HTMLDivElement>(null);
 
   const [selectedSeason, setSelectedSeason] = useState(1);
@@ -286,7 +286,7 @@ export default function Detail() {
                   Play
                 </motion.button>
 
-                {isSignedIn && (
+                {user && (
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
