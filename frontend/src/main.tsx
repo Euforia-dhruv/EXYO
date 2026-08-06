@@ -24,7 +24,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (token) {
-      convex.setAuth(token).catch(() => {}).finally(() => setLoaded());
+      convex.setAuth(async () => token).catch(() => {}).finally(() => setLoaded());
     } else {
       setLoaded();
     }
