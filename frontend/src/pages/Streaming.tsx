@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Radio, CheckCircle2, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Radio, CheckCircle2, Loader2, Wifi, WifiOff, Plus, X } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import { contentApi, type AddonManifest } from '../api/content.api';
 
@@ -14,6 +14,8 @@ const ADDON_OPTIONS = [
   { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
   { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
+  { id: 'notorrent', label: 'NoTorrent', desc: 'Movies & series streams (free + premium)', url: 'https://addon.notorrent2.workers.dev' },
+  { id: 'aiocatalogs', label: 'AIOCatalogs', desc: 'Additional movie catalogs', url: 'https://aio.pantelx.com' },
 ];
 
 function AddonBadge({ manifest, enabled }: { manifest?: AddonManifest | null; enabled: boolean }) {
@@ -60,6 +62,9 @@ function AddonBadge({ manifest, enabled }: { manifest?: AddonManifest | null; en
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
   const [addons, setAddons] = useState(['pengu', 'anime', 'flix']);
+  const [customAddons, setCustomAddons] = useState<string[]>([]);
+  const [newAddonUrl, setNewAddonUrl] = useState('');
+  const [addonError, setAddonError] = useState('');
 
   useEffect(() => {
     try {
@@ -67,12 +72,14 @@ export default function Streaming() {
       if (sp) setProxy(sp);
       const sa = localStorage.getItem('exyo-addons');
       if (sa) setAddons(JSON.parse(sa));
+      const ca = localStorage.getItem('exyo-custom-addons');
+      if (ca) setCustomAddons(JSON.parse(ca));
     } catch {}
   }, []);
 
   const { data: manifests, isLoading: manifestsLoading } = useQuery({
-    queryKey: ['addonManifests'],
-    queryFn: () => contentApi.getManifests(),
+    queryKey: ['addonManifests', customAddons],
+    queryFn: () => contentApi.getManifests(customAddons.length > 0 ? customAddons : undefined),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -166,6 +173,73 @@ export default function Streaming() {
             );
           })}
         </div>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Custom Addons</h3>
+        <div className="flex gap-2 mb-3">
+          <input
+            type="url"
+            value={newAddonUrl}
+            onChange={(e) => { setNewAddonUrl(e.target.value); setAddonError(''); }}
+            placeholder="https://example.com/manifest.json"
+            className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-red/30"
+          />
+          <button
+            onClick={() => {
+              const url = newAddonUrl.trim();
+              if (!url) { setAddonError('Enter a manifest URL'); return; }
+              try { new URL(url); } catch { setAddonError('Invalid URL'); return; }
+              if (customAddons.includes(url)) { setAddonError('Already added'); return; }
+              const next = [...customAddons, url];
+              setCustomAddons(next);
+              localStorage.setItem('exyo-custom-addons', JSON.stringify(next));
+              setNewAddonUrl('');
+              setAddonError('');
+            }}
+            className="bg-red hover:bg-red/80 text-white px-4 rounded-xl transition-all flex items-center gap-1.5 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </div>
+        {addonError && <p className="text-red/70 text-xs mb-2">{addonError}</p>}
+        {customAddons.length > 0 && (
+          <div className="space-y-2">
+            {customAddons.map((url) => {
+              const manifest = manifestMap.get(url.replace(/\/$/, ''));
+              const host = (() => { try { return new URL(url).hostname; } catch { return url; } })();
+              return (
+                <div
+                  key={url}
+                  className="w-full text-left p-4 rounded-2xl border bg-white/[0.06] border-red/20 flex items-start justify-between"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white">{manifest?.name || host}</p>
+                      {manifest ? (
+                        <Wifi className="w-3 h-3 text-green-400 shrink-0" />
+                      ) : (
+                        <WifiOff className="w-3 h-3 text-red/50 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-white/30 mt-0.5">{url}</p>
+                    <AddonBadge manifest={manifest} enabled={true} />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = customAddons.filter((u) => u !== url);
+                      setCustomAddons(next);
+                      localStorage.setItem('exyo-custom-addons', JSON.stringify(next));
+                    }}
+                    className="text-white/30 hover:text-red transition-colors p-1 shrink-0 mt-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </motion.div>
   );

@@ -11,6 +11,15 @@ const ALL_ADDON_URLS = [
   "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
   "https://animestream-addon.keypop3750.workers.dev",
   "https://free.flixnest.app",
+  "https://addon.notorrent2.workers.dev",
+  "https://aio.pantelx.com",
+];
+
+const STREAM_ADDON_URLS = [
+  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
+  "https://animestream-addon.keypop3750.workers.dev",
+  "https://free.flixnest.app",
+  "https://addon.notorrent2.workers.dev",
 ];
 
 const corsHeaders: Record<string, string> = {
@@ -236,33 +245,42 @@ http.route({
     if (!id) return json({ error: "id required" }, 400);
 
     const userAddonUrls = parseAddonUrls(addonsParam);
-    const addonUrls = mergeAddonUrls(userAddonUrls);
+    const streamAddonUrls = [...new Set([...STREAM_ADDON_URLS, ...userAddonUrls])];
 
     const typesToTry = type === "anime" ? ["anime", "series"] : [type];
 
     const results = await Promise.allSettled(
-      addonUrls.map(async (addonUrl) => {
+      streamAddonUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
         const allStreams: Record<string, unknown>[] = [];
         for (const tryType of typesToTry) {
           const streamUrl = `${base}/stream/${tryType}/${id}.json`;
-          const res = await fetch(streamUrl);
-          if (!res.ok) continue;
-          const data = await res.json();
-          for (const s of (data.streams || []) as Record<string, unknown>[]) {
-            const streamUrl = s.url as string;
-            const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
-            const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
-            const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
-            const proxiedUrl = streamUrl
-              ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
-              : undefined;
-            allStreams.push({
-              ...s,
-              addonName: addonUrl.split("/")[2] || addonUrl,
-              addonUrl: base,
-              proxiedUrl,
-            });
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10000);
+            const res = await fetch(streamUrl, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) continue;
+            const contentType = res.headers.get("content-type") || "";
+            if (!contentType.includes("json")) continue;
+            const data = await res.json();
+            for (const s of (data.streams || []) as Record<string, unknown>[]) {
+              const streamUrl = s.url as string;
+              const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
+              const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
+              const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
+              const proxiedUrl = streamUrl
+                ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+                : undefined;
+              allStreams.push({
+                ...s,
+                addonName: addonUrl.split("/")[2] || addonUrl,
+                addonUrl: base,
+                proxiedUrl,
+              });
+            }
+          } catch {
+            continue;
           }
         }
         return allStreams;
@@ -321,7 +339,10 @@ http.route({
     try {
       const base = addon.replace(/\/$/, "");
       const streamUrl = `${base}/stream/${type}/${id}.json`;
-      const res = await fetch(streamUrl);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(streamUrl, { signal: controller.signal });
+      clearTimeout(timer);
       if (!res.ok) return json({ error: "Addon returned error" }, res.status);
       const data = await res.json();
       const streams = (data.streams || []).map((s: Record<string, unknown>) => {

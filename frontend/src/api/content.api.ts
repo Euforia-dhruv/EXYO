@@ -4,14 +4,18 @@ const ADDON_MAP: Record<string, string> = {
   pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D',
   anime: 'https://animestream-addon.keypop3750.workers.dev',
   flix: 'https://free.flixnest.app',
+  notorrent: 'https://addon.notorrent2.workers.dev',
+  aiocatalogs: 'https://aio.pantelx.com',
 };
 
 function getEnabledAddonUrls(): string[] {
   try {
     const raw = localStorage.getItem('exyo-addons');
-    if (!raw) return [];
-    const ids: string[] = JSON.parse(raw);
-    return ids.map((id) => ADDON_MAP[id]).filter(Boolean);
+    const customRaw = localStorage.getItem('exyo-custom-addons');
+    const ids: string[] = raw ? JSON.parse(raw) : [];
+    const customUrls: string[] = customRaw ? JSON.parse(customRaw) : [];
+    const builtIn = ids.map((id) => ADDON_MAP[id]).filter(Boolean);
+    return [...new Set([...builtIn, ...customUrls])];
   } catch {
     return [];
   }
