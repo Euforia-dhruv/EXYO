@@ -69,7 +69,7 @@ export default function Register() {
                   if (!credential) return;
                   setLoading(true);
                   try {
-                    await convex.setAuth(async () => credential);
+                    convex.setAuth(async () => credential);
                     const user = await convex.query(api.users.getCurrentUser);
                     if (user) {
                       setAuth({
