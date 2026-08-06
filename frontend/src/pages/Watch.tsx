@@ -89,6 +89,15 @@ export default function Watch() {
     }
   }, [subtitleTracks, player]);
 
+  const handleBack = useCallback(() => {
+    if (id) {
+      const type = id.includes(':') ? 'series' : 'movie';
+      navigate(`/${type}/${id}`);
+    } else {
+      navigate(-1);
+    }
+  }, [id, navigate]);
+
   const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const showControlsTemporarily = useCallback(() => {
     player.setShowControls(true);
@@ -110,15 +119,6 @@ export default function Watch() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [handleBack, player.showStreamSelector, player.showSettings]);
-
-  const handleBack = useCallback(() => {
-    if (id) {
-      const type = id.includes(':') ? 'series' : 'movie';
-      navigate(`/${type}/${id}`);
-    } else {
-      navigate(-1);
-    }
-  }, [id, navigate]);
 
   return (
     <div
