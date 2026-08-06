@@ -84,20 +84,27 @@ async function fetchJsonWithTimeout(url: string, timeoutMs = 8000): Promise<unkn
   }
 }
 
-async function resolveRedirect(url: string, timeoutMs = 8000): Promise<string> {
+async function resolveRedirect(url: string, addonUrl?: string, timeoutMs = 5000): Promise<string> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    };
+    const auth = addonUrl ? extractAddonAuth(addonUrl) : "";
+    if (auth) headers.Cookie = `auth_token=${auth}`;
     const res = await fetch(url, {
-      method: "HEAD",
-      redirect: "follow",
+      method: "GET",
+      redirect: "manual",
       signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      },
+      headers,
     });
     clearTimeout(timer);
-    return res.url || url;
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (location) return location.startsWith("http") ? location : new URL(location, url).href;
+    }
+    return url;
   } catch {
     return url;
   }
@@ -316,22 +323,32 @@ http.route({
             const contentType = res.headers.get("content-type") || "";
             if (!contentType.includes("json")) continue;
             const data = await res.json();
+            const allStreamData: Record<string, unknown>[] = [];
             for (const s of (data.streams || []) as Record<string, unknown>[]) {
               const rawUrl = s.url as string;
               const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
               const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
               const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
-              const proxiedUrl = rawUrl
-                ? buildProxiedUrl(rawUrl, referer, addonUrl)
-                : undefined;
-              allStreams.push({
-                ...s,
-                url: rawUrl,
-                addonName: addonUrl.split("/")[2] || addonUrl,
-                addonUrl: base,
-                proxiedUrl,
-              });
+              allStreamData.push({ s, rawUrl, referer });
             }
+
+            // Resolve redirects in parallel (much faster than sequential)
+            const resolved = await Promise.all(
+              allStreamData.map(async ({ s, rawUrl, referer }) => {
+                const streamUrl = rawUrl ? await resolveRedirect(rawUrl, addonUrl) : rawUrl;
+                const proxiedUrl = streamUrl
+                  ? buildProxiedUrl(streamUrl, referer, addonUrl)
+                  : undefined;
+                return {
+                  ...s,
+                  url: streamUrl,
+                  addonName: addonUrl.split("/")[2] || addonUrl,
+                  addonUrl: base,
+                  proxiedUrl,
+                };
+              })
+            );
+            allStreams.push(...resolved);
           } catch {
             continue;
           }

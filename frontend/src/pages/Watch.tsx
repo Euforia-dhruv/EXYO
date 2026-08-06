@@ -22,7 +22,7 @@ export default function Watch() {
   const contentType = location.state?.contentType as string | undefined;
   const user = useAuthStore((s) => s.user);
 
-  const streamType = contentType || 'movie';
+  const streamType = contentType || (id?.includes(':') ? 'series' : 'movie');
 
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', id, streamType],
