@@ -1,5 +1,27 @@
 const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
+const ADDON_MAP: Record<string, string> = {
+  pengu: 'https://pengu.uk',
+  anime: 'https://animestream-addon.keypop3750.workers.dev',
+  flix: 'https://free.flixnest.app',
+};
+
+function getEnabledAddonUrls(): string[] {
+  try {
+    const raw = localStorage.getItem('exyo-addons');
+    if (!raw) return [];
+    const ids: string[] = JSON.parse(raw);
+    return ids.map((id) => ADDON_MAP[id]).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function addonParam(addonUrls?: string[]): string | undefined {
+  const urls = addonUrls && addonUrls.length > 0 ? addonUrls : getEnabledAddonUrls();
+  return urls.length > 0 ? urls.join(',') : undefined;
+}
+
 const contentFetch = async (path: string, params?: Record<string, string | string[]>) => {
   const url = new URL(`${SITE_URL}/api/content${path}`);
   if (params) {
@@ -81,9 +103,32 @@ export interface ContentDetailsResult {
   }>;
 }
 
+export interface AddonManifest {
+  id: string | unknown;
+  name: string | unknown;
+  description: string | unknown;
+  version: string | unknown;
+  types: string[];
+  catalogs: Array<{ id: string; name: string; type: string; addonUrl?: string; addonName?: string }>;
+  resources: unknown;
+  logo: string;
+  behaviorHints: Record<string, unknown>;
+  addonUrl: string;
+}
+
 export const contentApi = {
-  getCatalogs: async (type = 'movie', catalogId = 'top') => {
-    const result = await contentFetch('/catalogs', { type, catalogId });
+  getManifests: async (addonUrls?: string[]): Promise<AddonManifest[]> => {
+    const addons = addonParam(addonUrls);
+    const params: Record<string, string> = {};
+    if (addons) params.addons = addons;
+    return contentFetch('/manifests', params);
+  },
+
+  getCatalogs: async (type = 'movie', catalogId = 'top', addonUrls?: string[]) => {
+    const addons = addonParam(addonUrls);
+    const params: Record<string, string> = { type, catalogId };
+    if (addons) params.addons = addons;
+    const result = await contentFetch('/catalogs', params);
     if (Array.isArray(result)) {
       return {
         results: result.map((item: any) => ({
@@ -104,8 +149,11 @@ export const contentApi = {
     return result as ContentSearchResult;
   },
 
-  getCatalog: async (type: string, catalogId: string) => {
-    const result = await contentFetch('/catalogs', { type, catalogId });
+  getCatalog: async (type: string, catalogId: string, addonUrls?: string[]) => {
+    const addons = addonParam(addonUrls);
+    const params: Record<string, string> = { type, catalogId };
+    if (addons) params.addons = addons;
+    const result = await contentFetch('/catalogs', params);
     if (!Array.isArray(result)) return { results: [] } as ContentSearchResult;
     return {
       results: result.map((item: any) => ({
@@ -124,9 +172,11 @@ export const contentApi = {
     } as ContentSearchResult;
   },
 
-  search: async (query: string, type?: string) => {
+  search: async (query: string, type?: string, addonUrls?: string[]) => {
     const params: Record<string, string> = { q: query };
     if (type) params.type = type;
+    const addons = addonParam(addonUrls);
+    if (addons) params.addons = addons;
     const result = await contentFetch('/search', params);
     if (Array.isArray(result)) {
       return {
@@ -150,6 +200,8 @@ export const contentApi = {
     const params: Record<string, string> = { q: query };
     if (options?.type) params.type = options.type;
     if (options?.limit) params.limit = String(options.limit);
+    const addons = addonParam();
+    if (addons) params.addons = addons;
     const result = await contentFetch('/search', params);
     if (Array.isArray(result)) {
       return {
@@ -169,8 +221,11 @@ export const contentApi = {
     return result as ContentSearchResult;
   },
 
-  getDetails: async (id: string, type = 'movie') => {
-    const result = await contentFetch('/details', { id, type }) as ContentDetailsResult;
+  getDetails: async (id: string, type = 'movie', addonUrls?: string[]) => {
+    const addons = addonParam(addonUrls);
+    const params: Record<string, string> = { id, type };
+    if (addons) params.addons = addons;
+    const result = await contentFetch('/details', params) as ContentDetailsResult;
     if (!result.episodes && (result as any).videos) {
       result.episodes = (result as any).videos
         .filter((v: any) => v.type === 'episode' || v.season)
@@ -191,12 +246,10 @@ export const contentApi = {
   },
 
   getStreams: async (id: string, type = 'movie', addonUrls?: string[]) => {
-    let result;
-    if (addonUrls && addonUrls.length > 0) {
-      result = await contentFetch('/streams', { id, type, addons: addonUrls.join(',') });
-    } else {
-      result = await contentFetch('/streams', { id, type });
-    }
+    const params: Record<string, string> = { id, type };
+    const addons = addonParam(addonUrls);
+    if (addons) params.addons = addons;
+    const result = await contentFetch('/streams', params);
     if (Array.isArray(result)) {
       return {
         streams: result.map((item: any) => ({
@@ -241,8 +294,11 @@ export const contentApi = {
     return result as ContentStreamsResult;
   },
 
-  getSubtitles: async (id: string, type = 'movie') => {
-    const result = await contentFetch('/subtitles', { id, type });
+  getSubtitles: async (id: string, type = 'movie', addonUrls?: string[]) => {
+    const params: Record<string, string> = { id, type };
+    const addons = addonParam(addonUrls);
+    if (addons) params.addons = addons;
+    const result = await contentFetch('/subtitles', params);
     if (Array.isArray(result)) {
       return { subtitles: result };
     }

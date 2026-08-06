@@ -6,8 +6,9 @@ const http = httpRouter();
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const PROXY_BASE_URL = "https://exyo.vercel.app";
 
-const DEFAULT_STREAM_ADDONS = [
-  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
+const ALL_ADDON_URLS = [
+  CINEMETA_URL,
+  "https://pengu.uk",
   "https://animestream-addon.keypop3750.workers.dev",
   "https://free.flixnest.app",
 ];
@@ -25,12 +26,98 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function parseAddonUrls(addonsParam: string | null): string[] {
+  if (!addonsParam) return [];
+  return addonsParam.split(",").filter(Boolean);
+}
 
+function mergeAddonUrls(userAddons: string[]): string[] {
+  return [...new Set([...ALL_ADDON_URLS, ...userAddons])];
+}
+
+async function fetchJsonWithTimeout(url: string, timeoutMs = 8000): Promise<unknown | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function extractCatalogsFromManifest(manifest: Record<string, unknown>, addonBase: string) {
+  const catalogs = manifest.catalogs as Array<Record<string, unknown>> | undefined;
+  if (!catalogs || !Array.isArray(catalogs)) return [];
+  return catalogs.map((c) => ({
+    ...c,
+    addonUrl: addonBase,
+    addonName: manifest.name || addonBase,
+  }));
+}
+
+function extractMetaVideos(meta: Record<string, unknown>, baseId: string) {
+  const videos = meta.videos as Array<Record<string, unknown>> | undefined;
+  if (!videos || !Array.isArray(videos)) return null;
+  return videos
+    .filter((v) => v.type === "episode" || v.season)
+    .map((v) => ({
+      id: `${baseId}:${v.season}:${v.number || v.episode}`,
+      videoId: `${baseId}:${v.season}:${v.number || v.episode}`,
+      name: v.name,
+      title: v.name,
+      episodeNumber: v.number || v.episode,
+      seasonNumber: v.season,
+      description: v.description || "",
+      runtime: v.runtime,
+      rating: v.imdbRating ? Number(v.imdbRating) : undefined,
+      stillUrl: v.poster || v.thumb,
+    }));
+}
 
 http.route({
   path: "/api/content/:path*",
   method: "OPTIONS",
   handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
+});
+
+http.route({
+  path: "/api/content/manifests",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const addonsParam = url.searchParams.get("addons");
+    const addonUrls = addonsParam ? parseAddonUrls(addonsParam) : ALL_ADDON_URLS;
+
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const data = await fetchJsonWithTimeout(`${base}/manifest.json`);
+        if (!data || typeof data !== "object") return null;
+        const m = data as Record<string, unknown>;
+        return {
+          id: m.id || base,
+          name: m.name || base,
+          description: m.description || "",
+          version: m.version || "",
+          types: m.types || [],
+          catalogs: extractCatalogsFromManifest(m, base),
+          resources: m.resources || [],
+          logo: m.logo || "",
+          behaviorHints: m.behaviorHints || {},
+          addonUrl: base,
+        };
+      })
+    );
+
+    const manifests = results
+      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
+      .map((r) => r.value);
+
+    return json(manifests);
+  }),
 });
 
 http.route({
@@ -40,15 +127,40 @@ http.route({
     const url = new URL(request.url);
     const type = url.searchParams.get("type") || "movie";
     const catalogId = url.searchParams.get("catalogId") || "trending";
+    const addonsParam = url.searchParams.get("addons");
+    const userAddonUrls = parseAddonUrls(addonsParam);
+    const addonUrls = mergeAddonUrls(userAddonUrls);
 
-    try {
-      const res = await fetch(`${CINEMETA_URL}/catalog/${type}/${catalogId}.json`);
-      if (!res.ok) return json({ error: "Failed to fetch" }, res.status);
-      const data = await res.json();
-      return json(data.metas || []);
-    } catch {
-      return json({ error: "Addon unreachable" }, 502);
-    }
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const catalogUrl = `${base}/catalog/${type}/${catalogId}.json`;
+        const data = await fetchJsonWithTimeout(catalogUrl);
+        if (!data || typeof data !== "object") return [];
+        const metas = (data as Record<string, unknown>).metas;
+        if (!Array.isArray(metas)) return [];
+        return metas.map((m: Record<string, unknown>) => ({
+          ...m,
+          addonUrl: base,
+          addonName: addonUrl.split("/")[2] || base,
+        }));
+      })
+    );
+
+    const allMetas = results
+      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
+    const seen = new Set<string>();
+    const deduped = allMetas.filter((m: unknown) => {
+      const meta = m as Record<string, unknown>;
+      const key = (meta.id as string) || (meta.imdb_id as string) || "";
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return json(deduped);
   }),
 });
 
@@ -59,16 +171,42 @@ http.route({
     const url = new URL(request.url);
     const q = url.searchParams.get("q");
     const type = url.searchParams.get("type") || "movie";
+    const addonsParam = url.searchParams.get("addons");
     if (!q) return json({ error: "Query required" }, 400);
 
-    try {
-      const res = await fetch(`${CINEMETA_URL}/catalog/${type}/top/search=${encodeURIComponent(q)}.json`);
-      if (!res.ok) return json({ error: "Search failed" }, res.status);
-      const data = await res.json();
-      return json(data.metas || []);
-    } catch {
-      return json({ error: "Addon unreachable" }, 502);
-    }
+    const userAddonUrls = parseAddonUrls(addonsParam);
+    const addonUrls = mergeAddonUrls(userAddonUrls);
+
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const searchUrl = `${base}/catalog/${type}/top/search=${encodeURIComponent(q)}.json`;
+        const data = await fetchJsonWithTimeout(searchUrl);
+        if (!data || typeof data !== "object") return [];
+        const metas = (data as Record<string, unknown>).metas;
+        if (!Array.isArray(metas)) return [];
+        return metas.map((m: Record<string, unknown>) => ({
+          ...m,
+          addonUrl: base,
+          addonName: addonUrl.split("/")[2] || base,
+        }));
+      })
+    );
+
+    const allResults = results
+      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
+    const seen = new Set<string>();
+    const deduped = allResults.filter((m: unknown) => {
+      const meta = m as Record<string, unknown>;
+      const key = (meta.id as string) || (meta.imdb_id as string) || "";
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return json(deduped);
   }),
 });
 
@@ -97,11 +235,8 @@ http.route({
     const addonsParam = url.searchParams.get("addons");
     if (!id) return json({ error: "id required" }, 400);
 
-    const userAddonUrls = addonsParam
-      ? addonsParam.split(",").filter(Boolean)
-      : [];
-
-    const addonUrls = [...new Set([...DEFAULT_STREAM_ADDONS, ...userAddonUrls])];
+    const userAddonUrls = parseAddonUrls(addonsParam);
+    const addonUrls = mergeAddonUrls(userAddonUrls);
 
     const results = await Promise.allSettled(
       addonUrls.map(async (addonUrl) => {
@@ -212,28 +347,41 @@ http.route({
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
     const type = url.searchParams.get("type") || "movie";
+    const addonsParam = url.searchParams.get("addons");
     if (!id) return json([], 400);
 
-    try {
-      // For episode IDs like "tt0944947:1:1", try the full ID first, then fallback to series ID
-      const res = await fetch(`${CINEMETA_URL}/meta/subtitles/${type}/${id}.json`);
-      if (res.ok) {
-        const data = await res.json();
-        return json(data.subtitles || []);
-      }
-      // Fallback: try with base series ID
-      if (id.includes(":")) {
-        const seriesId = id.split(":")[0];
-        const fallback = await fetch(`${CINEMETA_URL}/meta/subtitles/${type}/${seriesId}.json`);
-        if (fallback.ok) {
-          const data = await fallback.json();
-          return json(data.subtitles || []);
-        }
-      }
-      return json([]);
-    } catch {
-      return json([]);
-    }
+    const userAddonUrls = parseAddonUrls(addonsParam);
+    const addonUrls = mergeAddonUrls(userAddonUrls);
+
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const subUrl = `${base}/subtitles/${type}/${id}.json`;
+        const data = await fetchJsonWithTimeout(subUrl);
+        if (!data || typeof data !== "object") return [];
+        const subtitles = (data as Record<string, unknown>).subtitles;
+        if (!Array.isArray(subtitles)) return [];
+        return subtitles.map((s: Record<string, unknown>) => ({
+          ...s,
+          addonName: addonUrl.split("/")[2] || base,
+        }));
+      })
+    );
+
+    const allSubs = results
+      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
+    const seen = new Set<string>();
+    const deduped = allSubs.filter((s: unknown) => {
+      const sub = s as Record<string, unknown>;
+      const key = ((sub.url as string) || "") + ((sub.lang as string) || "");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return json(deduped);
   }),
 });
 
@@ -244,62 +392,66 @@ http.route({
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
     const type = url.searchParams.get("type") || "movie";
+    const addonsParam = url.searchParams.get("addons");
     if (!id) return json({ error: "id required" }, 400);
 
-    try {
-      // For episode IDs like "tt0944947:1:1", fetch the series meta and find the episode
-      const seriesId = id.includes(":") ? id.split(":")[0] : id;
-      const res = await fetch(`${CINEMETA_URL}/meta/${type}/${seriesId}.json`);
-      if (!res.ok) return json({ error: "Not found" }, 404);
-      const data = await res.json();
-      const meta = data.meta || data;
+    const userAddonUrls = parseAddonUrls(addonsParam);
+    const addonUrls = mergeAddonUrls(userAddonUrls);
 
-      // If it's an episode ID, extract the specific episode info
-      if (id.includes(":") && meta.videos) {
-        const parts = id.split(":");
-        const seasonNum = parseInt(parts[1]);
-        const epNum = parseInt(parts[2]);
-        const episode = meta.videos.find(
-          (v: Record<string, unknown>) => v.season === seasonNum && (v.number === epNum || v.episode === epNum)
-        );
-        if (episode) {
-          return json({
-            ...meta,
-            ...episode,
-            id: id,
-            type: "series",
-            name: `${meta.name} — S${String(seasonNum).padStart(2, "0")}E${String(epNum).padStart(2, "0")} ${episode.name || ""}`,
-            background: meta.background || meta.poster,
-          });
-        }
-      }
+    const seriesId = id.includes(":") ? id.split(":")[0] : id;
 
-      // Map Cinemeta videos to episodes format
-      if (meta.videos && Array.isArray(meta.videos)) {
-        meta.episodes = meta.videos
-          .filter((v: Record<string, unknown>) => v.type === 'episode' || v.season)
-          .map((v: Record<string, unknown>) => ({
-            id: `${seriesId}:${v.season}:${v.number || v.episode}`,
-            videoId: `${seriesId}:${v.season}:${v.number || v.episode}`,
-            name: v.name,
-            title: v.name,
-            episodeNumber: v.number || v.episode,
-            seasonNumber: v.season,
-            description: v.description || '',
-            runtime: v.runtime,
-            rating: v.imdbRating ? Number(v.imdbRating) : undefined,
-            stillUrl: v.poster ? `https://images.metahub.space/episode/med/${seriesId}/${v.season}/${v.number || v.episode}/img` : undefined,
-          }));
-      }
+    const results = await Promise.allSettled(
+      addonUrls.map(async (addonUrl) => {
+        const base = addonUrl.replace(/\/$/, "");
+        const metaUrl = `${base}/meta/${type}/${seriesId}.json`;
+        const data = await fetchJsonWithTimeout(metaUrl);
+        if (!data || typeof data !== "object") return null;
+        const raw = data as Record<string, unknown>;
+        const meta = (raw.meta as Record<string, unknown>) || raw;
+        if (!meta || !meta.name) return null;
+        return { meta, addonUrl: base, addonName: addonUrl.split("/")[2] || base };
+      })
+    );
 
-      return json(meta);
-    } catch {
-      return json({ error: "Addon unreachable" }, 502);
+    const addonResults = results
+      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
+      .map((r) => r.value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
+
+    if (addonResults.length === 0) {
+      return json({ error: "Not found" }, 404);
     }
+
+    const primary = addonResults[0];
+    const meta = primary.meta;
+
+    if (id.includes(":") && meta.videos) {
+      const parts = id.split(":");
+      const seasonNum = parseInt(parts[1]);
+      const epNum = parseInt(parts[2]);
+      const episode = (meta.videos as Array<Record<string, unknown>>).find(
+        (v) => v.season === seasonNum && (v.number === epNum || v.episode === epNum)
+      );
+      if (episode) {
+        return json({
+          ...meta,
+          ...episode,
+          id: id,
+          type: "series",
+          name: `${meta.name} — S${String(seasonNum).padStart(2, "0")}E${String(epNum).padStart(2, "0")} ${episode.name || ""}`,
+          background: meta.background || meta.poster,
+        });
+      }
+    }
+
+    const episodes = extractMetaVideos(meta, seriesId);
+    if (episodes) {
+      meta.episodes = episodes;
+    }
+
+    return json(meta);
   }),
 });
 
-// Stream proxy - proxies HLS playlists and segments, and MP4 files
 http.route({
   path: "/api/proxy",
   method: "GET",
@@ -322,20 +474,17 @@ http.route({
 
       const contentType = upstream.headers.get("content-type") || "application/octet-stream";
 
-      // For m3u8 playlists, rewrite segment URLs to go through this proxy
       if (target.endsWith(".m3u8") || contentType.includes("mpegurl") || contentType.includes("m3u8")) {
         const text = await upstream.text();
         const base = new URL(target);
         const rewritten = text.split("\n").map(line => {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith("#")) {
-            // Rewrite URI="..." in tags
             return line.replace(/URI="([^"]+)"/g, (_m, uri) => {
               const abs = new URL(uri, base).href;
               return `URI="${proxyOrigin}/api/proxy?url=${encodeURIComponent(abs)}&referer=${encodeURIComponent(referer)}"`;
             });
           }
-          // Rewrite segment URLs — use absolute URLs to avoid cross-origin resolution issues
           const abs = new URL(trimmed, base).href;
           return `${proxyOrigin}/api/proxy?url=${encodeURIComponent(abs)}&referer=${encodeURIComponent(referer)}`;
         }).join("\n");
@@ -350,7 +499,6 @@ http.route({
         });
       }
 
-      // For non-playlist content (segments, MP4s), stream through
       const respHeaders: Record<string, string> = {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": contentType,
@@ -373,7 +521,6 @@ http.route({
   }),
 });
 
-// OPTIONS for proxy
 http.route({
   path: "/api/proxy",
   method: "OPTIONS",

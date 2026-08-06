@@ -28,6 +28,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const About = lazy(() => import('./pages/About'));
+const Anime = lazy(() => import('./pages/Anime'));
 
 function Loading() {
   return (
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/movies" element={<Movies />} />
               <Route path="/tv" element={<TVShows />} />
+              <Route path="/anime" element={<Anime />} />
               <Route path="/movie/:id" element={<Detail />} />
               <Route path="/series/:id" element={<Detail />} />
               <Route path="/search" element={<Search />} />

@@ -43,8 +43,13 @@ export default function Home() {
   });
 
   const { data: anime } = useQuery({
-    queryKey: ['cinemeta', 'anime', 'trending'],
-    queryFn: () => contentApi.getCatalog('anime', 'trending'),
+    queryKey: ['catalog', 'anime', 'anime-top-rated'],
+    queryFn: () => contentApi.getCatalog('anime', 'anime-top-rated'),
+  });
+
+  const { data: animeAiring } = useQuery({
+    queryKey: ['catalog', 'anime', 'anime-airing'],
+    queryFn: () => contentApi.getCatalog('anime', 'anime-airing'),
   });
 
   const historyMap = useMemo(() => {
@@ -86,7 +91,8 @@ export default function Home() {
         {topRated && <ContentRow title="Top Rated" items={extractItems(topRated)} size="lg" viewAllLink="/movies" />}
         {tvTrending && <ContentRow title="Trending Series" items={extractItems(tvTrending)} size="md" viewAllLink="/tv" />}
         {tvPopular && <ContentRow title="Popular Series" items={extractItems(tvPopular)} size="md" viewAllLink="/tv" />}
-        {anime && <ContentRow title="Anime" items={extractItems(anime)} size="md" viewAllLink="/home?catalogId=anime" />}
+        {anime && <ContentRow title="Anime" items={extractItems(anime)} size="md" viewAllLink="/anime" />}
+        {animeAiring && <ContentRow title="Currently Airing Anime" items={extractItems(animeAiring)} size="md" viewAllLink="/anime" />}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { path: '/home', label: 'Home' },
   { path: '/movies', label: 'Movies' },
   { path: '/tv', label: 'Series' },
-  { path: '/home?catalogId=anime', label: 'Anime' },
+  { path: '/anime', label: 'Anime' },
 ];
 
 export default function Navbar() {
@@ -66,10 +66,7 @@ export default function Navbar() {
     (path: string) => {
       const full = location.pathname + location.search;
       if (path === '/home')
-        return (
-          (location.pathname === '/home' || location.pathname === '/') &&
-          !location.search.includes('catalogId=anime')
-        );
+        return location.pathname === '/home' || location.pathname === '/';
       if (path.includes('?')) return full === path;
       return location.pathname === path || location.pathname.startsWith(path + '/');
     },

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Radio, CheckCircle2 } from 'lucide-react';
+import { Radio, CheckCircle2, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '../utils/helpers';
+import { contentApi, type AddonManifest } from '../api/content.api';
 
 const PROXY_OPTIONS = [
   { id: 'vercel', label: 'Vercel Proxy', desc: 'Recommended', url: 'https://exyo.vercel.app/api/proxy' },
@@ -9,10 +11,51 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
-  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV', url: 'https://pengu.uk' },
-  { id: 'anime', label: 'AnimeStream', desc: '7,000+ anime', url: 'https://animestream-addon.keypop3750.workers.dev' },
-  { id: 'flix', label: 'Flix-Streams', desc: 'Movies & series', url: 'https://free.flixnest.app' },
+  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams', url: 'https://pengu.uk' },
+  { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
+  { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
 ];
+
+function AddonBadge({ manifest, enabled }: { manifest?: AddonManifest | null; enabled: boolean }) {
+  if (!manifest) return null;
+
+  const resourceNames: string[] = [];
+  const res = manifest.resources;
+  if (Array.isArray(res)) {
+    for (const r of res) {
+      if (typeof r === 'string') resourceNames.push(r);
+      else if (r && typeof r === 'object' && 'name' in r) resourceNames.push((r as any).name);
+    }
+  }
+
+  const catalogList = (manifest.catalogs || []).map((c) => c.name);
+  const typeList = (manifest.types || []).filter(Boolean) as string[];
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      {typeList.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {typeList.map((t) => (
+            <span key={t} className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-white/[0.06] text-white/50 border border-white/[0.04]">
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+      {resourceNames.length > 0 && (
+        <div className="flex items-center gap-1.5 text-[10px] text-white/30">
+          <Wifi className="w-3 h-3" />
+          <span>{resourceNames.join(', ')}</span>
+        </div>
+      )}
+      {catalogList.length > 0 && (
+        <p className="text-[10px] text-white/25">
+          Catalogs: {catalogList.slice(0, 5).join(', ')}{catalogList.length > 5 ? ` +${catalogList.length - 5} more` : ''}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
@@ -26,6 +69,19 @@ export default function Streaming() {
       if (sa) setAddons(JSON.parse(sa));
     } catch {}
   }, []);
+
+  const { data: manifests, isLoading: manifestsLoading } = useQuery({
+    queryKey: ['addonManifests'],
+    queryFn: () => contentApi.getManifests(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const manifestMap = new Map<string, AddonManifest>();
+  if (manifests) {
+    for (const m of manifests) {
+      manifestMap.set(m.addonUrl, m);
+    }
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -62,9 +118,16 @@ export default function Streaming() {
 
       <div>
         <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Addons</h3>
+        {manifestsLoading && (
+          <div className="flex items-center gap-2 text-white/30 text-xs mb-3">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Loading addon info...</span>
+          </div>
+        )}
         <div className="space-y-2">
-          {ADDON_OPTIONS.map(({ id, label, desc }) => {
+          {ADDON_OPTIONS.map(({ id, label, desc, url }) => {
             const enabled = addons.includes(id);
+            const manifest = manifestMap.get(url);
             return (
               <button
                 key={id}
@@ -74,16 +137,24 @@ export default function Streaming() {
                   localStorage.setItem('exyo-addons', JSON.stringify(next));
                 }}
                 className={cn(
-                  'w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between',
+                  'w-full text-left p-4 rounded-2xl border transition-all flex items-start justify-between',
                   enabled ? 'bg-white/[0.06] border-red/20' : 'bg-card border-white/[0.04] hover:border-white/[0.08]'
                 )}
               >
-                <div>
-                  <p className="text-sm font-medium text-white">{label}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-white">{label}</p>
+                    {manifest ? (
+                      <Wifi className="w-3 h-3 text-green-400 shrink-0" />
+                    ) : !manifestsLoading ? (
+                      <WifiOff className="w-3 h-3 text-red/50 shrink-0" />
+                    ) : null}
+                  </div>
                   <p className="text-xs text-white/30 mt-0.5">{desc}</p>
+                  <AddonBadge manifest={manifest} enabled={enabled} />
                 </div>
                 <div className={cn(
-                  'w-11 h-6 rounded-full transition-all relative shrink-0',
+                  'w-11 h-6 rounded-full transition-all relative shrink-0 mt-1',
                   enabled ? 'bg-red' : 'bg-white/10'
                 )}>
                   <div className={cn(
