@@ -101,9 +101,13 @@ export default function Watch() {
   const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const showControlsTemporarily = useCallback(() => {
     player.setShowControls(true);
+    document.body.style.cursor = 'default';
     if (controlsTimeout) clearTimeout(controlsTimeout);
     const timeout = setTimeout(() => {
-      if (player.isPlaying) player.setShowControls(false);
+      if (player.isPlaying) {
+        player.setShowControls(false);
+        document.body.style.cursor = 'none';
+      }
     }, 4000);
     setControlsTimeout(timeout);
   }, [player, controlsTimeout]);
@@ -123,7 +127,7 @@ export default function Watch() {
   return (
     <div
       ref={player.containerRef}
-      className="fixed inset-0 bg-black cursor-none"
+      className="fixed inset-0 bg-black"
       onMouseMove={showControlsTemporarily}
       onClick={player.togglePlay}
     >

@@ -324,50 +324,62 @@ export function usePlayer({
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
+      // Try direct URL first (many addons have CORS), fall back to proxied
+      const directUrl = selectedStream?.url || sourceUrl;
+      const urlsToTry = sourceUrl !== directUrl ? [directUrl, sourceUrl] : [sourceUrl];
+
       const { MoviPlayer } = await import('movi-player/player');
-      const player = new MoviPlayer({
-        source: { type: 'url', url: sourceUrl },
-        renderer: 'canvas',
-        canvas,
-      });
 
-      streamingPlayerRef.current = player;
+      for (const tryUrl of urlsToTry) {
+        if (cancelled) return;
+        console.log('[Player] MoviPlayer trying URL:', tryUrl.substring(0, 100));
 
-      player.on('timeupdate', (t: number) => {
-        setCurrentTime(t);
-      });
-      player.on('statechange', (state: string) => {
-        if (state === 'playing') setIsBuffering(false);
-        if (state === 'ended') setIsBuffering(false);
-        if (state === 'buffering') setIsBuffering(true);
-      });
-      player.on('error', (err: any) => {
-        console.error('[Player] MoviPlayer error:', err?.message || err);
-        if (!cancelled) {
-          video.style.display = '';
-          canvas.style.display = 'none';
-          setIsStreamingPlayer(false);
-          // Auto-fallback to next stream instead of error screen
-          tryNextStreamPlayback();
-        }
-      });
+        const player = new MoviPlayer({
+          source: { type: 'url', url: tryUrl },
+          renderer: 'canvas',
+          canvas,
+        });
 
-      try {
-        await player.load();
-        if (!cancelled) {
+        streamingPlayerRef.current = player;
+
+        player.on('timeupdate', (t: number) => {
+          setCurrentTime(t);
+        });
+        player.on('statechange', (state: string) => {
+          if (state === 'playing') setIsBuffering(false);
+          if (state === 'ended') setIsBuffering(false);
+          if (state === 'buffering') setIsBuffering(true);
+        });
+
+        let playerFailed = false;
+        player.on('error', (err: any) => {
+          console.error('[Player] MoviPlayer error on', tryUrl.substring(0, 60), ':', err?.message || err);
+          playerFailed = true;
+        });
+
+        try {
+          await player.load();
+          if (cancelled || playerFailed) {
+            player.destroy().catch(() => {});
+            continue;
+          }
           const dur = player.getDuration();
           if (dur > 0) setDuration(dur);
           player.play();
+          return; // Success
+        } catch (e: any) {
+          console.error('[Player] MoviPlayer load failed:', e?.message || e);
+          player.destroy().catch(() => {});
+          continue;
         }
-      } catch (e: any) {
-        console.error('[Player] MoviPlayer load failed:', e?.message || e);
-        if (!cancelled) {
-          video.style.display = '';
-          canvas.style.display = 'none';
-          setIsStreamingPlayer(false);
-          // Auto-fallback to next stream
-          tryNextStreamPlayback();
-        }
+      }
+
+      // All URLs failed
+      if (!cancelled) {
+        video.style.display = '';
+        canvas.style.display = 'none';
+        setIsStreamingPlayer(false);
+        tryNextStreamPlayback();
       }
     }
 
