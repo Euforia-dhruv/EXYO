@@ -225,27 +225,33 @@ http.route({
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
     const q = url.searchParams.get("q");
-    const type = url.searchParams.get("type") || "movie";
+    const type = url.searchParams.get("type");
     const addonsParam = url.searchParams.get("addons");
     if (!q) return json({ error: "Query required" }, 400);
 
     const userAddonUrls = parseAddonUrls(addonsParam);
     const addonUrls = mergeAddonUrls(userAddonUrls);
 
+    // Search both movie and series unless a specific type is requested
+    const typesToSearch = type ? [type] : ["movie", "series"];
+
     const results = await Promise.allSettled(
-      addonUrls.map(async (addonUrl) => {
-        const base = addonUrl.replace(/\/$/, "");
-        const searchUrl = `${base}/catalog/${type}/top/search=${encodeURIComponent(q)}.json`;
-        const data = await fetchJsonWithTimeout(searchUrl);
-        if (!data || typeof data !== "object") return [];
-        const metas = (data as Record<string, unknown>).metas;
-        if (!Array.isArray(metas)) return [];
-        return metas.map((m: Record<string, unknown>) => ({
-          ...m,
-          addonUrl: base,
-          addonName: addonUrl.split("/")[2] || base,
-        }));
-      })
+      addonUrls.flatMap((addonUrl) =>
+        typesToSearch.map(async (searchType) => {
+          const base = addonUrl.replace(/\/$/, "");
+          const searchUrl = `${base}/catalog/${searchType}/top/search=${encodeURIComponent(q)}.json`;
+          const data = await fetchJsonWithTimeout(searchUrl);
+          if (!data || typeof data !== "object") return [];
+          const metas = (data as Record<string, unknown>).metas;
+          if (!Array.isArray(metas)) return [];
+          return metas.map((m: Record<string, unknown>) => ({
+            ...m,
+            type: searchType,
+            addonUrl: base,
+            addonName: addonUrl.split("/")[2] || base,
+          }));
+        })
+      )
     );
 
     const allResults = results
@@ -315,14 +321,12 @@ http.route({
               const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
               const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
               const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
-              // Resolve redirect URLs (e.g. PenguPlay returns 307 redirects)
-              const streamUrl = rawUrl ? await resolveRedirect(rawUrl) : rawUrl;
-              const proxiedUrl = streamUrl
-                ? buildProxiedUrl(streamUrl, referer, addonUrl)
+              const proxiedUrl = rawUrl
+                ? buildProxiedUrl(rawUrl, referer, addonUrl)
                 : undefined;
               allStreams.push({
                 ...s,
-                url: streamUrl,
+                url: rawUrl,
                 addonName: addonUrl.split("/")[2] || addonUrl,
                 addonUrl: base,
                 proxiedUrl,
@@ -563,15 +567,28 @@ http.route({
       const range = request.headers.get("Range");
       if (range) headers.Range = range;
 
-      const upstream = await fetch(target, { headers, method: request.method });
-      if (!upstream.ok) return new Response(null, { status: upstream.status });
+      // Manually follow redirects to preserve headers across hops
+      let currentUrl = target;
+      let upstream;
+      for (let i = 0; i < 5; i++) {
+        upstream = await fetch(currentUrl, { headers, method: request.method, redirect: "manual" });
+        if (upstream.status >= 300 && upstream.status < 400) {
+          const location = upstream.headers.get("location");
+          if (location) {
+            currentUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
+            continue;
+          }
+        }
+        break;
+      }
+      if (!upstream || !upstream.ok) return new Response(null, { status: upstream?.status || 502 });
 
       const contentType = upstream.headers.get("content-type") || "application/octet-stream";
       const upstreamStatus = upstream.status as number;
 
-      if (target.endsWith(".m3u8") || contentType.includes("mpegurl") || contentType.includes("m3u8")) {
+      if (currentUrl.endsWith(".m3u8") || target.endsWith(".m3u8") || contentType.includes("mpegurl") || contentType.includes("m3u8")) {
         const text = await upstream.text();
-        const base = new URL(target);
+        const base = new URL(currentUrl);
         const rewritten = text.split("\n").map(line => {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith("#")) {

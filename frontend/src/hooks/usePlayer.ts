@@ -163,12 +163,17 @@ export function usePlayer({
     let cancelled = false;
     let blobUrl: string | null = null;
     let tryingFFmpeg = false;
+    let triedDirect = false;
+    let triedProxy = false;
     setVideoError(null);
     setIsBuffering(true);
 
-    const playUrl = selectedStream?.proxiedUrl || url;
-    const fmt = detectFormat(playUrl, selectedStream.title, selectedStream.description);
-    console.log('[Player] Stream:', selectedStream.name, '| codec:', fmt.codec, '| format:', fmt.format, '| URL:', playUrl.substring(0, 100));
+    // Try direct URL first (browser follows redirects natively), then proxy
+    const rawUrl = url;
+    const proxyUrl = selectedStream?.proxiedUrl;
+    const playUrl = rawUrl;
+    const fmt = detectFormat(rawUrl, selectedStream.title, selectedStream.description);
+    console.log('[Player] Stream:', selectedStream.name, '| codec:', fmt.codec, '| format:', fmt.format);
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
@@ -206,7 +211,17 @@ export function usePlayer({
       if (cancelled) return;
       const err = video.error;
       const errMsg = err?.message || 'Unknown playback error';
-      console.log('[Player] Native error:', errMsg, '| format:', fmt.format, '| codec:', fmt.codec);
+      console.log('[Player] Native error:', errMsg, '| format:', fmt.format, '| codec:', fmt.codec, '| triedDirect:', triedDirect, '| triedProxy:', triedProxy);
+
+      // If direct URL failed and we have a proxy, try that
+      if (!triedDirect && proxyUrl && proxyUrl !== rawUrl) {
+        triedDirect = true;
+        console.log('[Player] Direct URL failed, trying proxy...');
+        setVideoError(null);
+        video.src = proxyUrl;
+        video.play().catch(() => {});
+        return;
+      }
 
       // For MKV/HEVC/AVI, try streaming player first
       if (!tryingFFmpeg && (fmt.format === 'mkv' || fmt.format === 'avi' || fmt.codec === 'hevc')) {
@@ -248,6 +263,14 @@ export function usePlayer({
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal && !cancelled) {
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            // If direct URL failed on network error, try proxy
+            if (!triedDirect && proxyUrl && proxyUrl !== rawUrl) {
+              triedDirect = true;
+              console.log('[Player] HLS network error on direct URL, trying proxy...');
+              hls?.destroy();
+              playWithHls(proxyUrl);
+              return;
+            }
             hls?.startLoad();
           } else {
             setVideoError(data.error?.message || 'HLS playback error');
@@ -324,10 +347,8 @@ export function usePlayer({
       setIsStreamingPlayer(true);
       setIsBuffering(true);
 
-      // Always use proxiedUrl when available (it handles auth, CORS, redirects)
-      // Only try direct URL when no proxy exists (e.g. HLS from CDN)
-      const hasProxy = !!selectedStream?.proxiedUrl;
-      const urlsToTry = hasProxy ? [sourceUrl] : [sourceUrl];
+      // Try direct URL first, then proxy (browser follows redirects)
+      const urlsToTry = proxyUrl && proxyUrl !== rawUrl ? [rawUrl, proxyUrl] : [rawUrl];
 
       const { MoviPlayer } = await import('movi-player/player');
 
