@@ -38,11 +38,14 @@ export default function Watch() {
     if (!streamsData?.streams) return [];
     return streamsData.streams.map((s) => ({
       url: s.url,
+      proxiedUrl: s.proxiedUrl || undefined,
       name: s.name || s.title,
       title: s.name || s.title,
       quality: s.quality,
       codec: s.videoCodec || s.codec,
       addon: s.addon,
+      addonName: s.addonName,
+      addonUrl: s.addonUrl,
       behaviorHints: s.behaviorHints as any,
     }));
   }, [streamsData, initialStream]);

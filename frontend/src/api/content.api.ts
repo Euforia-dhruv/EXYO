@@ -59,6 +59,7 @@ export interface ContentSearchResult {
 export interface ContentStreamsResult {
   streams: Array<{
     url: string;
+    proxiedUrl?: string;
     name?: string;
     title?: string;
     quality?: string;
@@ -254,6 +255,7 @@ export const contentApi = {
       return {
         streams: result.map((item: any) => ({
           url: item.url,
+          proxiedUrl: item.proxiedUrl,
           name: item.name,
           title: item.title || item.name,
           quality: item.quality || item.description,
@@ -277,6 +279,7 @@ export const contentApi = {
       return {
         streams: result.map((item: any) => ({
           url: item.url,
+          proxiedUrl: item.proxiedUrl,
           name: item.name,
           title: item.title || item.name,
           quality: item.quality || item.description,

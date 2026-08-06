@@ -39,7 +39,7 @@ export default function Detail() {
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', streamEpisodeId || id],
     queryFn: () => contentApi.getStreams(streamEpisodeId || id!),
-    enabled: !!(streamEpisodeId || id) && showStreams,
+    enabled: !!(streamEpisodeId || id),
   });
 
   const watchlist = useConvexQuery(api.watchlist.getWatchlist);

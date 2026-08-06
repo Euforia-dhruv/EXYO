@@ -448,7 +448,13 @@ http.route({
       meta.episodes = episodes;
     }
 
-    return json(meta);
+    const normalized: Record<string, unknown> = {
+      ...meta,
+      backdropUrl: meta.background || meta.poster || meta.backgroundImage || null,
+      posterUrl: meta.poster || meta.background || null,
+    };
+
+    return json(normalized);
   }),
 });
 
