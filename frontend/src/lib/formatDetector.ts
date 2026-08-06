@@ -120,9 +120,12 @@ export async function selectDecodeMethod(
 ): Promise<DecodeMethod> {
   if (format === 'hls') return 'hls.js';
 
-  // Always try native first. The video element will fire an error event
-  // if the codec/container isn't supported, triggering fallback to the
-  // next stream. This avoids ffmpeg trying to download entire multi-GB files.
+  // MKV containers can't play natively — skip straight to streaming player
+  if (format === 'mkv' || format === 'avi' || format === 'flv') return 'webcodecs';
+
+  // HEVC in MP4 may or may not play natively — try native, fallback handled by caller
+  // AV1/VP9 in MP4/WebM should play natively in modern browsers
+
   return 'native';
 }
 

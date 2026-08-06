@@ -193,6 +193,7 @@ export function usePlayer({
       const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
       const nextIdx = currentIdx + 1;
       if (nextIdx < currentStreams.length) {
+        console.log('[Player] Auto-falling back to stream', nextIdx + 1, 'of', currentStreams.length);
         setSelectedStream(currentStreams[nextIdx]);
         setVideoError(null);
       } else {
@@ -207,20 +208,22 @@ export function usePlayer({
       const errMsg = err?.message || 'Unknown playback error';
       console.log('[Player] Native error:', errMsg, '| format:', fmt.format, '| codec:', fmt.codec);
 
-      // For MKV/HEVC/AVI, try WebCodecs streaming player
+      // For MKV/HEVC/AVI, try streaming player first
       if (!tryingFFmpeg && (fmt.format === 'mkv' || fmt.format === 'avi' || fmt.codec === 'hevc')) {
         tryingFFmpeg = true;
         console.log('[Player] Launching streaming player for', fmt.format, fmt.codec);
-        launchStreamingPlayer(playUrl).catch(e => {
-          console.error('[Player] Streaming player failed:', e);
-          setVideoError(`Playback failed: ${e.message || 'Unknown error'}`);
-          setIsBuffering(false);
+        launchStreamingPlayer(playUrl).then(() => {
+          if (!cancelled) console.log('[Player] Streaming player launched');
+        }).catch(e => {
+          console.error('[Player] Streaming player failed, trying next stream:', e.message);
+          if (!cancelled) tryNextStreamPlayback();
         });
         return;
       }
 
-      setVideoError(errMsg);
-      setIsBuffering(false);
+      // Auto-fallback to next stream
+      console.log('[Player] Auto-trying next stream due to:', errMsg);
+      tryNextStreamPlayback();
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -339,13 +342,13 @@ export function usePlayer({
         if (state === 'buffering') setIsBuffering(true);
       });
       player.on('error', (err: any) => {
-        console.error('[Player] MoviPlayer error:', err);
+        console.error('[Player] MoviPlayer error:', err?.message || err);
         if (!cancelled) {
           video.style.display = '';
           canvas.style.display = 'none';
           setIsStreamingPlayer(false);
-          setVideoError(err?.message || 'Streaming player error');
-          setIsBuffering(false);
+          // Auto-fallback to next stream instead of error screen
+          tryNextStreamPlayback();
         }
       });
 
@@ -357,28 +360,33 @@ export function usePlayer({
           player.play();
         }
       } catch (e: any) {
-        console.error('[Player] MoviPlayer load failed:', e);
+        console.error('[Player] MoviPlayer load failed:', e?.message || e);
         if (!cancelled) {
           video.style.display = '';
           canvas.style.display = 'none';
           setIsStreamingPlayer(false);
-          setVideoError(e?.message || 'Failed to load stream');
-          setIsBuffering(false);
+          // Auto-fallback to next stream
+          tryNextStreamPlayback();
         }
       }
     }
 
     (async () => {
       const method = await selectDecodeMethod(fmt.format, fmt.codec);
+      console.log('[Player] Decode method:', method, '| format:', fmt.format, '| codec:', fmt.codec);
 
       if (method === 'hls.js' && Hls.isSupported()) {
         playWithHls(playUrl);
       } else if (method === 'hls.js' && video.canPlayType('application/vnd.apple.mpegurl')) {
         setSourceAndPlay(playUrl);
+      } else if (method === 'webcodecs') {
+        // MKV/AVI/FLV — go straight to streaming player, skip native
+        launchStreamingPlayer(playUrl).catch(e => {
+          console.error('[Player] Streaming player failed:', e?.message || e);
+          if (!cancelled) tryNextStreamPlayback();
+        });
       } else if (method === 'native') {
         setSourceAndPlay(playUrl);
-      } else if (method === 'ffmpeg-remux' || method === 'ffmpeg-decode') {
-        decodeWithFFmpeg(playUrl, fmt.format);
       } else {
         setSourceAndPlay(playUrl);
       }

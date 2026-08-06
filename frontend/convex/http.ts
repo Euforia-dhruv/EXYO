@@ -22,6 +22,33 @@ const STREAM_ADDON_URLS = [
   "https://addon.notorrent2.workers.dev",
 ];
 
+function extractAddonAuth(addonUrl: string): string {
+  // Extract auth_token from PenguPlay-style addon URLs
+  // Format: https://pengu.uk/{%22auth_token%22:%22TOKEN%22}
+  try {
+    const parsed = new URL(addonUrl);
+    const decoded = decodeURIComponent(parsed.pathname + parsed.search);
+    const tokenMatch = decoded.match(/auth_token['":\s]+([A-Za-z0-9_-]+)/);
+    if (tokenMatch) return tokenMatch[1];
+  } catch {}
+  return "";
+}
+
+function buildProxiedUrl(
+  streamUrl: string,
+  referer: string,
+  addonUrl: string,
+): string {
+  let proxyUrl = `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+  if (referer) proxyUrl += `&referer=${encodeURIComponent(referer)}`;
+
+  // Extract auth token from addon URL and forward it
+  const auth = extractAddonAuth(addonUrl);
+  if (auth) proxyUrl += `&auth=${encodeURIComponent(auth)}`;
+
+  return proxyUrl;
+}
+
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -270,7 +297,7 @@ http.route({
               const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
               const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
               const proxiedUrl = streamUrl
-                ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+                ? buildProxiedUrl(streamUrl, referer, addonUrl)
                 : undefined;
               allStreams.push({
                 ...s,
@@ -351,7 +378,7 @@ http.route({
         const proxyHeaders = (behaviorHints as any)?.proxyHeaders?.request;
         const referer = proxyHeaders?.Referer || proxyHeaders?.referer || "";
         const proxiedUrl = streamUrl
-          ? `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}${referer ? `&referer=${encodeURIComponent(referer)}` : ""}`
+          ? buildProxiedUrl(streamUrl, referer, addon)
           : undefined;
         return {
           ...s,
@@ -497,6 +524,7 @@ http.route({
     const url = new URL(request.url);
     const target = url.searchParams.get("url");
     const referer = url.searchParams.get("referer") || "";
+    const auth = url.searchParams.get("auth") || "";
     if (!target) return new Response("url required", { status: 400 });
 
     const proxyOrigin = url.origin;
@@ -506,11 +534,18 @@ http.route({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       };
       if (referer) headers.Referer = referer;
+      if (auth) {
+        // Forward auth token as cookie for addons like PenguPlay
+        headers.Cookie = `auth_token=${auth}`;
+      }
+      const range = request.headers.get("Range");
+      if (range) headers.Range = range;
 
-      const upstream = await fetch(target, { headers });
+      const upstream = await fetch(target, { headers, method: request.method });
       if (!upstream.ok) return new Response(null, { status: upstream.status });
 
       const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+      const upstreamStatus = upstream.status as number;
 
       if (target.endsWith(".m3u8") || contentType.includes("mpegurl") || contentType.includes("m3u8")) {
         const text = await upstream.text();
@@ -552,7 +587,7 @@ http.route({
       const acceptRanges = upstream.headers.get("accept-ranges");
       if (acceptRanges) respHeaders["Accept-Ranges"] = acceptRanges;
 
-      return new Response(upstream.body, { status: 200, headers: respHeaders });
+      return new Response(upstream.body, { status: upstreamStatus, headers: respHeaders });
     } catch (err: any) {
       return new Response("proxy error: " + err.message, { status: 502 });
     }
@@ -563,6 +598,44 @@ http.route({
   path: "/api/proxy",
   method: "OPTIONS",
   handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
+});
+
+http.route({
+  path: "/api/proxy",
+  method: "HEAD",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const target = url.searchParams.get("url");
+    const referer = url.searchParams.get("referer") || "";
+    const auth = url.searchParams.get("auth") || "";
+    if (!target) return new Response(null, { status: 400 });
+
+    try {
+      const headers: Record<string, string> = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      };
+      if (referer) headers.Referer = referer;
+      if (auth) headers.Cookie = `auth_token=${auth}`;
+
+      const upstream = await fetch(target, { method: "HEAD", headers });
+      if (!upstream.ok) return new Response(null, { status: upstream.status });
+
+      const respHeaders: Record<string, string> = {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
+      };
+
+      const contentLength = upstream.headers.get("content-length");
+      if (contentLength) respHeaders["Content-Length"] = contentLength;
+
+      const acceptRanges = upstream.headers.get("accept-ranges");
+      if (acceptRanges) respHeaders["Accept-Ranges"] = acceptRanges;
+
+      return new Response(null, { status: upstream.status, headers: respHeaders });
+    } catch (err: any) {
+      return new Response(null, { status: 502 });
+    }
+  }),
 });
 
 export default http;
