@@ -600,42 +600,4 @@ http.route({
   handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
 });
 
-http.route({
-  path: "/api/proxy",
-  method: "HEAD",
-  handler: httpAction(async (_ctx, request) => {
-    const url = new URL(request.url);
-    const target = url.searchParams.get("url");
-    const referer = url.searchParams.get("referer") || "";
-    const auth = url.searchParams.get("auth") || "";
-    if (!target) return new Response(null, { status: 400 });
-
-    try {
-      const headers: Record<string, string> = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      };
-      if (referer) headers.Referer = referer;
-      if (auth) headers.Cookie = `auth_token=${auth}`;
-
-      const upstream = await fetch(target, { method: "HEAD", headers });
-      if (!upstream.ok) return new Response(null, { status: upstream.status });
-
-      const respHeaders: Record<string, string> = {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
-      };
-
-      const contentLength = upstream.headers.get("content-length");
-      if (contentLength) respHeaders["Content-Length"] = contentLength;
-
-      const acceptRanges = upstream.headers.get("accept-ranges");
-      if (acceptRanges) respHeaders["Accept-Ranges"] = acceptRanges;
-
-      return new Response(null, { status: upstream.status, headers: respHeaders });
-    } catch (err: any) {
-      return new Response(null, { status: 502 });
-    }
-  }),
-});
-
 export default http;

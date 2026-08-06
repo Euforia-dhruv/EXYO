@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `https://${req.headers.host}`);
   const target = url.searchParams.get("url");
   const referer = url.searchParams.get("referer") || "";
+  const auth = url.searchParams.get("auth") || "";
 
   if (!target) {
     return res.status(400).send("url required");
@@ -37,12 +38,13 @@ export default async function handler(req, res) {
   try {
     const headers = { "User-Agent": USER_AGENT };
     if (referer) headers.Referer = referer;
+    if (auth) headers.Cookie = `auth_token=${auth}`;
 
     // Forward Range header for MP4 seeking
     const range = req.headers.range;
     if (range) headers.Range = range;
 
-    const upstream = await fetch(target, { headers, redirect: "follow" });
+    const upstream = await fetch(target, { headers, method: req.method, redirect: "follow" });
     if (!upstream.ok) {
       return res.status(upstream.status).send("upstream error " + upstream.status);
     }
