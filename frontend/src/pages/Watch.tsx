@@ -109,7 +109,7 @@ export default function Watch() {
       : undefined,
   });
 
-  const [showTorrentStats, setShowTorrentStats] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [showNextEpisode, setShowNextEpisode] = useState(false);
 
   useEffect(() => {
@@ -150,10 +150,6 @@ export default function Watch() {
     });
   }, [nextEpisode, navigate, episodes, currentEpisodeIndex, streamType]);
 
-  const handleDismissNextEpisode = useCallback(() => {
-    setShowNextEpisode(false);
-  }, []);
-
   const handleBack = useCallback(() => {
     if (id) {
       const type = id.includes(':') ? 'series' : 'movie';
@@ -163,43 +159,49 @@ export default function Watch() {
     }
   }, [id, navigate]);
 
-  const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const showControlsTemporarily = useCallback(() => {
     player.setShowControls(true);
     document.body.style.cursor = 'default';
-    if (controlsTimeout) clearTimeout(controlsTimeout);
-    const timeout = setTimeout(() => {
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
       if (player.isPlaying) {
         player.setShowControls(false);
         document.body.style.cursor = 'none';
       }
-    }, 4000);
-    setControlsTimeout(timeout);
-  }, [player, controlsTimeout]);
+    }, 3000);
+  }, [player]);
 
-  useEffect(() => () => { if (controlsTimeout) clearTimeout(controlsTimeout); }, [controlsTimeout]);
+  useEffect(() => () => {
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !player.showStreamSelector && !player.showSettings) {
         handleBack();
       }
-      if (e.key === 'd' || e.key === 'D') {
-        if (!(e.target instanceof HTMLInputElement)) {
-          setShowTorrentStats((prev) => !prev);
-        }
+      if ((e.key === 'd' || e.key === 'D') && !(e.target instanceof HTMLInputElement)) {
+        setShowStats((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [handleBack, player.showStreamSelector, player.showSettings]);
 
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('[data-no-play]')) return;
+    player.togglePlay();
+  }, [player]);
+
   return (
     <div
       ref={player.containerRef}
       className="fixed inset-0 bg-black"
       onMouseMove={showControlsTemporarily}
-      onClick={player.togglePlay}
+      onClick={handleContainerClick}
     >
       <video ref={player.videoRef} className="w-full h-full object-contain" playsInline />
       <canvas
@@ -270,13 +272,13 @@ export default function Watch() {
         onOpenStreams={() => player.setShowStreamSelector(true)}
         onSubtitleToggle={player.toggleSubtitles}
         showSubtitles={player.showSubtitles}
-        showStats={showTorrentStats}
-        onToggleStats={() => setShowTorrentStats((p) => !p)}
+        showStats={showStats}
+        onToggleStats={() => setShowStats((p) => !p)}
       />
 
       <StreamStatsOverlay
         videoRef={player.videoRef}
-        visible={showTorrentStats}
+        visible={showStats}
       />
 
       {player.showStreamSelector && (
@@ -305,7 +307,7 @@ export default function Watch() {
         show={showNextEpisode}
         nextEpisode={nextEpisode}
         onPlayNext={handlePlayNextEpisode}
-        onDismiss={handleDismissNextEpisode}
+        onDismiss={() => setShowNextEpisode(false)}
       />
     </div>
   );

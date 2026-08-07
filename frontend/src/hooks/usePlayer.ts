@@ -78,8 +78,8 @@ export function usePlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const controlsTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const streamingPlayerRef = useRef<any | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -128,6 +128,8 @@ export function usePlayer({
   onStreamErrorRef.current = onStreamError;
   const streamsRef = useRef(streams);
   streamsRef.current = streams;
+  const selectedStreamRef = useRef(selectedStream);
+  selectedStreamRef.current = selectedStream;
 
   const lastSaveTime = useRef(0);
   const saveProgress = useCallback(
@@ -150,28 +152,16 @@ export function usePlayer({
       return;
     }
 
-    let hls: Hls | null = null;
     let cancelled = false;
     setVideoError(null);
     setIsBuffering(true);
+    setIsPlaying(false);
 
     const rawUrl = url;
     const proxyUrl = selectedStream?.proxiedUrl;
     const fmt = detectFormat(rawUrl, selectedStream.title, selectedStream.description);
     const method = selectDecodeMethod(fmt.format, fmt.codec);
     console.log(`[Player] Stream: ${selectedStream.name} | format: ${fmt.format} | codec: ${fmt.codec} | method: ${method}`);
-
-    // Exhaustive fallback state machine.
-    // For each stream we try every possible playback method before moving to the next stream.
-    //
-    // HLS streams:
-    //   hls.js (direct) → hls.js (proxy) → streaming player (direct) → streaming player (proxy) → next stream
-    //
-    // Native-compatible streams (MP4, WebM, TS, OGG, etc):
-    //   native (direct) → native (proxy) → streaming player (direct) → streaming player (proxy) → next stream
-    //
-    // Non-native streams (MKV, AVI, FLV, HEVC, WMV, etc):
-    //   streaming player (direct) → streaming player (proxy) → next stream
 
     type Phase =
       | 'hls-direct' | 'hls-proxy' | 'hls-streaming-direct' | 'hls-streaming-proxy'
@@ -185,27 +175,34 @@ export function usePlayer({
       return 'native-direct';
     })();
 
+    const bufferingSafety = setTimeout(() => {
+      if (!cancelled) setIsBuffering(false);
+    }, 15000);
+
     const handleTimeUpdate = () => {
+      if (cancelled) return;
       setCurrentTime(video.currentTime);
       if (video.duration) {
         saveProgress((video.currentTime / video.duration) * 100);
       }
     };
-    const handleLoadedMetadata = () => setDuration(video.duration);
+    const handleLoadedMetadata = () => { if (!cancelled) setDuration(video.duration); };
     const handleProgress = () => {
+      if (cancelled) return;
       if (video.buffered.length > 0) {
         setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
       }
     };
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleWaiting = () => setIsBuffering(true);
-    const handlePlaying = () => setIsBuffering(false);
+    const handlePlay = () => { if (!cancelled) setIsPlaying(true); };
+    const handlePause = () => { if (!cancelled) setIsPlaying(false); };
+    const handleWaiting = () => { if (!cancelled) setIsBuffering(true); };
+    const handlePlaying = () => { if (!cancelled) setIsBuffering(false); };
+    const handleCanPlay = () => { if (!cancelled) setIsBuffering(false); };
 
     function tryNextStream() {
       if (cancelled) return;
       const currentStreams = streamsRef.current;
-      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
+      const currentIdx = currentStreams.findIndex((s) => s === selectedStreamRef.current);
       const nextIdx = currentIdx + 1;
       if (nextIdx < currentStreams.length) {
         console.log(`[Player] All methods exhausted for stream ${currentIdx + 1}. Falling back to stream ${nextIdx + 1} of ${currentStreams.length}`);
@@ -215,7 +212,7 @@ export function usePlayer({
         console.log('[Player] ALL streams exhausted');
         setVideoError('All streams failed to play');
         setIsBuffering(false);
-        onStreamErrorRef.current?.('All streams failed', selectedStream);
+        onStreamErrorRef.current?.('All streams failed', selectedStreamRef.current);
       }
     }
 
@@ -224,15 +221,15 @@ export function usePlayer({
         case 'hls-direct':          return 'hls-proxy';
         case 'hls-proxy':           return 'hls-streaming-direct';
         case 'hls-streaming-direct': return 'hls-streaming-proxy';
-        case 'hls-streaming-proxy':  return null; // done with this stream
+        case 'hls-streaming-proxy':  return null;
 
         case 'native-direct':        return 'native-proxy';
         case 'native-proxy':         return 'native-streaming-direct';
         case 'native-streaming-direct': return 'native-streaming-proxy';
-        case 'native-streaming-proxy':  return null; // done with this stream
+        case 'native-streaming-proxy':  return null;
 
         case 'streaming-direct':     return 'streaming-proxy';
-        case 'streaming-proxy':      return null; // done with this stream
+        case 'streaming-proxy':      return null;
 
         default: return null;
       }
@@ -252,9 +249,9 @@ export function usePlayer({
     }
 
     function cleanupHls() {
-      if (hls) {
-        hls.destroy();
-        hls = null;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     }
 
@@ -289,31 +286,33 @@ export function usePlayer({
     video.addEventListener('pause', handlePause);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
+    video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
 
     function playWithHls(sourceUrl: string, isProxy: boolean) {
       if (cancelled || !video) return;
       cleanupHls();
 
-      hls = new Hls({
+      const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
         maxBufferLength: 30,
         maxMaxBufferLength: 60,
         startLevel: -1,
       });
+      hlsRef.current = hls;
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal && !cancelled) {
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             if (!isProxy && proxyUrl && proxyUrl !== rawUrl) {
               console.log('[Player] HLS network error on direct, trying proxy...');
-              hls?.destroy();
-              hls = null;
+              hlsRef.current?.destroy();
+              hlsRef.current = null;
               playWithHls(proxyUrl, true);
               return;
             }
-            hls?.startLoad();
+            hls.startLoad();
           } else {
             console.log('[Player] HLS fatal non-network error, advancing phase');
             cleanupHls();
@@ -322,24 +321,23 @@ export function usePlayer({
         }
       });
 
-      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_event, data) => {
+        if (cancelled) return;
+        const tracks: Array<{ id: string; label: string; language?: string }> = data.audioTracks.map((at) => ({
+          id: String(at.id),
+          label: at.name || at.lang || `Track ${at.id}`,
+          language: at.lang,
+        }));
+        if (tracks.length > 0) {
+          setAudioTracks(tracks);
+          setActiveAudioTrack(tracks[0]);
+        }
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (!cancelled) {
-          const tracks: Array<{ id: string; label: string; language?: string }> = [];
-          if (hls?.audioTracks) {
-            for (const at of hls.audioTracks) {
-              tracks.push({
-                id: String(at.id),
-                label: at.name || at.lang || `Track ${at.id}`,
-                language: at.lang,
-              });
-            }
-          }
-          if (tracks.length > 0) {
-            setAudioTracks(tracks);
-            setActiveAudioTrack(tracks[0]);
-          }
           setIsBuffering(false);
-          video?.play().catch(() => {});
+          video.play().catch(() => {});
         }
       });
 
@@ -369,10 +367,11 @@ export function usePlayer({
 
         streamingPlayerRef.current = moviPlayer;
 
-        moviPlayer.on('timeupdate', (t: number) => setCurrentTime(t));
+        moviPlayer.on('timeupdate', (t: number) => { if (!cancelled) setCurrentTime(t); });
         moviPlayer.on('statechange', (state: string) => {
-          if (state === 'playing') setIsBuffering(false);
-          if (state === 'ended') setIsBuffering(false);
+          if (cancelled) return;
+          if (state === 'playing') { setIsBuffering(false); setIsPlaying(true); }
+          if (state === 'ended') { setIsBuffering(false); setIsPlaying(false); }
           if (state === 'buffering') setIsBuffering(true);
         });
 
@@ -499,6 +498,7 @@ export function usePlayer({
 
     return () => {
       cancelled = true;
+      clearTimeout(bufferingSafety);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('progress', handleProgress);
@@ -506,32 +506,13 @@ export function usePlayer({
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('playing', handlePlaying);
+      video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
       cleanupHls();
       cleanupStreamingPlayer();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStream]);
-
-  useEffect(() => {
-    const handleMouseMove = () => {
-      setShowControls(true);
-      document.body.style.cursor = 'default';
-      clearTimeout(controlsTimeout.current);
-      controlsTimeout.current = setTimeout(() => {
-        if (isPlaying) {
-          setShowControls(false);
-          document.body.style.cursor = 'none';
-        }
-      }, 3000);
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      clearTimeout(controlsTimeout.current);
-      document.body.style.cursor = 'default';
-    };
-  }, [isPlaying]);
 
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -553,13 +534,14 @@ export function usePlayer({
         case 'c': e.preventDefault(); toggleSubtitles(); break;
         case 'Escape':
           if (showStreamSelector) setShowStreamSelector(false);
+          else if (showSettings) setShowSettings(false);
           else if (document.fullscreenElement) document.exitFullscreen();
           break;
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isPlaying, showStreamSelector]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlaying, showStreamSelector, showSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const togglePlay = useCallback(() => {
     if (streamingPlayerRef.current && isStreamingPlayer) {
@@ -670,9 +652,8 @@ export function usePlayer({
 
   const switchAudioTrack = useCallback((track: { id: string; label: string; language?: string }) => {
     setActiveAudioTrack(track);
-    const hlsInstance = (streamingPlayerRef.current as any)?._hls;
-    if (hlsInstance && hlsInstance.audioTrack !== undefined) {
-      hlsInstance.audioTrack = parseInt(track.id);
+    if (hlsRef.current) {
+      hlsRef.current.audioTrack = parseInt(track.id);
     }
   }, []);
 
@@ -716,18 +697,6 @@ export function usePlayer({
     skip,
     changePlaybackRate,
     toggleSubtitles,
-    tryNextStream: useCallback(() => {
-      const currentStreams = streamsRef.current;
-      const currentIdx = currentStreams.findIndex((s) => s === selectedStream);
-      const nextIdx = currentIdx + 1;
-      if (nextIdx < currentStreams.length) {
-        setSelectedStream(currentStreams[nextIdx]);
-        setVideoError(null);
-      } else {
-        setVideoError('All streams failed to play');
-        setIsBuffering(false);
-      }
-    }, [selectedStream]),
     clearErrorAndOpenSelector,
     downloadStream,
     audioTracks,
