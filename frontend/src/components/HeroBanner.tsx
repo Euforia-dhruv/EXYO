@@ -74,6 +74,12 @@ function HeroBanner({ items, autoPlayInterval = 8000 }: Props) {
   const handlePlay = useCallback(() => {
     if (!currentItem) return;
     const id = currentItem.id || currentItem.imdbId || '';
+    navigate(currentItem.type === 'anime' ? `/anime/${id}` : currentItem.type === 'tv' || currentItem.type === 'series' ? `/series/${id}` : `/movie/${id}`, { state: { autoPlay: true } });
+  }, [currentItem, navigate]);
+
+  const handleDetails = useCallback(() => {
+    if (!currentItem) return;
+    const id = currentItem.id || currentItem.imdbId || '';
     navigate(currentItem.type === 'anime' ? `/anime/${id}` : currentItem.type === 'tv' || currentItem.type === 'series' ? `/series/${id}` : `/movie/${id}`);
   }, [currentItem, navigate]);
 
@@ -179,7 +185,7 @@ function HeroBanner({ items, autoPlayInterval = 8000 }: Props) {
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={handlePlay}
+                onClick={handleDetails}
                 className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl glass glass-border text-white font-bold text-base hover:bg-white/[0.08] transition-all"
               >
                 <Info className="w-6 h-6" />

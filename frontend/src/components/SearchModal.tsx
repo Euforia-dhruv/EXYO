@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
@@ -15,7 +15,15 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
     enabled: query.length >= 2,
   });
 
-  const results: ContentSearchResult['results'] = data?.results || [];
+  const results: ContentSearchResult['results'] = useMemo(() => {
+    const items = data?.results || [];
+    const typePriority: Record<string, number> = { movie: 0, tv: 1, series: 1, anime: 2 };
+    return [...items].sort((a, b) => {
+      const pa = typePriority[a.type || 'movie'] ?? 1;
+      const pb = typePriority[b.type || 'movie'] ?? 1;
+      return pa - pb;
+    });
+  }, [data]);
 
   useEffect(() => {
     if (open) {

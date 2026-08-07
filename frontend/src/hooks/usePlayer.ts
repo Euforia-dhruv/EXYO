@@ -532,16 +532,11 @@ export function usePlayer({
         case 'f': e.preventDefault(); toggleFullscreen(); break;
         case 'm': e.preventDefault(); toggleMute(); break;
         case 'c': e.preventDefault(); toggleSubtitles(); break;
-        case 'Escape':
-          if (showStreamSelector) setShowStreamSelector(false);
-          else if (showSettings) setShowSettings(false);
-          else if (document.fullscreenElement) document.exitFullscreen();
-          break;
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isPlaying, showStreamSelector, showSettings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const togglePlay = useCallback(() => {
     if (streamingPlayerRef.current && isStreamingPlayer) {

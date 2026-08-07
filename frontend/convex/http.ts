@@ -245,8 +245,15 @@ http.route({
     const addonsParam = url.searchParams.get("addons");
     if (!q) return json({ error: "Query required" }, 400);
 
+    const ANIME_ADDON_URL = "https://animestream-addon.keypop3750.workers.dev";
+
     const userAddonUrls = parseAddonUrls(addonsParam);
-    const addonUrls = mergeAddonUrls(userAddonUrls);
+    const allAddonUrls = mergeAddonUrls(userAddonUrls);
+
+    // Exclude anime addon from general search — it pollutes movie/series results
+    const addonUrls = type === "anime"
+      ? allAddonUrls
+      : allAddonUrls.filter((u) => u !== ANIME_ADDON_URL);
 
     // Search both movie and series unless a specific type is requested
     const typesToSearch = type ? [type] : ["movie", "series"];

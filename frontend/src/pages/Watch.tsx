@@ -152,12 +152,12 @@ export default function Watch() {
 
   const handleBack = useCallback(() => {
     if (id) {
-      const type = id.includes(':') ? 'series' : 'movie';
-      navigate(`/${type}/${id}`);
+      const resolvedType = contentType === 'anime' ? 'anime' : id.includes(':') ? 'series' : 'movie';
+      navigate(`/${resolvedType}/${id}`);
     } else {
       navigate(-1);
     }
-  }, [id, navigate]);
+  }, [id, navigate, contentType]);
 
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -179,8 +179,16 @@ export default function Watch() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !player.showStreamSelector && !player.showSettings) {
-        handleBack();
+      if (e.key === 'Escape') {
+        if (player.showStreamSelector) {
+          player.setShowStreamSelector(false);
+        } else if (player.showSettings) {
+          player.setShowSettings(false);
+        } else if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          handleBack();
+        }
       }
       if ((e.key === 'd' || e.key === 'D') && !(e.target instanceof HTMLInputElement)) {
         setShowStats((prev) => !prev);
@@ -188,7 +196,7 @@ export default function Watch() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleBack, player.showStreamSelector, player.showSettings]);
+  }, [handleBack, player.showStreamSelector, player.showSettings, player.setShowStreamSelector, player.setShowSettings]);
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;

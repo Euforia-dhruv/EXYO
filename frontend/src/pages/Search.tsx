@@ -20,7 +20,15 @@ export default function Search() {
     gcTime: 15 * 60 * 1000,
   });
 
-  const results = useMemo(() => data?.results || [], [data]);
+  const results = useMemo(() => {
+    const items = data?.results || [];
+    const typePriority: Record<string, number> = { movie: 0, tv: 1, series: 1, anime: 2 };
+    return [...items].sort((a, b) => {
+      const pa = typePriority[a.type || 'movie'] ?? 1;
+      const pb = typePriority[b.type || 'movie'] ?? 1;
+      return pa - pb;
+    });
+  }, [data]);
 
   return (
     <main className="min-h-screen pt-24 pb-20">

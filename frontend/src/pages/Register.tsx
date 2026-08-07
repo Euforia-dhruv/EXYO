@@ -35,7 +35,7 @@ export default function Register() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="absolute top-6 left-6 z-20"
       >
-        <img src="/logo-full.png" alt="EXYO" className="h-10 object-contain" />
+        <img src="https://exyo.cc.cd/logo-full.png" alt="EXYO" className="h-10 object-contain" />
       </motion.div>
 
       <motion.div
@@ -47,7 +47,7 @@ export default function Register() {
         <div className="bg-black/50 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-8 sm:p-10">
           <div className="text-center mb-8">
             <motion.img
-              src="/logo-full.png"
+              src="https://exyo.cc.cd/logo-full.png"
               alt="EXYO"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}

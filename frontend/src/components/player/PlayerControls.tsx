@@ -51,7 +51,6 @@ export default function PlayerControls({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="absolute inset-0 z-30 flex flex-col"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Top gradient */}
           <div className="h-24 bg-gradient-to-b from-black/70 to-transparent" />
