@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize,
-  Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw,
+  Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw, Activity,
 } from 'lucide-react';
 import { formatTime } from '../../utils/helpers';
 import type { PlayerStream } from '../../hooks/usePlayer';
@@ -18,6 +18,7 @@ interface Props {
   playbackRate: number;
   currentStream: PlayerStream | null;
   showSubtitles: boolean;
+  showStats: boolean;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (vol: number) => void;
@@ -28,13 +29,14 @@ interface Props {
   onOpenSettings: () => void;
   onOpenStreams: () => void;
   onSubtitleToggle: () => void;
+  onToggleStats: () => void;
 }
 
 export default function PlayerControls({
   visible, playing, currentTime, duration, buffered, volume, muted,
   isFullscreen, currentStream, onPlayPause, onSeek, onVolumeChange,
   onMuteToggle, onFullscreenToggle, onBack, onOpenSettings, onOpenStreams,
-  onSubtitleToggle, showSubtitles,
+  onSubtitleToggle, showSubtitles, showStats, onToggleStats,
 }: Props) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const buffPercent = duration > 0 ? (buffered / 100) * 100 : 0;
@@ -174,6 +176,17 @@ export default function PlayerControls({
                   }`}
                 >
                   <Subtitles className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onToggleStats}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                    showStats
+                      ? 'text-red bg-red/10 hover:bg-red/15'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.08]'
+                  }`}
+                  title="Stream Stats (D)"
+                >
+                  <Activity className="w-5 h-5" />
                 </button>
                 <button
                   onClick={onOpenStreams}

@@ -99,6 +99,8 @@ export default function Detail() {
     return seasons.find((s) => s.season === selectedSeason)?.episodes || seasons[0]?.episodes || [];
   }, [seasons, selectedSeason]);
 
+  const isTv = details?.type === 'tv' || details?.type === 'series' || details?.type === 'anime' || contentType === 'anime';
+
   const filteredEpisodes = useMemo(() => {
     if (!episodeSearch.trim()) return currentEpisodes;
     const q = episodeSearch.toLowerCase();
@@ -158,8 +160,6 @@ export default function Detail() {
     const epId = ep.videoId || ep.id || id;
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);
   }, [details, id, openStreamDrawer]);
-
-  const isTv = details?.type === 'tv' || details?.type === 'series' || details?.type === 'anime' || contentType === 'anime';
 
   const handlePlay = useCallback(() => {
     if (isTv) {

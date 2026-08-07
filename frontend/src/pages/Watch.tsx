@@ -270,6 +270,8 @@ export default function Watch() {
         onOpenStreams={() => player.setShowStreamSelector(true)}
         onSubtitleToggle={player.toggleSubtitles}
         showSubtitles={player.showSubtitles}
+        showStats={showTorrentStats}
+        onToggleStats={() => setShowTorrentStats((p) => !p)}
       />
 
       <StreamStatsOverlay
