@@ -98,6 +98,8 @@ export function usePlayer({
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [activeSubtitleUrl, setActiveSubtitleUrl] = useState<string | null>(null);
   const [isStreamingPlayer, setIsStreamingPlayer] = useState(false);
+  const [audioTracks, setAudioTracks] = useState<Array<{ id: string; label: string; language?: string }>>([]);
+  const [activeAudioTrack, setActiveAudioTrack] = useState<{ id: string; label: string; language?: string } | null>(null);
 
   const streams = useMemo(() => sortStreamsByQuality(rawStreams), [rawStreams]);
 
@@ -320,8 +322,22 @@ export function usePlayer({
         }
       });
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         if (!cancelled) {
+          const tracks: Array<{ id: string; label: string; language?: string }> = [];
+          if (hls?.audioTracks) {
+            for (const at of hls.audioTracks) {
+              tracks.push({
+                id: String(at.id),
+                label: at.name || at.lang || `Track ${at.id}`,
+                language: at.lang,
+              });
+            }
+          }
+          if (tracks.length > 0) {
+            setAudioTracks(tracks);
+            setActiveAudioTrack(tracks[0]);
+          }
           setIsBuffering(false);
           video?.play().catch(() => {});
         }
@@ -652,6 +668,14 @@ export function usePlayer({
     document.body.removeChild(a);
   }, []);
 
+  const switchAudioTrack = useCallback((track: { id: string; label: string; language?: string }) => {
+    setActiveAudioTrack(track);
+    const hlsInstance = (streamingPlayerRef.current as any)?._hls;
+    if (hlsInstance && hlsInstance.audioTrack !== undefined) {
+      hlsInstance.audioTrack = parseInt(track.id);
+    }
+  }, []);
+
   return {
     videoRef,
     containerRef,
@@ -706,5 +730,8 @@ export function usePlayer({
     }, [selectedStream]),
     clearErrorAndOpenSelector,
     downloadStream,
+    audioTracks,
+    activeAudioTrack,
+    switchAudioTrack,
   };
 }

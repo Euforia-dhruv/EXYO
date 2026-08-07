@@ -1,4 +1,6 @@
-import { useEffect, useState, useRef, memo } from 'react';
+import { useEffect, useState, useRef, memo, useMemo } from 'react';
+import { parseSubtitles, type SubtitleCue } from '../../lib/subtitleParser';
+import { useSubtitleStore } from '../../store/subtitleStore';
 
 interface Props {
   currentTime: number;
@@ -6,69 +8,28 @@ interface Props {
   isActive: boolean;
 }
 
-interface Cue {
-  start: number;
-  end: number;
-  text: string;
-}
-
-function parseVTT(text: string): Cue[] {
-  const cues: Cue[] = [];
-  const lines = text.split('\n');
-  let i = 0;
-  // Skip WEBVTT header
-  while (i < lines.length && !lines[i].includes('-->')) i++;
-  while (i < lines.length) {
-    if (lines[i].includes('-->')) {
-      const [startStr, endStr] = lines[i].split('-->').map((s) => s.trim());
-      const start = parseTime(startStr);
-      const end = parseTime(endStr);
-      i++;
-      const textLines: string[] = [];
-      while (i < lines.length && lines[i].trim() !== '') {
-        textLines.push(lines[i].trim());
-        i++;
-      }
-      cues.push({ start, end, text: textLines.join('\n') });
-    }
-    i++;
-  }
-  return cues;
-}
-
-function parseTime(str: string): number {
-  const parts = str.split(':');
-  if (parts.length === 3) {
-    const [h, m, s] = parts;
-    return parseInt(h) * 3600 + parseInt(m) * 60 + parseFloat(s);
-  }
-  if (parts.length === 2) {
-    const [m, s] = parts;
-    return parseInt(m) * 60 + parseFloat(s);
-  }
-  return parseFloat(str) || 0;
-}
-
-function stripTags(text: string): string {
-  return text.replace(/<[^>]*>/g, '');
-}
-
 function SubtitleRenderer({ currentTime, subtitleUrl, isActive }: Props) {
-  const [cues, setCues] = useState<Cue[]>([]);
-  const [currentCue, setCurrentCue] = useState<string | null>(null);
+  const [cues, setCues] = useState<SubtitleCue[]>([]);
+  const [currentCue, setCurrentCue] = useState<SubtitleCue | null>(null);
+  const lastUrlRef = useRef('');
+
+  const settings = useSubtitleStore();
 
   useEffect(() => {
-    if (!subtitleUrl || !isActive) return;
+    if (!subtitleUrl || !isActive || subtitleUrl === lastUrlRef.current) return;
+    lastUrlRef.current = subtitleUrl;
     let cancelled = false;
+
     fetch(subtitleUrl)
       .then((r) => r.text())
       .then((text) => {
         if (!cancelled) {
-          const parsed = text.trim().startsWith('WEBVTT') ? parseVTT(text) : [];
+          const parsed = parseSubtitles(text);
           setCues(parsed);
         }
       })
       .catch(() => {});
+
     return () => { cancelled = true; };
   }, [subtitleUrl, isActive]);
 
@@ -78,18 +39,52 @@ function SubtitleRenderer({ currentTime, subtitleUrl, isActive }: Props) {
       return;
     }
     const active = cues.find((c) => currentTime >= c.start && currentTime <= c.end);
-    setCurrentCue(active ? stripTags(active.text) : null);
+    setCurrentCue(active || null);
   }, [currentTime, cues, isActive]);
+
+  const containerStyle = useMemo(() => {
+    const bgAlpha = settings.backgroundOpacity / 100;
+    const textAlpha = settings.opacity / 100;
+    const baseSize = 16 * (settings.size / 100);
+    const shadow = settings.edgeStyle === 'shadow'
+      ? `0 2px 8px ${settings.edgeColor}, 0 0 4px ${settings.edgeColor}`
+      : settings.edgeStyle === 'outline'
+      ? `-1px -1px 0 ${settings.edgeColor}, 1px -1px 0 ${settings.edgeColor}, -1px 1px 0 ${settings.edgeColor}, 1px 1px 0 ${settings.edgeColor}`
+      : settings.edgeStyle === 'glow'
+      ? `0 0 10px ${settings.edgeColor}, 0 0 20px ${settings.edgeColor}`
+      : 'none';
+
+    return {
+      position: settings.position === 'top' ? 'top' as const : 'bottom' as const,
+      opacity: textAlpha,
+      fontSize: `${baseSize}px`,
+      fontWeight: settings.fontWeight,
+      fontFamily: settings.fontFamily,
+      color: settings.color,
+      textShadow: shadow,
+      textAlign: settings.alignment,
+      backgroundColor: bgAlpha > 0 ? settings.backgroundColor : 'transparent',
+      borderRadius: '8px',
+      padding: bgAlpha > 0 ? '6px 16px' : '0',
+      lineHeight: 1.5,
+      maxWidth: '85%',
+      wordBreak: 'break-word',
+    };
+  }, [settings]);
 
   if (!isActive || !currentCue) return null;
 
+  const lines = currentCue.text.split('\n');
+
   return (
-    <div className="absolute bottom-24 inset-x-0 z-20 flex justify-center pointer-events-none px-8">
-      <div
-        className="px-5 py-2.5 rounded-xl bg-black/70 backdrop-blur-sm text-white text-base sm:text-lg font-medium text-center leading-relaxed max-w-[80%]"
-        style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}
-      >
-        {currentCue}
+    <div
+      className="absolute inset-x-0 z-20 flex justify-center pointer-events-none px-8"
+      style={{ bottom: settings.position === 'bottom' ? '80px' : undefined, top: settings.position === 'top' ? '60px' : undefined }}
+    >
+      <div style={containerStyle}>
+        {lines.map((line, i) => (
+          <div key={i}>{line}</div>
+        ))}
       </div>
     </div>
   );

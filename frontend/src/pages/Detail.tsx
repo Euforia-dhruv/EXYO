@@ -127,13 +127,33 @@ export default function Detail() {
     const effectiveId = streamEpisodeId || id;
     if (!details || !effectiveId) return;
     const slug = (details.name || details.title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    const episodeList = isTv && currentEpisodes.length > 0
+      ? currentEpisodes.map((ep: any, i: number) => ({
+          id: ep.videoId || ep.id || id,
+          title: ep.name || ep.title || `Episode ${ep.episodeNumber}`,
+          episodeNumber: ep.episodeNumber || i + 1,
+          seasonNumber: ep.seasonNumber || 1,
+          stillUrl: ep.stillUrl || ep.posterUrl,
+        }))
+      : undefined;
+
+    const epIdx = episodeList?.findIndex((ep) => ep.id === effectiveId) ?? undefined;
+
     navigate(`/watch/${slug}?id=${effectiveId}&stream=${encodeURIComponent(stream.url)}`, {
-      state: { title: details.name || details.title, stream, backdropUrl: details.backdropUrl, contentType },
+      state: {
+        title: details.name || details.title,
+        stream,
+        backdropUrl: details.backdropUrl,
+        contentType,
+        episodes: episodeList,
+        episodeIndex: epIdx,
+      },
     });
     setShowStreams(false);
-  }, [details, id, streamEpisodeId, navigate, contentType]);
+  }, [details, id, streamEpisodeId, navigate, contentType, isTv, currentEpisodes]);
 
-  const handlePlayEpisode = useCallback((ep: any) => {
+  const handlePlayEpisode = useCallback((ep: any, epIdx?: number) => {
     if (!details) return;
     const epId = ep.videoId || ep.id || id;
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);

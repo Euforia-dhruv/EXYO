@@ -17,6 +17,7 @@ interface Props {
   isFullscreen: boolean;
   playbackRate: number;
   currentStream: PlayerStream | null;
+  showSubtitles: boolean;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (vol: number) => void;
@@ -33,7 +34,7 @@ export default function PlayerControls({
   visible, playing, currentTime, duration, buffered, volume, muted,
   isFullscreen, currentStream, onPlayPause, onSeek, onVolumeChange,
   onMuteToggle, onFullscreenToggle, onBack, onOpenSettings, onOpenStreams,
-  onSubtitleToggle,
+  onSubtitleToggle, showSubtitles,
 }: Props) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const buffPercent = duration > 0 ? (buffered / 100) * 100 : 0;
@@ -132,6 +133,12 @@ export default function PlayerControls({
                   {playing ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
                 </button>
                 <button
+                  onClick={() => onSeek(Math.max(0, currentTime - 10))}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+                <button
                   onClick={() => onSeek(Math.min(duration, currentTime + 10))}
                   className="text-white/60 hover:text-white transition-colors"
                 >
@@ -160,7 +167,11 @@ export default function PlayerControls({
               <div className="flex items-center gap-2">
                 <button
                   onClick={onSubtitleToggle}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                    showSubtitles
+                      ? 'text-red bg-red/10 hover:bg-red/15'
+                      : 'text-white/50 hover:text-white hover:bg-white/[0.08]'
+                  }`}
                 >
                   <Subtitles className="w-5 h-5" />
                 </button>

@@ -1,12 +1,17 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
+import { useTorrentPlayer } from '../hooks/useTorrentPlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
+import PlayerSettings from '../components/player/PlayerSettings';
+import NextEpisodePopup from '../components/player/NextEpisodePopup';
+import type { EpisodeInfo } from '../components/player/NextEpisodePopup';
+import TorrentStatsOverlay from '../components/player/TorrentStatsOverlay';
 import { contentApi } from '../api/content.api';
 import { ELogo } from '../components/Logo';
 import { useAuthStore } from '../stores/authStore';
@@ -17,16 +22,18 @@ export default function Watch() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // The actual content ID is passed as a query parameter, not the route param (which is a slug)
   const id = searchParams.get('id') || slug;
-  
+
   const title = location.state?.title as string | undefined;
   const backdropUrl = location.state?.backdropUrl as string | undefined;
   const initialStream = location.state?.stream as PlayerStream | undefined;
   const contentType = location.state?.contentType as string | undefined;
+  const episodes = location.state?.episodes as EpisodeInfo[] | undefined;
+  const currentEpisodeIndex = location.state?.episodeIndex as number | undefined;
   const user = useAuthStore((s) => s.user);
 
   const streamType = contentType || (id?.includes(':') ? 'series' : 'movie');
+  const isTv = streamType === 'series' || streamType === 'anime';
 
   const { data: streamsData, isLoading: streamsLoading } = useQuery({
     queryKey: ['contentStreams', id, streamType],
@@ -61,7 +68,6 @@ export default function Watch() {
       : [];
 
     if (initialStream) {
-      // Put initial stream first, then all others (deduped by URL)
       const seen = new Set<string>();
       seen.add(initialStream.url);
       const rest = fetched.filter((s) => {
@@ -104,11 +110,51 @@ export default function Watch() {
       : undefined,
   });
 
+  const torrent = useTorrentPlayer();
+  const [showTorrentStats, setShowTorrentStats] = useState(false);
+  const [showNextEpisode, setShowNextEpisode] = useState(false);
+
   useEffect(() => {
     if (subtitleTracks.length > 0 && !player.activeSubtitleUrl && player.showSubtitles) {
       player.setActiveSubtitleUrl(subtitleTracks[0].url);
     }
   }, [subtitleTracks, player]);
+
+  const nextEpisode = useMemo<EpisodeInfo | null>(() => {
+    if (!isTv || !episodes || currentEpisodeIndex === undefined) return null;
+    const nextIdx = currentEpisodeIndex + 1;
+    if (nextIdx >= episodes.length) return null;
+    return episodes[nextIdx];
+  }, [isTv, episodes, currentEpisodeIndex]);
+
+  useEffect(() => {
+    if (!nextEpisode) return;
+    if (player.duration > 0 && player.currentTime > 0) {
+      const remaining = player.duration - player.currentTime;
+      if (remaining <= 10 && remaining > 0 && player.isPlaying) {
+        setShowNextEpisode(true);
+      }
+    }
+  }, [player.currentTime, player.duration, player.isPlaying, nextEpisode]);
+
+  const handlePlayNextEpisode = useCallback(() => {
+    if (!nextEpisode) return;
+    setShowNextEpisode(false);
+    const slugName = (nextEpisode.title || `episode-${nextEpisode.episodeNumber}`)
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    navigate(`/watch/${slugName}?id=${nextEpisode.id}`, {
+      state: {
+        title: nextEpisode.title,
+        episodes,
+        episodeIndex: (currentEpisodeIndex ?? 0) + 1,
+        contentType: streamType,
+      },
+    });
+  }, [nextEpisode, navigate, episodes, currentEpisodeIndex, streamType]);
+
+  const handleDismissNextEpisode = useCallback(() => {
+    setShowNextEpisode(false);
+  }, []);
 
   const handleBack = useCallback(() => {
     if (id) {
@@ -171,6 +217,7 @@ export default function Watch() {
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="flex flex-col items-center gap-3">
             <ELogo size={48} animate />
+            <p className="text-white/40 text-sm font-medium">Loading stream...</p>
           </div>
         </div>
       )}
@@ -219,6 +266,19 @@ export default function Watch() {
         onOpenSettings={() => player.setShowSettings(true)}
         onOpenStreams={() => player.setShowStreamSelector(true)}
         onSubtitleToggle={player.toggleSubtitles}
+        showSubtitles={player.showSubtitles}
+      />
+
+      <TorrentStatsOverlay
+        stats={{
+          peers: torrent.peers,
+          downloadSpeed: torrent.downloadSpeed,
+          uploadSpeed: torrent.uploadSpeed,
+          progress: torrent.progress,
+          downloaded: torrent.downloaded,
+          uploaded: torrent.uploaded,
+        }}
+        visible={showTorrentStats && torrent.status !== 'idle'}
       />
 
       {player.showStreamSelector && (
@@ -230,6 +290,25 @@ export default function Watch() {
           loading={streamsLoading}
         />
       )}
+
+      {player.showSettings && (
+        <PlayerSettings
+          open={player.showSettings}
+          onClose={() => player.setShowSettings(false)}
+          playbackRate={player.playbackRate}
+          onSpeedChange={player.changePlaybackRate}
+          audioTracks={player.audioTracks}
+          activeAudioTrack={player.activeAudioTrack}
+          onAudioTrackSelect={player.switchAudioTrack}
+        />
+      )}
+
+      <NextEpisodePopup
+        show={showNextEpisode}
+        nextEpisode={nextEpisode}
+        onPlayNext={handlePlayNextEpisode}
+        onDismiss={handleDismissNextEpisode}
+      />
     </div>
   );
 }
