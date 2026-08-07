@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, LogOut, Settings, ChevronDown } from 'lucide-react';
-import Logo, { ELogo } from './Logo';
+import { Wordmark, ELogo } from './Logo';
 import { useAuthStore } from '../stores/authStore';
 
 const NAV_LINKS = [
@@ -100,7 +100,7 @@ export default function Navbar() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between h-16 lg:h-[72px]">
             <Link to="/home" className="shrink-0">
-              <Logo size="sm" />
+              <Wordmark size="lg" />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-1">
