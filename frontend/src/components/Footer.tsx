@@ -12,7 +12,7 @@ export default function Footer() {
       <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
           <div>
-            <Wordmark size="lg" />
+            <Wordmark size="xl" />
             <p className="text-white/30 text-sm mt-4 leading-relaxed max-w-[240px]">
               Stream everything. Movies, series, anime — all free.
             </p>

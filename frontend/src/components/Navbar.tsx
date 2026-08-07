@@ -100,7 +100,7 @@ export default function Navbar() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between h-16 lg:h-[72px]">
             <Link to="/home" className="shrink-0">
-              <Wordmark size="lg" />
+              <Wordmark size="xl" />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-1">

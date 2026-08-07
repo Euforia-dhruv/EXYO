@@ -56,13 +56,14 @@ export function ELogo({ size = 32, className = '', animate = false }: { size?: n
   );
 }
 
-export function Wordmark({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
+export function Wordmark({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
+  const heights = { sm: 24, md: 28, lg: 40, xl: 56 };
   return (
     <img
       src="/Exyologo-Photoroom.png"
       alt="EXYO"
       className={`object-contain shrink-0 ${className}`}
-      style={{ height: size === 'sm' ? 24 : size === 'md' ? 28 : 40 }}
+      style={{ height: heights[size] }}
     />
   );
 }
