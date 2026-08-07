@@ -4,14 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
-import { useTorrentPlayer } from '../hooks/useTorrentPlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
 import PlayerSettings from '../components/player/PlayerSettings';
 import NextEpisodePopup from '../components/player/NextEpisodePopup';
 import type { EpisodeInfo } from '../components/player/NextEpisodePopup';
-import TorrentStatsOverlay from '../components/player/TorrentStatsOverlay';
+import StreamStatsOverlay from '../components/player/StreamStatsOverlay';
 import { contentApi } from '../api/content.api';
 import { ELogo } from '../components/Logo';
 import { useAuthStore } from '../stores/authStore';
@@ -110,7 +109,6 @@ export default function Watch() {
       : undefined,
   });
 
-  const torrent = useTorrentPlayer();
   const [showTorrentStats, setShowTorrentStats] = useState(false);
   const [showNextEpisode, setShowNextEpisode] = useState(false);
 
@@ -185,6 +183,11 @@ export default function Watch() {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !player.showStreamSelector && !player.showSettings) {
         handleBack();
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        if (!(e.target instanceof HTMLInputElement)) {
+          setShowTorrentStats((prev) => !prev);
+        }
       }
     };
     window.addEventListener('keydown', handler);
@@ -269,16 +272,9 @@ export default function Watch() {
         showSubtitles={player.showSubtitles}
       />
 
-      <TorrentStatsOverlay
-        stats={{
-          peers: torrent.peers,
-          downloadSpeed: torrent.downloadSpeed,
-          uploadSpeed: torrent.uploadSpeed,
-          progress: torrent.progress,
-          downloaded: torrent.downloaded,
-          uploaded: torrent.uploaded,
-        }}
-        visible={showTorrentStats && torrent.status !== 'idle'}
+      <StreamStatsOverlay
+        videoRef={player.videoRef}
+        visible={showTorrentStats}
       />
 
       {player.showStreamSelector && (
