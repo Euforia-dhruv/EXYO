@@ -73,7 +73,7 @@ export default function StreamSelector({ streams, currentStream, onSelect, onClo
             streams.map((stream, i) => {
               const isActive = currentStream?.url === stream.url;
               const qColor = QUALITY_COLORS[stream.quality?.toLowerCase() || ''] || QUALITY_COLORS['480p'];
-              const codec = getCodecBadge(stream.codec || stream.videoCodec);
+              const codec = getCodecBadge(stream.codec || (stream as any).videoCodec);
 
               return (
                 <motion.button

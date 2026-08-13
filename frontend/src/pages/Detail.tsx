@@ -155,7 +155,7 @@ export default function Detail() {
     setShowStreams(false);
   }, [details, id, streamEpisodeId, navigate, contentType, isTv, currentEpisodes]);
 
-  const handlePlayEpisode = useCallback((ep: any, epIdx?: number) => {
+  const handlePlayEpisode = useCallback((ep: any, _epIdx?: number) => {
     if (!details) return;
     const epId = ep.videoId || ep.id || id;
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);
@@ -342,7 +342,7 @@ export default function Detail() {
           {/* Left — Main content */}
           <div className="flex-1 min-w-0">
             {/* Cast */}
-            {details.cast?.length > 0 && (
+            {details.cast && details.cast.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -351,7 +351,7 @@ export default function Detail() {
               >
                 <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Cast</h3>
                 <div className="flex flex-wrap gap-2">
-                  {details.cast.slice(0, 10).map((name) => (
+                  {details.cast!.slice(0, 10).map((name) => (
                     <span key={name} className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.04] text-white/50 text-sm">{name}</span>
                   ))}
                 </div>

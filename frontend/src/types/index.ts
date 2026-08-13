@@ -1,12 +1,12 @@
 export interface CatalogItem {
-  id: string;
+  id?: string;
   imdbId?: string;
   name?: string;
   title?: string;
   posterUrl?: string;
   backdropUrl?: string;
   description?: string;
-  type?: 'movie' | 'tv' | 'series' | 'anime';
+  type?: string;
   year?: string;
   rating?: number;
   runtime?: string;

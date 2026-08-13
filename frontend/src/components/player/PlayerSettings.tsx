@@ -62,7 +62,7 @@ const ALIGN_OPTIONS: Array<{ label: string; value: 'left' | 'center' | 'right' }
 ];
 
 export default function PlayerSettings({
-  open, onClose, playbackRate, onSpeedChange, audioTracks, onAudioTrackSelect, activeAudioTrack,
+  open: _open, onClose, playbackRate, onSpeedChange, audioTracks, onAudioTrackSelect, activeAudioTrack,
 }: Props) {
   const subtitle = useSubtitleStore();
   const [view, setView] = useState<SettingsView>('main');

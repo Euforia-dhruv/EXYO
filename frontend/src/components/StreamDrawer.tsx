@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Check, Shield, Wifi, Film, Music, Globe, HardDrive, Zap } from 'lucide-react';
+import { X, Play, Check, Shield, Wifi, Music, Globe, HardDrive, Zap } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import type { Stream } from '../types';
 import { ELogo } from './Logo';
@@ -111,7 +111,7 @@ function parseFileSize(stream: Stream): string {
   return '';
 }
 
-function getProviderColor(name: string): string {
+function getProviderColor(name?: string): string {
   const lower = (name || '').toLowerCase();
   if (lower.includes('pengu')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
   if (lower.includes('nuvio')) return 'bg-violet-500/10 text-violet-400 border-violet-500/20';

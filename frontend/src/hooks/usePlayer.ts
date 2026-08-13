@@ -103,6 +103,14 @@ export function usePlayer({
 
   const streams = useMemo(() => sortStreamsByQuality(rawStreams), [rawStreams]);
 
+  const proxyMode = useMemo(() => {
+    try {
+      return localStorage.getItem('exyo-proxy') || 'vercel';
+    } catch {
+      return 'vercel';
+    }
+  }, []);
+
   const streamsByAddon = useMemo(() => {
     const groups: Record<string, PlayerStream[]> = {};
     for (const stream of streams) {
@@ -212,24 +220,41 @@ export function usePlayer({
         console.log('[Player] ALL streams exhausted');
         setVideoError('All streams failed to play');
         setIsBuffering(false);
-        onStreamErrorRef.current?.('All streams failed', selectedStreamRef.current);
+        onStreamErrorRef.current?.('All streams failed', selectedStreamRef.current!);
       }
     }
 
     function advancePhase(): Phase | null {
+      const skipProxy = proxyMode === 'direct';
+
       switch (phase) {
-        case 'hls-direct':          return 'hls-proxy';
-        case 'hls-proxy':           return 'hls-streaming-direct';
-        case 'hls-streaming-direct': return 'hls-streaming-proxy';
-        case 'hls-streaming-proxy':  return null;
+        case 'hls-direct':
+          if (skipProxy) return 'hls-streaming-direct';
+          return 'hls-proxy';
+        case 'hls-proxy':
+          return 'hls-streaming-direct';
+        case 'hls-streaming-direct':
+          if (skipProxy) return null;
+          return 'hls-streaming-proxy';
+        case 'hls-streaming-proxy':
+          return null;
 
-        case 'native-direct':        return 'native-proxy';
-        case 'native-proxy':         return 'native-streaming-direct';
-        case 'native-streaming-direct': return 'native-streaming-proxy';
-        case 'native-streaming-proxy':  return null;
+        case 'native-direct':
+          if (skipProxy) return 'native-streaming-direct';
+          return 'native-proxy';
+        case 'native-proxy':
+          return 'native-streaming-direct';
+        case 'native-streaming-direct':
+          if (skipProxy) return null;
+          return 'native-streaming-proxy';
+        case 'native-streaming-proxy':
+          return null;
 
-        case 'streaming-direct':     return 'streaming-proxy';
-        case 'streaming-proxy':      return null;
+        case 'streaming-direct':
+          if (skipProxy) return null;
+          return 'streaming-proxy';
+        case 'streaming-proxy':
+          return null;
 
         default: return null;
       }
@@ -260,13 +285,13 @@ export function usePlayer({
         streamingPlayerRef.current.destroy();
         streamingPlayerRef.current = null;
       }
-      video.style.display = '';
+      video!.style.display = '';
       if (canvasRef.current) canvasRef.current.style.display = 'none';
       setIsStreamingPlayer(false);
     }
 
     function restoreVideoElement() {
-      video.style.display = '';
+      video!.style.display = '';
       if (canvasRef.current) canvasRef.current.style.display = 'none';
       setIsStreamingPlayer(false);
     }
@@ -350,7 +375,7 @@ export function usePlayer({
       const canvas = canvasRef.current;
       if (!canvas) return false;
 
-      video.style.display = 'none';
+      video!.style.display = 'none';
       canvas.style.display = 'block';
       setIsStreamingPlayer(true);
       setIsBuffering(true);
@@ -367,8 +392,8 @@ export function usePlayer({
 
         streamingPlayerRef.current = moviPlayer;
 
-        moviPlayer.on('timeupdate', (t: number) => { if (!cancelled) setCurrentTime(t); });
-        moviPlayer.on('statechange', (state: string) => {
+        (moviPlayer as any).on('timeupdate', (t: number) => { if (!cancelled) setCurrentTime(t); });
+        (moviPlayer as any).on('statechange', (state: string) => {
           if (cancelled) return;
           if (state === 'playing') { setIsBuffering(false); setIsPlaying(true); }
           if (state === 'ended') { setIsBuffering(false); setIsPlaying(false); }
@@ -435,22 +460,22 @@ export function usePlayer({
           break;
 
         case 'native-direct':
-          video.src = rawUrl;
-          video.muted = false;
-          video.play().catch(() => {
-            video.muted = true;
-            video.play().catch(() => {});
+          video!.src = rawUrl;
+          video!.muted = false;
+          video!.play().catch(() => {
+            video!.muted = true;
+            video!.play().catch(() => {});
           });
           break;
 
         case 'native-proxy':
           if (proxyUrl && proxyUrl !== rawUrl) {
             setVideoError(null);
-            video.src = proxyUrl;
-            video.muted = false;
-            video.play().catch(() => {
-              video.muted = true;
-              video.play().catch(() => {});
+            video!.src = proxyUrl;
+            video!.muted = false;
+            video!.play().catch(() => {
+              video!.muted = true;
+              video!.play().catch(() => {});
             });
           } else {
             tryNextPhase();

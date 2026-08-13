@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, X, SkipForward } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 
 export interface EpisodeInfo {
   id: string;

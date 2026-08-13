@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
 import { parseSubtitles, type SubtitleCue } from '../../lib/subtitleParser';
 import { useSubtitleStore } from '../../store/subtitleStore';
 
@@ -42,7 +42,7 @@ function SubtitleRenderer({ currentTime, subtitleUrl, isActive }: Props) {
     setCurrentCue(active || null);
   }, [currentTime, cues, isActive]);
 
-  const containerStyle = useMemo(() => {
+  const containerStyle = useMemo((): React.CSSProperties => {
     const bgAlpha = settings.backgroundOpacity / 100;
     const textAlpha = settings.opacity / 100;
     const baseSize = 16 * (settings.size / 100);
@@ -55,7 +55,6 @@ function SubtitleRenderer({ currentTime, subtitleUrl, isActive }: Props) {
       : 'none';
 
     return {
-      position: settings.position === 'top' ? 'top' as const : 'bottom' as const,
       opacity: textAlpha,
       fontSize: `${baseSize}px`,
       fontWeight: settings.fontWeight,

@@ -139,7 +139,7 @@ export function canPlayNatively(format: VideoFormat, codec: VideoCodec): boolean
 export function needsStreamingPlayer(format: VideoFormat, codec: VideoCodec): boolean {
   const nonNativeFormats: VideoFormat[] = ['mkv', 'avi', 'flv', 'rmvb', 'rm', 'vob', 'wmv'];
   if (nonNativeFormats.includes(format)) return true;
-  if (format === 'hevc' || codec === 'hevc') return true;
+  if (format === 'mkv' || codec === 'hevc') return true;
   if (codec === 'divx' || codec === 'xvid') return true;
   return false;
 }

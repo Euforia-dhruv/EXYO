@@ -19,8 +19,8 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
     const items = data?.results || [];
     const typePriority: Record<string, number> = { movie: 0, tv: 1, series: 1, anime: 2 };
     return [...items].sort((a, b) => {
-      const pa = typePriority[a.type || 'movie'] ?? 1;
-      const pb = typePriority[b.type || 'movie'] ?? 1;
+      const pa = typePriority[a.type || 'movie'] ?? 3;
+      const pb = typePriority[b.type || 'movie'] ?? 3;
       return pa - pb;
     });
   }, [data]);
@@ -38,9 +38,8 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
   const handleSelect = useCallback(
     (item: ContentSearchResult['results'][0]) => {
       const id = item.id || item.imdbId || '';
-      const isAnime = item.type === 'anime';
       const isTv = item.type === 'tv' || item.type === 'series';
-      navigate(isAnime ? `/anime/${id}` : isTv ? `/series/${id}` : `/movie/${id}`);
+      navigate(isTv ? `/series/${id}` : `/movie/${id}`);
       onClose();
       setQuery('');
     },

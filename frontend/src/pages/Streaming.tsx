@@ -19,7 +19,7 @@ const ADDON_OPTIONS = [
   { id: 'aiocatalogs', label: 'AIOCatalogs', desc: 'Additional movie catalogs', url: 'https://aio.pantelx.com' },
 ];
 
-function AddonBadge({ manifest, enabled }: { manifest?: AddonManifest | null; enabled: boolean }) {
+function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: boolean }) {
   if (!manifest) return null;
 
   const resourceNames: string[] = [];
@@ -216,7 +216,7 @@ export default function Streaming() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-white">{manifest?.name || host}</p>
+                      <p className="text-sm font-medium text-white">{String(manifest?.name || host)}</p>
                       {manifest ? (
                         <Wifi className="w-3 h-3 text-green-400 shrink-0" />
                       ) : (

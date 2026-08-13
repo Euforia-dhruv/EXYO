@@ -46,7 +46,6 @@ export function useStreamStats(videoRef: React.RefObject<HTMLVideoElement | null
   const lastBytesRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
   const speedSamplesRef = useRef<number[]>([]);
-  const fetchObserverRef = useRef<PerformanceObserver | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const measureSpeed = useCallback(() => {

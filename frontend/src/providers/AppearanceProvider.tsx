@@ -43,9 +43,8 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const root = document.documentElement;
-    let resolvedTheme = theme;
     if (theme === 'system') {
-      resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     root.style.setProperty('--theme-accent', accentColor);
     root.classList.remove('theme-dark', 'theme-light', 'theme-system');

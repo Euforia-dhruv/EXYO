@@ -9,7 +9,6 @@ interface LogoProps {
 
 export default function Logo({ size = 'md', showWord = true, className = '', animate = false }: LogoProps) {
   const iconSizes = { sm: 32, md: 40, lg: 56 };
-  const wordSizes = { sm: 'text-lg', md: 'text-xl', lg: 'text-3xl' };
   const iconPx = iconSizes[size];
 
   const Wrapper = animate ? motion.div : 'div';

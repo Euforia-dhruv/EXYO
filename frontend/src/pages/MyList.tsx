@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
+import { useQuery as useConvexQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { motion } from 'framer-motion';
 import { ListOrdered } from 'lucide-react';
@@ -8,7 +8,6 @@ import { ELogo } from '../components/Logo';
 
 export default function MyList() {
   const watchlist = useConvexQuery(api.watchlist.getWatchlist);
-  const removeMutation = useConvexMutation(api.watchlist.removeFromWatchlist);
 
   const items = useMemo(() => {
     if (!watchlist || !Array.isArray(watchlist)) return [];

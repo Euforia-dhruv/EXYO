@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, ArrowDown, ArrowUp, Users, BarChart3 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Users, BarChart3 } from 'lucide-react';
 
 export interface TorrentStats {
   peers: number;

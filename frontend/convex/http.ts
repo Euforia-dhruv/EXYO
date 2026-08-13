@@ -3,38 +3,86 @@ import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
 
-const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const PROXY_BASE_URL = "https://exyo.vercel.app";
-
+const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TMDB_ADDON_URL = "https://94c8cb9f702d-tmdb-addon.baby-beamup.club";
 
-const ALL_ADDON_URLS = [
-  CINEMETA_URL,
-  TMDB_ADDON_URL,
-  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
-  "https://animestream-addon.keypop3750.workers.dev",
-  "https://free.flixnest.app",
-  "https://addon.notorrent2.workers.dev",
-  "https://aio.pantelx.com",
-  "https://nuviostreams.hayd.uk",
+// ─────────────────────────────────────────────────────────────
+// Source definitions — ordered by priority (highest first)
+// ─────────────────────────────────────────────────────────────
+interface AddonDef {
+  id: string;
+  url: string;
+  auth?: string;
+  priority: number;
+  /** Which resource categories this addon excels at */
+  categories: ("metadata" | "catalog" | "stream" | "subtitle")[];
+}
+
+const ANIME_ADDON_URL = "https://animestream-addon.keypop3750.workers.dev";
+
+const BUILTIN_ADDONS: AddonDef[] = [
+  {
+    id: "tmdb",
+    url: TMDB_ADDON_URL,
+    priority: 10,
+    categories: ["metadata", "catalog"],
+  },
+  {
+    id: "cinemeta",
+    url: CINEMETA_URL,
+    priority: 9,
+    categories: ["metadata", "catalog"],
+  },
+  {
+    id: "pengu",
+    url: "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
+    auth: "Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0",
+    priority: 7,
+    categories: ["stream"],
+  },
+  {
+    id: "animestream",
+    url: ANIME_ADDON_URL,
+    priority: 6,
+    categories: ["catalog", "stream", "subtitle"],
+  },
+  {
+    id: "flixnest",
+    url: "https://free.flixnest.app",
+    priority: 5,
+    categories: ["catalog", "stream"],
+  },
+  {
+    id: "notorrent",
+    url: "https://addon.notorrent2.workers.dev",
+    priority: 4,
+    categories: ["stream"],
+  },
+  {
+    id: "nuvio",
+    url: "https://nuviostreams.hayd.uk",
+    priority: 3,
+    categories: ["stream"],
+  },
+  {
+    id: "aiocatalogs",
+    url: "https://aio.pantelx.com",
+    priority: 2,
+    categories: ["catalog"],
+  },
 ];
 
-const METADATA_ADDON_URLS = [
-  TMDB_ADDON_URL,
-  CINEMETA_URL,
-];
+function getAddonByUrl(url: string): AddonDef | undefined {
+  const base = url.replace(/\/$/, "");
+  return BUILTIN_ADDONS.find((a) => a.url.replace(/\/$/, "") === base);
+}
 
-const STREAM_ADDON_URLS = [
-  "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
-  "https://animestream-addon.keypop3750.workers.dev",
-  "https://free.flixnest.app",
-  "https://addon.notorrent2.workers.dev",
-  "https://nuviostreams.hayd.uk",
-];
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
 
 function extractAddonAuth(addonUrl: string): string {
-  // Extract auth_token from PenguPlay-style addon URLs
-  // Format: https://pengu.uk/{%22auth_token%22:%22TOKEN%22}
   try {
     const parsed = new URL(addonUrl);
     const decoded = decodeURIComponent(parsed.pathname + parsed.search);
@@ -44,18 +92,11 @@ function extractAddonAuth(addonUrl: string): string {
   return "";
 }
 
-function buildProxiedUrl(
-  streamUrl: string,
-  referer: string,
-  addonUrl: string,
-): string {
+function buildProxiedUrl(streamUrl: string, referer: string, addonUrl: string): string {
   let proxyUrl = `${PROXY_BASE_URL}/api/proxy?url=${encodeURIComponent(streamUrl)}`;
   if (referer) proxyUrl += `&referer=${encodeURIComponent(referer)}`;
-
-  // Extract auth token from addon URL and forward it
   const auth = extractAddonAuth(addonUrl);
   if (auth) proxyUrl += `&auth=${encodeURIComponent(auth)}`;
-
   return proxyUrl;
 }
 
@@ -77,7 +118,7 @@ function parseAddonUrls(addonsParam: string | null): string[] {
 }
 
 function mergeAddonUrls(userAddons: string[]): string[] {
-  return [...new Set([...ALL_ADDON_URLS, ...userAddons])];
+  return [...new Set([...BUILTIN_ADDONS.map((a) => a.url), ...userAddons])];
 }
 
 async function fetchJsonWithTimeout(url: string, timeoutMs = 8000): Promise<unknown | null> {
@@ -102,12 +143,7 @@ async function resolveRedirect(url: string, addonUrl?: string, timeoutMs = 5000)
     };
     const auth = addonUrl ? extractAddonAuth(addonUrl) : "";
     if (auth) headers.Cookie = `auth_token=${auth}`;
-    const res = await fetch(url, {
-      method: "GET",
-      redirect: "manual",
-      signal: controller.signal,
-      headers,
-    });
+    const res = await fetch(url, { method: "GET", redirect: "manual", signal: controller.signal, headers });
     clearTimeout(timer);
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get("location");
@@ -118,6 +154,36 @@ async function resolveRedirect(url: string, addonUrl?: string, timeoutMs = 5000)
     return url;
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// Deduplication
+// ─────────────────────────────────────────────────────────────
+
+function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function metaKey(meta: Record<string, unknown>): string {
+  return (meta.id as string) || (meta.imdb_id as string) || "";
+}
+
+function streamKey(stream: Record<string, unknown>): string {
+  return (stream.url as string) || (stream.infoHash as string) || "";
+}
+
+function subtitleKey(sub: Record<string, unknown>): string {
+  return ((sub.url as string) || "") + ((sub.lang as string) || "");
+}
+
+// ─────────────────────────────────────────────────────────────
+// Content extraction helpers
+// ─────────────────────────────────────────────────────────────
 
 function extractCatalogsFromManifest(manifest: Record<string, unknown>, addonBase: string) {
   const catalogs = manifest.catalogs as Array<Record<string, unknown>> | undefined;
@@ -148,26 +214,43 @@ function extractMetaVideos(meta: Record<string, unknown>, baseId: string) {
     }));
 }
 
+function detectCodec(stream: Record<string, unknown>): string {
+  const title = ((stream.title as string) || "").toLowerCase();
+  const desc = ((stream.description as string) || "").toLowerCase();
+  const name = ((stream.name as string) || "").toLowerCase();
+  const combined = `${title} ${desc} ${name}`;
+  if (combined.includes("hevc") || combined.includes("h.265") || combined.includes("x265")) return "hevc";
+  if (combined.includes("av1") || combined.includes("av01")) return "av1";
+  return "h264";
+}
+
+// ─────────────────────────────────────────────────────────────
+// ROUTES
+// ─────────────────────────────────────────────────────────────
+
 http.route({
   path: "/api/content/:path*",
   method: "OPTIONS",
   handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
 });
 
+// ── Manifests ───────────────────────────────────────────────
 http.route({
   path: "/api/content/manifests",
   method: "GET",
   handler: httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
     const addonsParam = url.searchParams.get("addons");
-    const addonUrls = addonsParam ? parseAddonUrls(addonsParam) : ALL_ADDON_URLS;
+    const userUrls = parseAddonUrls(addonsParam);
+    const allUrls = addonsParam ? mergeAddonUrls(userUrls) : BUILTIN_ADDONS.map((a) => a.url);
 
     const results = await Promise.allSettled(
-      addonUrls.map(async (addonUrl) => {
+      allUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
         const data = await fetchJsonWithTimeout(`${base}/manifest.json`);
         if (!data || typeof data !== "object") return null;
         const m = data as Record<string, unknown>;
+        const def = getAddonByUrl(addonUrl);
         return {
           id: m.id || base,
           name: m.name || base,
@@ -179,18 +262,20 @@ http.route({
           logo: m.logo || "",
           behaviorHints: m.behaviorHints || {},
           addonUrl: base,
+          priority: def?.priority ?? 0,
         };
       })
     );
 
     const manifests = results
-      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
-      .map((r) => r.value);
+      .filter((r) => r.status === "fulfilled" && r.value !== null)
+      .map((r) => (r as PromiseFulfilledResult<unknown>).value);
 
     return json(manifests);
   }),
 });
 
+// ── Catalogs ────────────────────────────────────────────────
 http.route({
   path: "/api/content/catalogs",
   method: "GET",
@@ -219,22 +304,16 @@ http.route({
     );
 
     const allMetas = results
-      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-      .flatMap((r) => r.value);
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<unknown[]>).value);
 
-    const seen = new Set<string>();
-    const deduped = allMetas.filter((m: unknown) => {
-      const meta = m as Record<string, unknown>;
-      const key = (meta.id as string) || (meta.imdb_id as string) || "";
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const deduped = dedupeByKey(allMetas, (m) => metaKey(m as Record<string, unknown>));
 
     return json(deduped, 200, "public, max-age=300");
   }),
 });
 
+// ── Search ──────────────────────────────────────────────────
 http.route({
   path: "/api/content/search",
   method: "GET",
@@ -245,21 +324,13 @@ http.route({
     const addonsParam = url.searchParams.get("addons");
     if (!q) return json({ error: "Query required" }, 400);
 
-    const ANIME_ADDON_URL = "https://animestream-addon.keypop3750.workers.dev";
-
     const userAddonUrls = parseAddonUrls(addonsParam);
     const allAddonUrls = mergeAddonUrls(userAddonUrls);
 
-    // Exclude anime addon from general search — it pollutes movie/series results
-    const addonUrls = type === "anime"
-      ? allAddonUrls
-      : allAddonUrls.filter((u) => u !== ANIME_ADDON_URL);
-
-    // Search both movie and series unless a specific type is requested
-    const typesToSearch = type ? [type] : ["movie", "series"];
+    const typesToSearch = type ? [type] : ["movie", "series", "anime"];
 
     const results = await Promise.allSettled(
-      addonUrls.flatMap((addonUrl) =>
+      allAddonUrls.flatMap((addonUrl) =>
         typesToSearch.map(async (searchType) => {
           const base = addonUrl.replace(/\/$/, "");
           const searchUrl = `${base}/catalog/${searchType}/top/search=${encodeURIComponent(q)}.json`;
@@ -278,22 +349,16 @@ http.route({
     );
 
     const allResults = results
-      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-      .flatMap((r) => r.value);
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<unknown[]>).value);
 
-    const seen = new Set<string>();
-    const deduped = allResults.filter((m: unknown) => {
-      const meta = m as Record<string, unknown>;
-      const key = (meta.id as string) || (meta.imdb_id as string) || "";
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const deduped = dedupeByKey(allResults, (m) => metaKey(m as Record<string, unknown>));
 
     return json(deduped);
   }),
 });
 
+// ── Single manifest ─────────────────────────────────────────
 http.route({
   path: "/api/content/manifest",
   method: "GET",
@@ -309,6 +374,7 @@ http.route({
   }),
 });
 
+// ── Streams ─────────────────────────────────────────────────
 http.route({
   path: "/api/content/streams",
   method: "GET",
@@ -320,7 +386,7 @@ http.route({
     if (!id) return json({ error: "id required" }, 400);
 
     const userAddonUrls = parseAddonUrls(addonsParam);
-    const streamAddonUrls = [...new Set([...STREAM_ADDON_URLS, ...userAddonUrls])];
+    const streamAddonUrls = [...new Set([...BUILTIN_ADDONS.filter((a) => a.categories.includes("stream")).map((a) => a.url), ...userAddonUrls])];
 
     const typesToTry = type === "anime" ? ["anime", "series"] : [type];
 
@@ -339,7 +405,7 @@ http.route({
             const contentType = res.headers.get("content-type") || "";
             if (!contentType.includes("json")) continue;
             const data = await res.json();
-            const allStreamData: Record<string, unknown>[] = [];
+            const allStreamData: Array<{ s: Record<string, unknown>; rawUrl: string; referer: string }> = [];
             for (const s of (data.streams || []) as Record<string, unknown>[]) {
               const rawUrl = s.url as string;
               const behaviorHints = s.behaviorHints as Record<string, unknown> | undefined;
@@ -348,16 +414,16 @@ http.route({
               allStreamData.push({ s, rawUrl, referer });
             }
 
-            // Resolve redirects in parallel (much faster than sequential)
+            // Resolve redirects in parallel
             const resolved = await Promise.all(
-              allStreamData.map(async ({ s, rawUrl, referer }) => {
-                const streamUrl = rawUrl ? await resolveRedirect(rawUrl, addonUrl) : rawUrl;
-                const proxiedUrl = streamUrl
-                  ? buildProxiedUrl(streamUrl, referer, addonUrl)
+              allStreamData.map(async (item) => {
+                const resolvedUrl = item.rawUrl ? await resolveRedirect(item.rawUrl, addonUrl) : item.rawUrl;
+                const proxiedUrl = resolvedUrl
+                  ? buildProxiedUrl(resolvedUrl, item.referer, addonUrl)
                   : undefined;
                 return {
-                  ...s,
-                  url: streamUrl,
+                  ...item.s,
+                  url: resolvedUrl,
                   addonName: addonUrl.split("/")[2] || addonUrl,
                   addonUrl: base,
                   proxiedUrl,
@@ -374,44 +440,28 @@ http.route({
     );
 
     const allStreams = results
-      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-      .flatMap((r) => r.value);
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<unknown[]>).value);
 
-    const seen = new Set<string>();
-    const deduped = allStreams.filter((s: unknown) => {
-      const stream = s as Record<string, unknown>;
-      const key = (stream.url as string) || (stream.infoHash as string) || "";
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    // Dedupe by URL/infoHash
+    const deduped = dedupeByKey(allStreams, (s) => streamKey(s as Record<string, unknown>));
 
-    const playable = deduped.filter((s: unknown) => {
-      const stream = s as Record<string, unknown>;
-      const url = (stream.url as string) || "";
-      if (!url) return false;
-      return true;
-    }).map((s: unknown) => {
-      const stream = s as Record<string, unknown>;
-      const title = ((stream.title as string) || "").toLowerCase();
-      const desc = ((stream.description as string) || "").toLowerCase();
-      const name = ((stream.name as string) || "").toLowerCase();
-      const combined = `${title} ${desc} ${name}`;
-      let codec = "h264";
-      if (combined.includes("hevc") || combined.includes("h.265") || combined.includes("x265")) {
-        codec = "hevc";
-      } else if (combined.includes("av1") || combined.includes("av01")) {
-        codec = "av1";
-      } else if (combined.includes("h.264") || combined.includes("avc") || combined.includes("x264")) {
-        codec = "h264";
-      }
-      return { ...stream, codec };
-    });
+    // Filter to playable + detect codec
+    const playable = deduped
+      .filter((s: unknown) => {
+        const stream = s as Record<string, unknown>;
+        return !!(stream.url as string);
+      })
+      .map((s: unknown) => {
+        const stream = s as Record<string, unknown>;
+        return { ...stream, codec: detectCodec(stream) };
+      });
 
     return json(playable);
   }),
 });
 
+// ── Single addon stream ─────────────────────────────────────
 http.route({
   path: "/api/content/stream",
   method: "GET",
@@ -453,6 +503,7 @@ http.route({
   }),
 });
 
+// ── Subtitles ───────────────────────────────────────────────
 http.route({
   path: "/api/content/subtitles",
   method: "GET",
@@ -482,22 +533,16 @@ http.route({
     );
 
     const allSubs = results
-      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-      .flatMap((r) => r.value);
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<unknown[]>).value);
 
-    const seen = new Set<string>();
-    const deduped = allSubs.filter((s: unknown) => {
-      const sub = s as Record<string, unknown>;
-      const key = ((sub.url as string) || "") + ((sub.lang as string) || "");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const deduped = dedupeByKey(allSubs, (s) => subtitleKey(s as Record<string, unknown>));
 
     return json(deduped);
   }),
 });
 
+// ── Details ─────────────────────────────────────────────────
 http.route({
   path: "/api/content/details",
   method: "GET",
@@ -513,7 +558,7 @@ http.route({
     const typesToTry = type === "anime" ? ["anime", "series"] : [type];
 
     // Phase 1: Try metadata-rich addons first (TMDB, Cinemeta) — fast, good data
-    const metadataUrls = [...new Set([...METADATA_ADDON_URLS, ...userAddonUrls])];
+    const metadataUrls = [...new Set([...BUILTIN_ADDONS.filter((a) => a.categories.includes("metadata")).map((a) => a.url), ...userAddonUrls])];
     const metadataResults = await Promise.allSettled(
       metadataUrls.map(async (addonUrl) => {
         const base = addonUrl.replace(/\/$/, "");
@@ -531,13 +576,13 @@ http.route({
     );
 
     const metadataAddonResults = metadataResults
-      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
-      .map((r) => r.value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
+      .filter((r) => r.status === "fulfilled" && (r as PromiseFulfilledResult<unknown>).value !== null)
+      .map((r) => (r as PromiseFulfilledResult<unknown>).value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
 
     // Phase 2: If no metadata found, try all remaining addons
     let addonResults = metadataAddonResults;
     if (addonResults.length === 0) {
-      const allUrls = [...new Set([...ALL_ADDON_URLS, ...userAddonUrls])];
+      const allUrls = [...new Set([...BUILTIN_ADDONS.map((a) => a.url), ...userAddonUrls])];
       const allResults = await Promise.allSettled(
         allUrls.map(async (addonUrl) => {
           const base = addonUrl.replace(/\/$/, "");
@@ -554,8 +599,8 @@ http.route({
         })
       );
       addonResults = allResults
-        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled" && r.value !== null)
-        .map((r) => r.value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
+        .filter((r) => r.status === "fulfilled" && (r as PromiseFulfilledResult<unknown>).value !== null)
+        .map((r) => (r as PromiseFulfilledResult<unknown>).value as { meta: Record<string, unknown>; addonUrl: string; addonName: string });
     }
 
     if (addonResults.length === 0) {
@@ -566,7 +611,6 @@ http.route({
     let mergedMeta: Record<string, unknown> = {};
     for (const result of addonResults) {
       const m = result.meta;
-      // Prefer non-empty fields from each source
       for (const [key, value] of Object.entries(m)) {
         if (value && (!mergedMeta[key] || mergedMeta[key] === "")) {
           mergedMeta[key] = value;
@@ -609,6 +653,7 @@ http.route({
   }),
 });
 
+// ── Proxy ───────────────────────────────────────────────────
 http.route({
   path: "/api/proxy",
   method: "GET",
@@ -626,10 +671,7 @@ http.route({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       };
       if (referer) headers.Referer = referer;
-      if (auth) {
-        // Forward auth token as cookie for addons like PenguPlay
-        headers.Cookie = `auth_token=${auth}`;
-      }
+      if (auth) headers.Cookie = `auth_token=${auth}`;
       const range = request.headers.get("Range");
       if (range) headers.Range = range;
 

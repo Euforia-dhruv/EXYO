@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Search as SearchIcon } from 'lucide-react';
 import { ELogo } from '../components/Logo';
 import { contentApi } from '../api/content.api';
 import Card from '../components/Card';
@@ -24,8 +23,8 @@ export default function Search() {
     const items = data?.results || [];
     const typePriority: Record<string, number> = { movie: 0, tv: 1, series: 1, anime: 2 };
     return [...items].sort((a, b) => {
-      const pa = typePriority[a.type || 'movie'] ?? 1;
-      const pb = typePriority[b.type || 'movie'] ?? 1;
+      const pa = typePriority[a.type || 'movie'] ?? 3;
+      const pb = typePriority[b.type || 'movie'] ?? 3;
       return pa - pb;
     });
   }, [data]);

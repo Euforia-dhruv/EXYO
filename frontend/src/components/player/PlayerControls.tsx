@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize,
+  Play, Pause, SkipForward, Volume2, VolumeX, Maximize,
   Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw, Activity,
 } from 'lucide-react';
 import { formatTime } from '../../utils/helpers';
