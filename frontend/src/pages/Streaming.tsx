@@ -11,6 +11,9 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
+  { id: 'torrentio', label: 'Torrentio', desc: '4K HDR/DV torrents from 10+ providers (debrid required)', url: 'https://torrentio.strem.fun' },
+  { id: 'mediafusion', label: 'MediaFusion', desc: 'Universal addon: movies, series, live TV, sports (50+ languages)', url: 'https://mediafusion.elfhosted.com' },
+  { id: 'comet', label: 'Comet', desc: 'Fastest torrent/debrid/usenet search addon', url: 'https://comet.elfhosted.com' },
   { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams (4K/HD)', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
   { id: 'nuvio', label: 'Nuvio Streams', desc: 'Multi-provider HTTP streams (4K/HD/HDR)', url: 'https://nuviostreams.hayd.uk' },
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },

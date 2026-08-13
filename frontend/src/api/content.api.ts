@@ -7,6 +7,9 @@ const ADDON_MAP: Record<string, string> = {
   flix: 'https://free.flixnest.app',
   notorrent: 'https://addon.notorrent2.workers.dev',
   aiocatalogs: 'https://aio.pantelx.com',
+  torrentio: 'https://torrentio.strem.fun',
+  mediafusion: 'https://mediafusion.elfhosted.com',
+  comet: 'https://comet.elfhosted.com',
 };
 
 function getEnabledAddonUrls(): string[] {
