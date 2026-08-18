@@ -6,7 +6,7 @@ import { api } from '../../convex/_generated/api';
 import { motion } from 'framer-motion';
 import {
   Play, Plus, Check, Star, Calendar, Clock, ArrowLeft, Share2,
-  Search, PlayCircle, ChevronLeft, ChevronRight, X,
+  Search, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { contentApi } from '../api/content.api';
 import { DetailSkeleton } from '../components/Skeleton';
@@ -353,36 +353,6 @@ export default function Detail() {
                 <div className="flex flex-wrap gap-2">
                   {details.cast!.slice(0, 10).map((name) => (
                     <span key={name} className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.04] text-white/50 text-sm">{name}</span>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Trailers */}
-            {details.trailerStreams && details.trailerStreams.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="mb-10"
-              >
-                <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Trailers</h3>
-                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                  {details.trailerStreams.map((trailer, i) => (
-                    <a
-                      key={`${trailer.url}-${i}`}
-                      href={trailer.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-none w-72 aspect-video rounded-2xl overflow-hidden relative group bg-elevated border border-white/[0.04] hover:border-white/[0.1] transition-all"
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all">
-                        <PlayCircle className="w-14 h-14 text-white/60 group-hover:text-white transition-colors" />
-                      </div>
-                      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                        <span className="text-white text-xs font-medium">{trailer.name || `Trailer ${i + 1}`}</span>
-                      </div>
-                    </a>
                   ))}
                 </div>
               </motion.div>

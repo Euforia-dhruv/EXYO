@@ -69,7 +69,7 @@ function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: bo
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['pengu', 'nuvio', 'anime', 'flix']);
+  const [addons, setAddons] = useState(['pengu', 'nuvio', 'anime', 'flix', 'notorrent', 'webstreamr', 'showbox', 'stremverse', 'aiocatalogs', 'torrentio', 'mediafusion', 'comet']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');
