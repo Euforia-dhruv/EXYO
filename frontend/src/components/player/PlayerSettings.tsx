@@ -331,6 +331,37 @@ export default function PlayerSettings({
                   ))}
                 </div>
               </Section>
+
+              <Section label="Delay">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => subtitle.setDelay(Math.max(-5000, subtitle.delay - 500))}
+                    className="px-3 py-2 rounded-lg text-xs font-medium border bg-white/[0.02] border-white/[0.04] text-white/50 hover:bg-white/[0.05] transition-all"
+                  >
+                    -0.5s
+                  </button>
+                  <div className="flex-1 text-center">
+                    <input
+                      type="range"
+                      min={-5000}
+                      max={5000}
+                      step={100}
+                      value={subtitle.delay}
+                      onChange={(e) => subtitle.setDelay(Number(e.target.value))}
+                      className="w-full accent-red h-1"
+                    />
+                    <span className="text-white/50 text-xs font-mono">
+                      {subtitle.delay > 0 ? '+' : ''}{(subtitle.delay / 1000).toFixed(1)}s
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => subtitle.setDelay(Math.min(5000, subtitle.delay + 500))}
+                    className="px-3 py-2 rounded-lg text-xs font-medium border bg-white/[0.02] border-white/[0.04] text-white/50 hover:bg-white/[0.05] transition-all"
+                  >
+                    +0.5s
+                  </button>
+                </div>
+              </Section>
             </div>
           )}
 

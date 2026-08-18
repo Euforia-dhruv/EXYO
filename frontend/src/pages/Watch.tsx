@@ -14,6 +14,9 @@ import StreamStatsOverlay from '../components/player/StreamStatsOverlay';
 import { contentApi } from '../api/content.api';
 import { ELogo } from '../components/Logo';
 import { useAuthStore } from '../stores/authStore';
+import { formatTime } from '../utils/helpers';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, RotateCcw } from 'lucide-react';
 
 export default function Watch() {
   const { id: slug } = useParams<{ id: string }>();
@@ -112,6 +115,60 @@ export default function Watch() {
   const [showStats, setShowStats] = useState(false);
   const [showNextEpisode, setShowNextEpisode] = useState(false);
 
+  // --- RESUME FROM LAST POSITION ---
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [resumeTime, setResumeTime] = useState(0);
+  const resumeCheckedRef = useRef(false);
+
+  // Resume: check localStorage for saved progress
+  useEffect(() => {
+    if (!user || !id || resumeCheckedRef.current) return;
+    resumeCheckedRef.current = true;
+
+    const checkResume = async () => {
+      try {
+        const mod = await import('convex/react');
+        // Can't call query from here directly, use a different approach
+        // Store last progress in localStorage keyed by contentId
+        const key = `exyo:progress:${id}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const { progress } = JSON.parse(saved);
+          if (progress > 5 && progress < 95) {
+            setResumeTime(progress);
+            setShowResumePrompt(true);
+          }
+        }
+      } catch {}
+    };
+    checkResume();
+  }, [user, id]);
+
+  // Save progress to localStorage as well for resume
+  const lastProgressRef = useRef(0);
+  useEffect(() => {
+    if (!id || player.duration <= 0) return;
+    const pct = (player.currentTime / player.duration) * 100;
+    lastProgressRef.current = pct;
+    if (pct > 5 && pct < 95) {
+      try {
+        localStorage.setItem(`exyo:progress:${id}`, JSON.stringify({ progress: pct, time: player.currentTime }));
+      } catch {}
+    }
+  }, [player.currentTime, player.duration, id]);
+
+  const handleResume = useCallback(() => {
+    if (player.duration > 0) {
+      const seekTo = (resumeTime / 100) * player.duration;
+      player.seekTo(seekTo);
+    }
+    setShowResumePrompt(false);
+  }, [player, resumeTime]);
+
+  const handleStartFromBeginning = useCallback(() => {
+    setShowResumePrompt(false);
+  }, []);
+
   useEffect(() => {
     if (subtitleTracks.length > 0 && !player.activeSubtitleUrl && player.showSubtitles) {
       player.setActiveSubtitleUrl(subtitleTracks[0].url);
@@ -198,9 +255,168 @@ export default function Watch() {
     return () => window.removeEventListener('keydown', handler);
   }, [handleBack, player.showStreamSelector, player.showSettings, player.setShowStreamSelector, player.setShowSettings]);
 
+  // --- LONG-PRESS TO 2X SPEED ---
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressingRef = useRef(false);
+  const prevSpeedRef = useRef(1);
+  const [isLongPressSpeed, setIsLongPressSpeed] = useState(false);
+
+  const handleLongPressStart = useCallback(() => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressingRef.current = true;
+      prevSpeedRef.current = player.playbackRate;
+      player.changePlaybackRate(2);
+      setIsLongPressSpeed(true);
+    }, 400);
+  }, [player.playbackRate]);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (isLongPressingRef.current) {
+      player.changePlaybackRate(prevSpeedRef.current);
+      isLongPressingRef.current = false;
+      setIsLongPressSpeed(false);
+    }
+  }, [player]);
+
+  // --- MOBILE TOUCH GESTURES (swipe + double-tap) ---
+  const isMobile = useMemo(() =>
+    typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+    []
+  );
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const lastTapTimeRef = useRef(0);
+  const lastTapXRef = useRef(0);
+  const [swipeIndicator, setSwipeIndicator] = useState<{ side: 'left' | 'right'; type: 'volume' | 'brightness'; value: number } | null>(null);
+  const [doubleTapSide, setDoubleTapSide] = useState<'left' | 'right' | null>(null);
+  const [doubleTapRipple, setDoubleTapRipple] = useState<{ x: number; y: number; side: 'left' | 'right' } | null>(null);
+  const [longPressIndicator, setLongPressIndicator] = useState(false);
+
+  const brightnessRef = useRef(1);
+  const [brightness, setBrightness] = useState(1);
+  const volumeStartRef = useRef(0);
+  const brightnessStartRef = useRef(0);
+  const swipeStartYRef = useRef(0);
+
+  useEffect(() => {
+    if (isLongPressSpeed) {
+      setLongPressIndicator(true);
+      const t = setTimeout(() => setLongPressIndicator(false), 1500);
+      return () => clearTimeout(t);
+    }
+    setLongPressIndicator(false);
+  }, [isLongPressSpeed]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    volumeStartRef.current = player.volume;
+    brightnessStartRef.current = brightnessRef.current;
+    swipeStartYRef.current = touch.clientY;
+    handleLongPressStart();
+  }, [player.volume, handleLongPressStart]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+
+    // If moved significantly, cancel long-press
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
+
+    const screenW = window.innerWidth;
+    const isLeftSide = touchStartRef.current.x < screenW / 2;
+
+    // Vertical swipe = volume/brightness
+    if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) {
+      const delta = (swipeStartYRef.current - touch.clientY) / window.innerHeight;
+
+      if (isLeftSide) {
+        // Left side = brightness
+        const newBright = Math.max(0.1, Math.min(1, brightnessStartRef.current + delta));
+        brightnessRef.current = newBright;
+        setBrightness(newBright);
+        setSwipeIndicator({ side: 'left', type: 'brightness', value: Math.round(newBright * 100) });
+      } else {
+        // Right side = volume
+        const newVol = Math.max(0, Math.min(1, volumeStartRef.current + delta));
+        player.setVolumeTo(newVol);
+        setSwipeIndicator({ side: 'right', type: 'volume', value: Math.round(newVol * 100) });
+      }
+    } else {
+      setSwipeIndicator(null);
+    }
+  }, [player]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    handleLongPressEnd();
+    setSwipeIndicator(null);
+
+    if (!touchStartRef.current) return;
+    const endTouch = e.changedTouches[0];
+    const dx = endTouch.clientX - touchStartRef.current.x;
+    const dy = endTouch.clientY - touchStartRef.current.y;
+    const elapsed = Date.now() - touchStartRef.current.time;
+
+    // If it was a short tap with minimal movement
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && elapsed < 300) {
+      const now = Date.now();
+      const tapX = endTouch.clientX;
+      const screenW = window.innerWidth;
+      const side = tapX < screenW / 2 ? 'left' : 'right';
+
+      // Double-tap detection (< 300ms, same side)
+      if (now - lastTapTimeRef.current < 300 && Math.abs(tapX - lastTapXRef.current) < screenW / 2) {
+        // Double tap: skip ±10s
+        if (side === 'left') {
+          player.skip(-10);
+        } else {
+          player.skip(10);
+        }
+        // Show ripple
+        setDoubleTapRipple({ x: tapX, y: endTouch.clientY, side });
+        setTimeout(() => setDoubleTapRipple(null), 600);
+        setDoubleTapSide(null);
+        lastTapTimeRef.current = 0;
+      } else {
+        // Single tap: toggle controls
+        lastTapTimeRef.current = now;
+        lastTapXRef.current = tapX;
+        setDoubleTapSide(side);
+
+        // Toggle play on single tap (after short delay to check for double)
+        setTimeout(() => {
+          if (lastTapTimeRef.current === now) {
+            // No double-tap happened, this was a single tap
+            if (player.showControls) {
+              player.setShowControls(false);
+            } else {
+              showControlsTemporarily();
+            }
+          }
+        }, 320);
+      }
+    }
+
+    touchStartRef.current = null;
+  }, [player, handleLongPressEnd, showControlsTemporarily]);
+
+  // Desktop click handler (non-touch devices)
   const lastClickTime = useRef(0);
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    if (isMobile) return; // Mobile uses touch handlers
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('input') || target.closest('[data-no-play]')) return;
     const now = Date.now();
@@ -211,14 +427,23 @@ export default function Watch() {
       lastClickTime.current = now;
       player.togglePlay();
     }
-  }, [player]);
+  }, [player, isMobile]);
+
+  // Mini player: when navigating back with video playing, could show mini player
+  // Currently handled by PiP feature
 
   return (
     <div
       ref={player.containerRef}
       className="fixed inset-0 bg-black"
-      onMouseMove={showControlsTemporarily}
-      onClick={handleContainerClick}
+      onMouseMove={!isMobile ? showControlsTemporarily : undefined}
+      onClick={!isMobile ? handleContainerClick : undefined}
+      onTouchStart={isMobile ? handleTouchStart : undefined}
+      onTouchMove={isMobile ? handleTouchMove : undefined}
+      onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      style={{
+        filter: brightness < 1 ? `brightness(${brightness})` : undefined,
+      }}
     >
       <video ref={player.videoRef} className="w-full h-full object-contain" playsInline />
       <canvas
@@ -226,6 +451,78 @@ export default function Watch() {
         className="absolute inset-0 w-full h-full object-contain"
         style={{ display: player.isStreamingPlayer ? 'block' : 'none' }}
       />
+
+      {/* Long-press 2x speed indicator */}
+      <AnimatePresence>
+        {longPressIndicator && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
+          >
+            <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-3 flex items-center gap-2">
+              <Play className="w-5 h-5 text-white fill-white" />
+              <span className="text-white font-bold text-lg">2x</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Swipe indicator (volume/brightness) */}
+      <AnimatePresence>
+        {swipeIndicator && (
+          <motion.div
+            initial={{ opacity: 0, x: swipeIndicator.side === 'left' ? -20 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0 }}
+            className={`absolute top-1/2 -translate-y-1/2 z-50 pointer-events-none ${
+              swipeIndicator.side === 'left' ? 'left-8' : 'right-8'
+            }`}
+          >
+            <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-4 py-3 flex flex-col items-center gap-1 min-w-[60px]">
+              <div className="text-white text-2xl font-bold">{swipeIndicator.value}%</div>
+              <div className="text-white/50 text-xs uppercase tracking-wider">
+                {swipeIndicator.type === 'volume' ? 'Vol' : 'Bright'}
+              </div>
+              <div className="w-full h-1 bg-white/10 rounded-full mt-1">
+                <div
+                  className="h-full bg-red rounded-full transition-all"
+                  style={{ width: `${swipeIndicator.value}%` }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Double-tap ±10s ripple */}
+      <AnimatePresence>
+        {doubleTapRipple && (
+          <motion.div
+            initial={{ opacity: 0.7, scale: 0 }}
+            animate={{ opacity: 0, scale: 1.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="absolute z-50 pointer-events-none"
+            style={{
+              left: doubleTapRipple.x - 30,
+              top: doubleTapRipple.y - 30,
+            }}
+          >
+            <div className="w-[60px] h-[60px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              {doubleTapRipple.side === 'left' ? (
+                <RotateCcw className="w-6 h-6 text-white" />
+              ) : (
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">10</span>
+                  <span className="text-white text-xs">s</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {player.showSubtitles && player.activeSubtitleUrl && (
         <SubtitleRenderer
@@ -266,6 +563,45 @@ export default function Watch() {
           </div>
         </div>
       )}
+
+      {/* Resume prompt */}
+      <AnimatePresence>
+        {showResumePrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass glass-border rounded-3xl p-8 text-center max-w-sm"
+            >
+              <p className="text-white font-bold text-lg mb-2">Resume Playback</p>
+              <p className="text-white/50 text-sm mb-6">
+                Continue from {formatTime((resumeTime / 100) * (player.duration || 0))}
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleResume(); }}
+                  className="px-6 py-3 rounded-xl bg-red text-white text-sm font-bold hover:bg-red/80 transition-all flex items-center gap-2"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  Resume
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleStartFromBeginning(); }}
+                  className="px-6 py-3 rounded-xl bg-white/[0.08] text-white/60 text-sm font-medium hover:bg-white/[0.14] transition-all"
+                >
+                  Start from Beginning
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <PlayerControls
         visible={player.showControls}

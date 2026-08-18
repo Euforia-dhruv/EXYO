@@ -38,9 +38,10 @@ function SubtitleRenderer({ currentTime, subtitleUrl, isActive }: Props) {
       setCurrentCue(null);
       return;
     }
-    const active = cues.find((c) => currentTime >= c.start && currentTime <= c.end);
+    const adjusted = currentTime + (settings.delay / 1000);
+    const active = cues.find((c) => adjusted >= c.start && adjusted <= c.end);
     setCurrentCue(active || null);
-  }, [currentTime, cues, isActive]);
+  }, [currentTime, cues, isActive, settings.delay]);
 
   const containerStyle = useMemo((): React.CSSProperties => {
     const bgAlpha = settings.backgroundOpacity / 100;

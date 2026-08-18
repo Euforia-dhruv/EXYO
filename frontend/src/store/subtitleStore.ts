@@ -13,6 +13,7 @@ export interface SubtitleSettings {
   alignment: 'left' | 'center' | 'right';
   edgeStyle: 'none' | 'shadow' | 'outline' | 'glow';
   edgeColor: string;
+  delay: number;
 }
 
 interface SubtitleStore extends SubtitleSettings {
@@ -28,6 +29,7 @@ interface SubtitleStore extends SubtitleSettings {
   setAlignment: (v: 'left' | 'center' | 'right') => void;
   setEdgeStyle: (v: 'none' | 'shadow' | 'outline' | 'glow') => void;
   setEdgeColor: (v: string) => void;
+  setDelay: (v: number) => void;
 }
 
 const DEFAULTS: SubtitleSettings = {
@@ -43,6 +45,7 @@ const DEFAULTS: SubtitleSettings = {
   alignment: 'center',
   edgeStyle: 'shadow',
   edgeColor: '#000000',
+  delay: 0,
 };
 
 function load(): SubtitleSettings {
@@ -74,4 +77,5 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   setAlignment: (alignment) => { set({ alignment }); persist({ ...get(), alignment }); },
   setEdgeStyle: (edgeStyle) => { set({ edgeStyle }); persist({ ...get(), edgeStyle }); },
   setEdgeColor: (edgeColor) => { set({ edgeColor }); persist({ ...get(), edgeColor }); },
+  setDelay: (delay) => { set({ delay }); persist({ ...get(), delay }); },
 }));
