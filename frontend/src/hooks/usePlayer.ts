@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Hls from 'hls.js';
 import { detectFormat, selectDecodeMethod } from '../lib/formatDetector';
+import { toWorkersProxyUrl } from '../lib/proxyBuilder';
 
 export interface PlayerStream {
   url: string;
@@ -105,7 +106,7 @@ export function usePlayer({
 
   const proxyMode = useMemo(() => {
     try {
-      return localStorage.getItem('exyo-proxy') || 'vercel';
+      return localStorage.getItem('exyo-proxy') || 'workers';
     } catch {
       return 'vercel';
     }
@@ -166,8 +167,11 @@ export function usePlayer({
     setIsPlaying(false);
 
     const rawUrl = url;
-    const proxyUrl = selectedStream?.proxiedUrl;
     const fmt = detectFormat(rawUrl, selectedStream.title, selectedStream.description);
+    const baseProxyUrl = selectedStream?.proxiedUrl;
+    const proxyUrl = (proxyMode === 'workers' && baseProxyUrl)
+      ? toWorkersProxyUrl(baseProxyUrl, fmt.format === 'hls' ? 'hls' : 'mp4')
+      : baseProxyUrl;
     const method = selectDecodeMethod(fmt.format, fmt.codec);
     console.log(`[Player] Stream: ${selectedStream.name} | format: ${fmt.format} | codec: ${fmt.codec} | method: ${method}`);
 

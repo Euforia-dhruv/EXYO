@@ -6,6 +6,7 @@ import { cn } from '../utils/helpers';
 import { contentApi, type AddonManifest } from '../api/content.api';
 
 const PROXY_OPTIONS = [
+  { id: 'workers', label: 'Workers Proxy', desc: 'Fast — Cloudflare Workers', url: 'https://exyo.cc.cd' },
   { id: 'vercel', label: 'Vercel Proxy', desc: 'Recommended', url: 'https://exyo.vercel.app/api/proxy' },
   { id: 'direct', label: 'Direct', desc: 'No proxy', url: '' },
 ];
