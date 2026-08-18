@@ -20,6 +20,9 @@ const ADDON_OPTIONS = [
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
   { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
   { id: 'notorrent', label: 'NoTorrent', desc: 'Movies & series streams (free + premium)', url: 'https://addon.notorrent2.workers.dev' },
+  { id: 'webstreamr', label: 'WebStreamrMBG', desc: '20+ sources — 4KHDHub, CineHDPlus, Frembed & more', url: 'https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club' },
+  { id: 'showbox', label: 'Showbox', desc: '4K/1080p direct HTTP streams (needs config)', url: 'https://showbox.codiv.dpdns.org' },
+  { id: 'stremverse', label: 'StremVerse', desc: 'Live events, movies & series streams', url: 'https://stremverse.onrender.com' },
   { id: 'aiocatalogs', label: 'AIOCatalogs', desc: 'Additional movie catalogs', url: 'https://aio.pantelx.com' },
 ];
 

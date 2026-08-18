@@ -84,6 +84,24 @@ const BUILTIN_ADDONS: AddonDef[] = [
     categories: ["stream"],
   },
   {
+    id: "webstreamr",
+    url: "https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club",
+    priority: 1,
+    categories: ["stream"],
+  },
+  {
+    id: "showbox",
+    url: "https://showbox.codiv.dpdns.org",
+    priority: 1,
+    categories: ["stream"],
+  },
+  {
+    id: "stremverse",
+    url: "https://stremverse.onrender.com",
+    priority: 1,
+    categories: ["stream"],
+  },
+  {
     id: "nuvio",
     url: "https://nuviostreams.hayd.uk",
     priority: 1,
