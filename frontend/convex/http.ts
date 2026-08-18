@@ -23,6 +23,12 @@ const ANIME_ADDON_URL = "https://animestream-addon.keypop3750.workers.dev";
 
 const BUILTIN_ADDONS: AddonDef[] = [
   {
+    id: "cinepro",
+    url: "https://cinepro-core-bt64.onrender.com/stremio",
+    priority: 11,
+    categories: ["stream"],
+  },
+  {
     id: "tmdb",
     url: TMDB_ADDON_URL,
     priority: 10,

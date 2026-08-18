@@ -1,6 +1,7 @@
 const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
 const ADDON_MAP: Record<string, string> = {
+  cinepro: 'https://cinepro-core-bt64.onrender.com/stremio',
   pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D',
   nuvio: 'https://nuviostreams.hayd.uk',
   anime: 'https://animestream-addon.keypop3750.workers.dev',

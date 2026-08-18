@@ -7,6 +7,14 @@ import type { SourceConfig } from "./types";
 // ─────────────────────────────────────────────────────────────
 const BUILTIN_ADDONS: SourceConfig[] = [
   {
+    id: "cinepro",
+    name: "CinePro",
+    baseUrl: "https://cinepro-core-bt64.onrender.com/stremio",
+    type: "stremio",
+    enabled: true,
+    priority: 11,
+  },
+  {
     id: "cinemeta",
     name: "Cinemeta",
     baseUrl: "https://v3-cinemeta.strem.io",
