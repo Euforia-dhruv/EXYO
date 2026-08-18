@@ -198,10 +198,19 @@ export default function Watch() {
     return () => window.removeEventListener('keydown', handler);
   }, [handleBack, player.showStreamSelector, player.showSettings, player.setShowStreamSelector, player.setShowSettings]);
 
+  const lastClickTime = useRef(0);
+
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('input') || target.closest('[data-no-play]')) return;
-    player.togglePlay();
+    const now = Date.now();
+    if (now - lastClickTime.current < 300) {
+      player.toggleFullscreen();
+      lastClickTime.current = 0;
+    } else {
+      lastClickTime.current = now;
+      player.togglePlay();
+    }
   }, [player]);
 
   return (
@@ -282,6 +291,7 @@ export default function Watch() {
         showSubtitles={player.showSubtitles}
         showStats={showStats}
         onToggleStats={() => setShowStats((p) => !p)}
+        onPiP={player.togglePiP}
       />
 
       <StreamStatsOverlay
@@ -308,6 +318,10 @@ export default function Watch() {
           audioTracks={player.audioTracks}
           activeAudioTrack={player.activeAudioTrack}
           onAudioTrackSelect={player.switchAudioTrack}
+          subtitleTracks={subtitleTracks}
+          activeSubtitleUrl={player.activeSubtitleUrl}
+          onSubtitleTrackSelect={player.selectSubtitleTrack}
+          showSubtitles={player.showSubtitles}
         />
       )}
 

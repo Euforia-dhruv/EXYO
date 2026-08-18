@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Maximize,
-  Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw, Activity,
+  Minimize, Settings, Subtitles, ArrowLeft, Layers, RotateCcw, Activity, PictureInPicture2,
 } from 'lucide-react';
 import { formatTime } from '../../utils/helpers';
 import type { PlayerStream } from '../../hooks/usePlayer';
@@ -30,13 +30,14 @@ interface Props {
   onOpenStreams: () => void;
   onSubtitleToggle: () => void;
   onToggleStats: () => void;
+  onPiP: () => void;
 }
 
 export default function PlayerControls({
   visible, playing, currentTime, duration, buffered, volume, muted,
-  isFullscreen, currentStream, onPlayPause, onSeek, onVolumeChange,
+  isFullscreen, playbackRate, currentStream, onPlayPause, onSeek, onVolumeChange,
   onMuteToggle, onFullscreenToggle, onBack, onOpenSettings, onOpenStreams,
-  onSubtitleToggle, showSubtitles, showStats, onToggleStats,
+  onSubtitleToggle, showSubtitles, showStats, onToggleStats, onPiP,
 }: Props) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const buffPercent = duration > 0 ? (buffered / 100) * 100 : 0;
@@ -200,6 +201,13 @@ export default function PlayerControls({
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
                 >
                   <Settings className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onPiP}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                  title="Picture in Picture"
+                >
+                  <PictureInPicture2 className="w-5 h-5" />
                 </button>
                 <button
                   onClick={onFullscreenToggle}

@@ -14,6 +14,10 @@ interface Props {
   audioTracks: AudioTrackInfo[];
   onAudioTrackSelect: (track: AudioTrackInfo) => void;
   activeAudioTrack: AudioTrackInfo | null;
+  subtitleTracks: SubtitleTrackInfo[];
+  activeSubtitleUrl: string | null;
+  onSubtitleTrackSelect: (track: SubtitleTrackInfo | null) => void;
+  showSubtitles: boolean;
 }
 
 export interface AudioTrackInfo {
@@ -22,9 +26,15 @@ export interface AudioTrackInfo {
   language?: string;
 }
 
+export interface SubtitleTrackInfo {
+  url: string;
+  lang: string;
+  label: string;
+}
+
 const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
-type SettingsView = 'main' | 'speed' | 'subtitles' | 'audio';
+type SettingsView = 'main' | 'speed' | 'subtitles' | 'audio' | 'subtitle-track';
 
 const COLOR_PRESETS = [
   { label: 'White', value: '#ffffff' },
@@ -63,6 +73,7 @@ const ALIGN_OPTIONS: Array<{ label: string; value: 'left' | 'center' | 'right' }
 
 export default function PlayerSettings({
   open: _open, onClose, playbackRate, onSpeedChange, audioTracks, onAudioTrackSelect, activeAudioTrack,
+  subtitleTracks, activeSubtitleUrl, onSubtitleTrackSelect, showSubtitles,
 }: Props) {
   const subtitle = useSubtitleStore();
   const [view, setView] = useState<SettingsView>('main');
@@ -101,7 +112,8 @@ export default function PlayerSettings({
             <h3 className="text-white font-bold text-base">
               {view === 'main' && 'Settings'}
               {view === 'speed' && 'Playback Speed'}
-              {view === 'subtitles' && 'Subtitles'}
+              {view === 'subtitles' && 'Subtitle Style'}
+              {view === 'subtitle-track' && 'Subtitles'}
               {view === 'audio' && 'Audio Track'}
             </h3>
           </div>
@@ -125,7 +137,13 @@ export default function PlayerSettings({
               <SettingRow
                 icon={<Type className="w-4 h-4" />}
                 label="Subtitles"
-                value={subtitle.enabled ? 'On' : 'Off'}
+                value={showSubtitles ? (activeSubtitleUrl ? subtitleTracks.find(t => t.url === activeSubtitleUrl)?.label || 'On' : 'On') : 'Off'}
+                onClick={() => setView('subtitle-track')}
+              />
+              <SettingRow
+                icon={<Type className="w-4 h-4" />}
+                label="Subtitle Style"
+                value={subtitle.enabled ? 'Customized' : 'Default'}
                 onClick={() => setView('subtitles')}
               />
               {audioTracks.length > 0 && (
@@ -333,6 +351,40 @@ export default function PlayerSettings({
                   {track.language && <span className="text-white/30 ml-2">({track.language})</span>}
                 </button>
               ))}
+            </div>
+          )}
+
+          {view === 'subtitle-track' && (
+            <div className="space-y-2">
+              <button
+                onClick={() => onSubtitleTrackSelect(null)}
+                className={cn(
+                  'w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border',
+                  !showSubtitles || !activeSubtitleUrl
+                    ? 'bg-red/10 border-red/20 text-red'
+                    : 'bg-white/[0.02] border-white/[0.04] text-white/60 hover:bg-white/[0.05]'
+                )}
+              >
+                Off
+              </button>
+              {subtitleTracks.map((track) => (
+                <button
+                  key={track.url}
+                  onClick={() => onSubtitleTrackSelect(track)}
+                  className={cn(
+                    'w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border',
+                    activeSubtitleUrl === track.url
+                      ? 'bg-red/10 border-red/20 text-red'
+                      : 'bg-white/[0.02] border-white/[0.04] text-white/60 hover:bg-white/[0.05]'
+                  )}
+                >
+                  {track.label}
+                  <span className="text-white/30 ml-2">({track.lang})</span>
+                </button>
+              ))}
+              {subtitleTracks.length === 0 && (
+                <p className="text-white/30 text-sm text-center py-4">No subtitle tracks available</p>
+              )}
             </div>
           )}
         </div>

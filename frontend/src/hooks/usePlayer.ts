@@ -647,6 +647,16 @@ export function usePlayer({
     setShowSubtitles((prev) => !prev);
   }, []);
 
+  const selectSubtitleTrack = useCallback((track: { url: string; lang: string; label: string } | null) => {
+    if (track) {
+      setActiveSubtitleUrl(track.url);
+      setShowSubtitles(true);
+    } else {
+      setActiveSubtitleUrl(null);
+      setShowSubtitles(false);
+    }
+  }, []);
+
   const selectStream = useCallback((stream: PlayerStream) => {
     setSelectedStream(stream);
     setShowStreamSelector(false);
@@ -717,6 +727,7 @@ export function usePlayer({
     skip,
     changePlaybackRate,
     toggleSubtitles,
+    selectSubtitleTrack,
     clearErrorAndOpenSelector,
     downloadStream,
     audioTracks,
