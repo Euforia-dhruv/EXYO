@@ -231,6 +231,12 @@ const QUALITY_RANK: Record<string, number> = {
 
 function sortStreamsByQuality(streams: Record<string, unknown>[]): Record<string, unknown>[] {
   return [...streams].sort((a, b) => {
+    // Playable URL streams ALWAYS come first
+    const aPlayable = !!(a.url as string) ? 1 : 0;
+    const bPlayable = !!(b.url as string) ? 1 : 0;
+    if (aPlayable !== bPlayable) return bPlayable - aPlayable;
+
+    // Then by quality
     const aQuality = detectQuality(a);
     const bQuality = detectQuality(b);
     const aRank = QUALITY_RANK[aQuality] ?? 0;

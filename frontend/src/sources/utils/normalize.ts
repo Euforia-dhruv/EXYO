@@ -223,9 +223,9 @@ function codecRank(s: Stream): number {
 
 export function rankStreams(streams: Stream[], sourcePriority: Record<string, number> = {}): Stream[] {
   return [...streams].sort((a, b) => {
-    // Prefer direct playable URLs over torrents
-    const aPlayable = a.url && !a.infoHash ? 1 : 0;
-    const bPlayable = b.url && !b.infoHash ? 1 : 0;
+    // Prefer streams with playable URLs
+    const aPlayable = a.url ? 1 : 0;
+    const bPlayable = b.url ? 1 : 0;
     if (aPlayable !== bPlayable) return bPlayable - aPlayable;
 
     // Codec compatibility

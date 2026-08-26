@@ -61,8 +61,8 @@ function codecRank(s: PlayerStream): number {
 
 function sortStreamsByQuality(streams: PlayerStream[]): PlayerStream[] {
   return [...streams].sort((a, b) => {
-    const aPlay = a.url && !a.infoHash ? 1 : 0;
-    const bPlay = b.url && !b.infoHash ? 1 : 0;
+    const aPlay = a.url ? 1 : 0;
+    const bPlay = b.url ? 1 : 0;
     if (aPlay !== bPlay) return bPlay - aPlay;
     const cd = codecRank(b) - codecRank(a);
     if (cd !== 0) return cd;
@@ -127,9 +127,9 @@ export function usePlayer({
 
   useEffect(() => {
     if (streams.length > 0 && autoSelectBest) {
-      const isCurrentStillAvailable = selectedStream && streams.some((s) => s.url === selectedStream.url);
+      const isCurrentStillAvailable = selectedStream && streams.some((s) => s.url === selectedStream.url && s.url);
       if (!selectedStream || !isCurrentStillAvailable) {
-        const best = streams.find((s) => s.url && !s.infoHash) || streams[0];
+        const best = streams.find((s) => s.url) || streams[0];
         setSelectedStream(best);
       }
     }
