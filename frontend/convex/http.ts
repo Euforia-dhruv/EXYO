@@ -648,25 +648,15 @@ http.route({
     const url = new URL(request.url);
     const id = url.searchParams.get("id"); // TMDB ID
     const type = url.searchParams.get("type") || "movie";
-    const season = url.searchParams.get("season") ? parseInt(url.searchParams.get("season")!) : undefined;
-    const episode = url.searchParams.get("episode") ? parseInt(url.searchParams.get("episode")!) : undefined;
 
     if (!id) return json({ error: "TMDB id required" }, 400);
 
     // Extract numeric TMDB ID if prefixed with "tt"
     const tmdbId = id.startsWith("tt") ? id.replace("tt", "") : id;
 
-    const results = await Promise.allSettled([
-      getVidlinkStreams(tmdbId, type, season, episode),
-      getEmbedSuStreams(tmdbId, type),
-      getVidfastStreams(tmdbId, type),
-    ]);
-
-    const allStreams = results
-      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
-      .flatMap((r) => r.value);
-
-    return json(allStreams);
+    // Only VidLink returns direct MP4/HLS URLs — fastest provider
+    const streams = await getVidlinkStreams(tmdbId, type);
+    return json(streams);
   }),
 });
 
