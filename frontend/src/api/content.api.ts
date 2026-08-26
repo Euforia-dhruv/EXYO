@@ -317,6 +317,29 @@ export const contentApi = {
     return result;
   },
 
+  getEmbeds: async (id: string, type = 'movie', season?: number, episode?: number) => {
+    const params: Record<string, string> = { id, type };
+    if (season) params.season = String(season);
+    if (episode) params.episode = String(episode);
+    try {
+      const result = await contentFetch('/embeds', params);
+      if (Array.isArray(result)) {
+        return {
+          streams: result.map((item: any) => ({
+            url: item.url,
+            name: item.name,
+            title: item.title || item.name,
+            quality: item.quality,
+            addonName: item.addonName || item.name,
+          })),
+        } as ContentStreamsResult;
+      }
+      return { streams: [] } as ContentStreamsResult;
+    } catch {
+      return { streams: [] } as ContentStreamsResult;
+    }
+  },
+
   getManifest: async (addon?: string) => {
     return contentFetch('/manifest', addon ? { addon } : undefined);
   },

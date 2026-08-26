@@ -47,6 +47,14 @@ export default function Watch() {
     gcTime: 10 * 60 * 1000,
   });
 
+  const { data: embedsData } = useQuery({
+    queryKey: ['contentEmbeds', id, streamType],
+    queryFn: () => contentApi.getEmbeds(id!, streamType),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
   const { data: subtitlesData } = useQuery({
     queryKey: ['contentSubtitles', id, streamType],
     queryFn: () => contentApi.getSubtitles(id!, streamType),
@@ -73,18 +81,31 @@ export default function Watch() {
         }))
       : [];
 
+    // Merge free embed streams (VidLink, Embed.su, VidFast)
+    const embeds = embedsData?.streams
+      ? embedsData.streams.map((s) => ({
+          url: s.url,
+          name: s.name || s.title,
+          title: s.name || s.title,
+          quality: s.quality,
+          addonName: s.addonName || s.name,
+        }))
+      : [];
+
+    const all = [...embeds, ...fetched];
+
     if (initialStream) {
       const seen = new Set<string>();
       seen.add(initialStream.url);
-      const rest = fetched.filter((s) => {
+      const rest = all.filter((s) => {
         if (seen.has(s.url)) return false;
         seen.add(s.url);
         return true;
       });
       return [initialStream, ...rest];
     }
-    return fetched;
-  }, [streamsData, initialStream]);
+    return all;
+  }, [streamsData, embedsData, initialStream]);
 
   const subtitleTracks = useMemo(() => {
     if (!subtitlesData?.subtitles) return [];

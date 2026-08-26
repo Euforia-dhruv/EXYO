@@ -7,6 +7,75 @@ const PROXY_BASE_URL = "https://exyo.cc.cd";
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TMDB_ADDON_URL = "https://94c8cb9f702d-tmdb-addon.baby-beamup.club";
 
+// ─── Free embed providers (no API key needed) ────────────────
+interface EmbedProvider {
+  name: string;
+  getStreams(tmdbId: string, type: string, season?: number, episode?: number): Promise<unknown[]>;
+}
+
+async function encryptVidlink(tmdbId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://enc-dec.app/api/enc-vidlink?text=${encodeURIComponent(tmdbId)}`);
+    const data = await res.json() as Record<string, unknown>;
+    return (data.result as string) || null;
+  } catch { return null; }
+}
+
+async function getVidlinkStreams(tmdbId: string, type: string, season?: number, episode?: number): Promise<unknown[]> {
+  const encoded = await encryptVidlink(tmdbId);
+  if (!encoded) return [];
+  const path = type === 'tv' && season && episode
+    ? `/api/b/tv/${encoded}/${season}/${episode}`
+    : `/api/b/movie/${encoded}`;
+  const res = await fetch(`https://vidlink.pro${path}?multiLang=0`, {
+    headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://vidlink.pro' },
+  });
+  if (!res.ok) return [];
+  const data = await res.json() as Record<string, unknown>;
+  const stream = data.stream as Record<string, unknown> | undefined;
+  if (!stream?.qualities) return [];
+  const qualities = stream.qualities as Record<string, { url: string }>;
+  return Object.entries(qualities)
+    .filter(([, v]) => v?.url)
+    .map(([q, v]) => ({
+      url: v.url,
+      name: 'VidLink',
+      title: `VidLink ${q}p`,
+      quality: q === '4k' ? '2160p' : `${q}p`,
+      addonName: 'VidLink',
+    }));
+}
+
+async function getEmbedSuStreams(tmdbId: string, type: string): Promise<unknown[]> {
+  const id = type === 'tv' ? `tv/${tmdbId}` : `movie/${tmdbId}`;
+  const res = await fetch(`https://www.embed.su/embed/${id}`, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+  });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const iframeSrc = html.match(/src="(https?:\/\/[^"]*embed[^"]*)"/)?.[1];
+  if (!iframeSrc) return [];
+  // The embed page itself serves as a playable iframe
+  return [{
+    url: iframeSrc,
+    name: 'Embed.su',
+    title: 'Embed.su Stream',
+    quality: '1080p',
+    addonName: 'Embed.su',
+  }];
+}
+
+async function getVidfastStreams(tmdbId: string, type: string): Promise<unknown[]> {
+  const path = type === 'tv' ? `tv/${tmdbId}` : `movie/${tmdbId}`;
+  return [{
+    url: `https://vidfast.vc/${path}`,
+    name: 'VidFast',
+    title: 'VidFast Stream',
+    quality: '1080p',
+    addonName: 'VidFast',
+  }];
+}
+
 interface AddonDef {
   id: string;
   url: string;
@@ -569,6 +638,42 @@ http.route({
 
     return json(deduped);
   }),
+});
+
+// ── Free embed streams (VidLink, Embed.su, VidFast) ─────────
+http.route({
+  path: "/api/content/embeds",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id"); // TMDB ID
+    const type = url.searchParams.get("type") || "movie";
+    const season = url.searchParams.get("season") ? parseInt(url.searchParams.get("season")!) : undefined;
+    const episode = url.searchParams.get("episode") ? parseInt(url.searchParams.get("episode")!) : undefined;
+
+    if (!id) return json({ error: "TMDB id required" }, 400);
+
+    // Extract numeric TMDB ID if prefixed with "tt"
+    const tmdbId = id.startsWith("tt") ? id.replace("tt", "") : id;
+
+    const results = await Promise.allSettled([
+      getVidlinkStreams(tmdbId, type, season, episode),
+      getEmbedSuStreams(tmdbId, type),
+      getVidfastStreams(tmdbId, type),
+    ]);
+
+    const allStreams = results
+      .filter((r): r is PromiseFulfilledResult<unknown[]> => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
+    return json(allStreams);
+  }),
+});
+
+http.route({
+  path: "/api/content/embeds",
+  method: "OPTIONS",
+  handler: httpAction(async () => new Response(null, { status: 204, headers: corsHeaders })),
 });
 
 // ── Details ─────────────────────────────────────────────────
