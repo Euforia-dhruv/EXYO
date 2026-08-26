@@ -170,6 +170,52 @@ export function useTorrentPlayer() {
             'wss://tracker.ilithinks.com',
             'wss://tracker.pirateparty.gr',
             'wss://tracker.zerobytes.xyz',
+            'wss://tracker.openwebtorrent.com:443/announce',
+            'wss://tracker.bot.nu:443/announce',
+            'wss://tracker.quickseed.com:443/announce',
+            'wss://tracker.seederle.com:443/announce',
+            'wss://tracker.coalitionbangula.org:443/announce',
+            'wss://tracker.digitalcraft.cloud:443/announce',
+            'wss://tracker.lilithraws.org:443/announce',
+            'wss://tracker.pussytorrents.org:443/announce',
+            'wss://tracker.tamersunion.org:443/announce',
+            'wss://tracker.torrent.eu.org:443/announce',
+            'wss://tracker.tiny-vps.com:6969/announce',
+            'wss://tracker.kuroy.me:443/announce',
+            'wss://tracker.loligirl.cn:443/announce',
+            'wss://tracker.joinmesh.com:443/announce',
+            'wss://tracker.flashtorrents.org:6969/announce',
+            'wss://tracker.fdtech.club:443/announce',
+            'wss://tracker.cyberia.is:6969/announce',
+            'wss://tracker.lomp.fi:80/announce',
+            'wss://tracker.army:6881/announce',
+            'wss://opentrackr.org:443/announce',
+            'wss://tracker.open-tracker.org:1337/announce',
+            'wss://tracker.opentrackr.org:1337/announce',
+            'wss://tracker.files.fm:7073/announce',
+            'wss://bt1.archive.org:6969/announce',
+            'wss://bt2.archive.org:6969/announce',
+            'wss://explodie.org:6969/announce',
+            'wss://tracker.dler.org:6969/announce',
+            'wss://tracker.torrent.eu.org:451/announce',
+            'wss://tracker.tiny-vps.com:6969/announce',
+            'wss://tracker.openbittorrent.com:80/announce',
+            'wss://open.stealth.si:80/announce',
+            'wss://open.demonii.com:1337/announce',
+            'wss://tracker.p4p.arenabg.com:1337/announce',
+            'wss://tracker.parrotsec.org:6969/announce',
+            'wss://tracker.gmi.gd:6969/announce',
+            'wss://tracker.dump.cl:6969/announce',
+            'wss://tracker.leechlibre.org:6969/announce',
+            'wss://tracker.leech.ie:1337/announce',
+            'wss://tracker.lilithraws.org:6969/announce',
+            'wss://tracker.internetwarriors.net:1337/announce',
+            'wss://tracker.piratebay.org:6969/announce',
+            'wss://tracker.uw0.xyz:6969/announce',
+            'wss://tracker.bitsearch.to:1337/announce',
+            'wss://tracker.gbitt.info:80/announce',
+            'wss://tracker.auctor.tv:6969/announce',
+            'wss://tracker.leechers-paradise.org:6969/announce',
           ],
         });
       }
@@ -183,8 +229,8 @@ export function useTorrentPlayer() {
         }
 
         const timeout = setTimeout(() => {
-          reject(new Error('Torrent metadata timeout (30s)'));
-        }, 30000);
+          reject(new Error('No peers found — trying next stream'));
+        }, 15000);
 
         torrent!.on('ready', () => {
           clearTimeout(timeout);

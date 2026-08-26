@@ -185,6 +185,7 @@ export default function Watch() {
   // ─── Torrent stream resolution ──────────────────────────────
   // When the selected stream is a torrent (infoHash, no playable URL),
   // use WebTorrent to stream directly to the video element.
+  // If it fails, auto-select the next stream (which should be HLS).
   useEffect(() => {
     const stream = player.selectedStream;
     if (!stream || !player.videoRef.current) return;
@@ -205,6 +206,18 @@ export default function Watch() {
       }
     }
   }, [player.selectedStream, torrent]);
+
+  // Auto-fallback: when torrent fails, select next stream
+  useEffect(() => {
+    if (isTorrentStreamRef.current && torrent.status === 'error') {
+      const currentIdx = player.streams.findIndex((s) => s === player.selectedStream);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx < player.streams.length) {
+        torrentResolvingRef.current = false;
+        player.selectStream(player.streams[nextIdx]);
+      }
+    }
+  }, [torrent.status, player]);
 
   // Clean up torrent on unmount
   useEffect(() => {
