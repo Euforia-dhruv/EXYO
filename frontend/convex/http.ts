@@ -231,9 +231,17 @@ const QUALITY_RANK: Record<string, number> = {
 
 function sortStreamsByQuality(streams: Record<string, unknown>[]): Record<string, unknown>[] {
   return [...streams].sort((a, b) => {
-    // Playable URL streams ALWAYS come first
-    const aPlayable = !!(a.url as string) ? 1 : 0;
-    const bPlayable = !!(b.url as string) ? 1 : 0;
+    const aUrl = (a.url as string) || '';
+    const bUrl = (b.url as string) || '';
+    const aIsHls = aUrl.includes('.m3u8') || aUrl.includes('mpegurl');
+    const bIsHls = bUrl.includes('.m3u8') || bUrl.includes('mpegurl');
+
+    // HLS streams first (most likely to play in browser)
+    if (aIsHls !== bIsHls) return aIsHls ? -1 : 1;
+
+    // Then any URL streams over torrent-only
+    const aPlayable = aUrl.startsWith('http') ? 1 : 0;
+    const bPlayable = bUrl.startsWith('http') ? 1 : 0;
     if (aPlayable !== bPlayable) return bPlayable - aPlayable;
 
     // Then by quality
