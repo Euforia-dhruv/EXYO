@@ -10,8 +10,17 @@ const CLIENT_HINTS = {
   "sec-ch-ua-platform": '"Windows"',
 };
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+  "Access-Control-Allow-Headers": "Range, Content-Type, Referer",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
+};
+
 function browserHeaders(referer) {
-  return { "User-Agent": USER_AGENT, ...CLIENT_HINTS, Referer: referer };
+  const headers = { "User-Agent": USER_AGENT, ...CLIENT_HINTS };
+  if (referer) headers.Referer = referer;
+  return headers;
 }
 
 const HLS_PREFIX = "/hls/";
@@ -56,8 +65,8 @@ async function handleHls(request, path, origin) {
   const token = tokenWithExt.replace(/\.(m3u8|ts)$/, "");
   const { u: target, r: referer } = decodeToken(token);
 
-  const upstream = await fetch(target, { headers: browserHeaders(referer) });
-  if (!upstream.ok) return new Response(null, { status: upstream.status });
+  const upstream = await fetch(target, { headers: browserHeaders(referer), redirect: "follow" });
+  if (!upstream.ok) return new Response(null, { status: upstream.status, headers: CORS_HEADERS });
 
   const isPlaylist = new URL(target).pathname.endsWith(".m3u8");
 
@@ -66,21 +75,23 @@ async function handleHls(request, path, origin) {
     return new Response(rewritePlaylist(text, target, referer, origin), {
       status: 200,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        ...CORS_HEADERS,
         "Content-Type": "application/vnd.apple.mpegurl",
         "Cache-Control": "no-cache",
       },
     });
   }
 
-  return new Response(upstream.body, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Content-Type": upstream.headers.get("content-type") || "video/MP2T",
-      "Cache-Control": "public, max-age=86400",
-    },
-  });
+  const respHeaders = {
+    ...CORS_HEADERS,
+    "Content-Type": upstream.headers.get("content-type") || "video/MP2T",
+    "Cache-Control": "public, max-age=86400",
+  };
+
+  const contentLength = upstream.headers.get("content-length");
+  if (contentLength) respHeaders["Content-Length"] = contentLength;
+
+  return new Response(upstream.body, { status: 200, headers: respHeaders });
 }
 
 async function handleMp4(request, path) {
@@ -88,45 +99,53 @@ async function handleMp4(request, path) {
   const { u: target, r: referer } = decodeToken(token);
 
   const range = request.headers.get("Range");
+  const fetchHeaders = {
+    "User-Agent": USER_AGENT,
+    ...CLIENT_HINTS,
+  };
+  if (referer) fetchHeaders.Referer = referer;
+  if (range) fetchHeaders.Range = range;
+
   const upstream = await fetch(target, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      Referer: referer,
-      ...CLIENT_HINTS,
-      Range: range || "bytes=0-",
-    },
+    headers: fetchHeaders,
     redirect: "follow",
   });
 
-  const headers = new Headers();
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Accept-Ranges", "bytes");
-  headers.set("Content-Type", upstream.headers.get("content-type") || "video/mp4");
+  const respHeaders = { ...CORS_HEADERS };
+
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) respHeaders["Content-Type"] = contentType;
+  else respHeaders["Content-Type"] = "video/mp4";
+
+  respHeaders["Accept-Ranges"] = "bytes";
+  respHeaders["Cache-Control"] = "public, max-age=86400";
 
   const contentRange = upstream.headers.get("content-range");
-  if (range && contentRange) {
-    headers.set("Content-Range", contentRange);
-    const len = upstream.headers.get("content-length");
-    if (len) headers.set("Content-Length", len);
-  } else if (contentRange) {
-    const total = contentRange.split("/")[1];
-    if (total) headers.set("Content-Length", total);
+  if (contentRange) {
+    respHeaders["Content-Range"] = contentRange;
   }
 
-  const status = range ? upstream.status : 200;
-  return new Response(upstream.body, { status, headers });
+  const contentLength = upstream.headers.get("content-length");
+  if (contentLength) respHeaders["Content-Length"] = contentLength;
+
+  return new Response(upstream.body, { status: upstream.status, headers: respHeaders });
 }
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     try {
       if (path.startsWith(HLS_PREFIX)) return await handleHls(request, path, url.origin);
       if (path.startsWith(MP4_PREFIX)) return await handleMp4(request, path);
-      return new Response("EXYO proxy — OK", { status: 200 });
+      return new Response("EXYO proxy — OK", { status: 200, headers: CORS_HEADERS });
     } catch (err) {
-      return new Response("proxy error: " + err.message, { status: 502 });
+      return new Response("proxy error: " + err.message, { status: 502, headers: CORS_HEADERS });
     }
   },
 };

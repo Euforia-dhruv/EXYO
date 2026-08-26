@@ -205,7 +205,7 @@ export function dedupeSubtitles(subs: Subtitle[]): Subtitle[] {
 // Ranking
 // ─────────────────────────────────────────────────────────────
 const QUALITY_RANK: Record<string, number> = {
-  "2160p": 5, "4k": 5, "1080p": 4, "720p": 3, "480p": 2, "360p": 1,
+  "2160p": 6, "4k": 6, "1080p": 4, "720p": 3, "480p": 2, "360p": 1,
 };
 
 function rankQuality(q?: string): number {

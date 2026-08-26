@@ -3,7 +3,7 @@ import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
 
-const PROXY_BASE_URL = "https://exyo.vercel.app";
+const PROXY_BASE_URL = "https://exyo.cc.cd";
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TMDB_ADDON_URL = "https://94c8cb9f702d-tmdb-addon.baby-beamup.club";
 
@@ -70,48 +70,6 @@ const BUILTIN_ADDONS: AddonDef[] = [
     url: ANIME_ADDON_URL,
     priority: 4,
     categories: ["catalog", "stream", "subtitle"],
-  },
-  {
-    id: "flixnest",
-    url: "https://free.flixnest.app",
-    priority: 3,
-    categories: ["catalog", "stream"],
-  },
-  {
-    id: "notorrent",
-    url: "https://addon.notorrent2.workers.dev",
-    priority: 2,
-    categories: ["stream"],
-  },
-  {
-    id: "webstreamr",
-    url: "https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club",
-    priority: 1,
-    categories: ["stream"],
-  },
-  {
-    id: "showbox",
-    url: "https://showbox.codiv.dpdns.org",
-    priority: 1,
-    categories: ["stream"],
-  },
-  {
-    id: "stremverse",
-    url: "https://stremverse.onrender.com",
-    priority: 1,
-    categories: ["stream"],
-  },
-  {
-    id: "nuvio",
-    url: "https://nuviostreams.hayd.uk",
-    priority: 1,
-    categories: ["stream"],
-  },
-  {
-    id: "aiocatalogs",
-    url: "https://aio.pantelx.com",
-    priority: 0,
-    categories: ["catalog"],
   },
 ];
 
@@ -252,7 +210,7 @@ function extractMetaVideos(meta: Record<string, unknown>, baseId: string) {
       description: v.description || "",
       runtime: v.runtime,
       rating: v.imdbRating ? Number(v.imdbRating) : undefined,
-      stillUrl: v.poster || v.thumb,
+      stillUrl: v.still || v.stillUrl || v.thumbnail || v.image || v.poster || v.thumb,
     }));
 }
 
@@ -264,6 +222,33 @@ function detectCodec(stream: Record<string, unknown>): string {
   if (combined.includes("hevc") || combined.includes("h.265") || combined.includes("x265")) return "hevc";
   if (combined.includes("av1") || combined.includes("av01")) return "av1";
   return "h264";
+}
+
+function detectQuality(stream: Record<string, unknown>): string {
+  const title = ((stream.title as string) || "").toLowerCase();
+  const desc = ((stream.description as string) || "").toLowerCase();
+  const name = ((stream.name as string) || "").toLowerCase();
+  const combined = `${title} ${desc} ${name}`;
+  if (combined.includes("2160") || combined.includes("4k")) return "2160p";
+  if (combined.includes("1080")) return "1080p";
+  if (combined.includes("720")) return "720p";
+  if (combined.includes("480")) return "480p";
+  if (combined.includes("360")) return "360p";
+  return "";
+}
+
+const QUALITY_RANK: Record<string, number> = {
+  "2160p": 5, "4k": 5, "1080p": 4, "720p": 3, "480p": 2, "360p": 1,
+};
+
+function sortStreamsByQuality(streams: Record<string, unknown>[]): Record<string, unknown>[] {
+  return [...streams].sort((a, b) => {
+    const aQuality = detectQuality(a);
+    const bQuality = detectQuality(b);
+    const aRank = QUALITY_RANK[aQuality] ?? 0;
+    const bRank = QUALITY_RANK[bQuality] ?? 0;
+    return bRank - aRank;
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -440,12 +425,12 @@ http.route({
           const streamUrl = `${base}/stream/${tryType}/${id}.json`;
           try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 10000);
+            const timer = setTimeout(() => controller.abort(), 15000);
             const res = await fetch(streamUrl, { signal: controller.signal });
             clearTimeout(timer);
             if (!res.ok) continue;
             const contentType = res.headers.get("content-type") || "";
-            if (!contentType.includes("json")) continue;
+            if (contentType.includes("html") || contentType.includes("xml")) continue;
             const data = await res.json();
             const allStreamData: Array<{ s: Record<string, unknown>; rawUrl: string; referer: string }> = [];
             for (const s of (data.streams || []) as Record<string, unknown>[]) {
@@ -488,18 +473,18 @@ http.route({
     // Dedupe by URL/infoHash
     const deduped = dedupeByKey(allStreams, (s) => streamKey(s as Record<string, unknown>));
 
-    // Filter to playable + detect codec
+    // Filter to playable (URL or torrent infoHash) + detect codec + detect quality + sort by quality
     const playable = deduped
       .filter((s: unknown) => {
         const stream = s as Record<string, unknown>;
-        return !!(stream.url as string);
+        return !!(stream.url as string) || !!(stream.infoHash as string);
       })
       .map((s: unknown) => {
         const stream = s as Record<string, unknown>;
-        return { ...stream, codec: detectCodec(stream) };
+        return { ...stream, codec: detectCodec(stream), quality: detectQuality(stream) };
       });
 
-    return json(playable);
+    return json(sortStreamsByQuality(playable));
   }),
 });
 
@@ -654,7 +639,27 @@ http.route({
     for (const result of addonResults) {
       const m = result.meta;
       for (const [key, value] of Object.entries(m)) {
-        if (value && (!mergedMeta[key] || mergedMeta[key] === "")) {
+        if (key === "videos" && Array.isArray(value) && mergedMeta.videos) {
+          // Merge videos arrays: enrich episode entries with thumbnails from all addons
+          const existing = mergedMeta.videos as Array<Record<string, unknown>>;
+          const incoming = value as Array<Record<string, unknown>>;
+          for (const incomingEp of incoming) {
+            const matchIdx = existing.findIndex(
+              (e) => e.season === incomingEp.season && (e.number === incomingEp.number || e.episode === incomingEp.episode)
+            );
+            if (matchIdx >= 0) {
+              // Enrich existing episode with missing fields (especially thumbnails)
+              const ep = existing[matchIdx];
+              for (const [ek, ev] of Object.entries(incomingEp)) {
+                if (ev && (!ep[ek] || ep[ek] === "")) {
+                  ep[ek] = ev;
+                }
+              }
+            } else {
+              existing.push(incomingEp);
+            }
+          }
+        } else if (value && (!mergedMeta[key] || mergedMeta[key] === "")) {
           mergedMeta[key] = value;
         }
       }

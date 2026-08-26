@@ -130,11 +130,12 @@ export default function Detail() {
     if (!details || !effectiveId) return;
     const slug = (details.name || details.title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    const episodeList = isTv && currentEpisodes.length > 0
-      ? currentEpisodes.map((ep: any, i: number) => ({
-          id: ep.videoId || ep.id || id,
+    const allEpisodes = details.episodes || [];
+    const episodeList = isTv && allEpisodes.length > 0
+      ? allEpisodes.map((ep: any) => ({
+          id: ep.videoId || ep.id || `${id}:${ep.seasonNumber}:${ep.episodeNumber}`,
           title: ep.name || ep.title || `Episode ${ep.episodeNumber}`,
-          episodeNumber: ep.episodeNumber || i + 1,
+          episodeNumber: ep.episodeNumber || 0,
           seasonNumber: ep.seasonNumber || 1,
           stillUrl: ep.stillUrl || ep.posterUrl,
         }))
@@ -153,11 +154,11 @@ export default function Detail() {
       },
     });
     setShowStreams(false);
-  }, [details, id, streamEpisodeId, navigate, contentType, isTv, currentEpisodes]);
+  }, [details, id, streamEpisodeId, navigate, contentType, isTv]);
 
   const handlePlayEpisode = useCallback((ep: any, _epIdx?: number) => {
     if (!details) return;
-    const epId = ep.videoId || ep.id || id;
+    const epId = ep.videoId || ep.id || `${id}:${ep.seasonNumber}:${ep.episodeNumber}`;
     openStreamDrawer(epId, ep.name || ep.title || `E${ep.episodeNumber || '?'}`);
   }, [details, id, openStreamDrawer]);
 
@@ -165,7 +166,7 @@ export default function Detail() {
     if (isTv) {
       if (currentEpisodes.length > 0) {
         const ep = currentEpisodes[0];
-        const epId = ep.videoId || ep.id || id;
+        const epId = ep.videoId || ep.id || `${id}:${ep.seasonNumber}:${ep.episodeNumber}`;
         openStreamDrawer(epId, ep.name || ep.title || 'Episode 1');
       }
     } else {
@@ -450,8 +451,8 @@ export default function Detail() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredEpisodes.map((ep: any, idx: number) => {
-                      const epId = ep.videoId || ep.id || id;
-                      const epImage = ep.stillUrl || ep.posterUrl || details.backdropUrl;
+                      const epId = ep.videoId || ep.id || `${id}:${ep.seasonNumber}:${ep.episodeNumber}`;
+                      const epImage = ep.stillUrl || ep.posterUrl;
                       const isSelected = selectedEpisode === epId;
 
                       return (

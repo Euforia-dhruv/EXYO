@@ -6,24 +6,20 @@ import { cn } from '../utils/helpers';
 import { contentApi, type AddonManifest } from '../api/content.api';
 
 const PROXY_OPTIONS = [
-  { id: 'workers', label: 'Workers Proxy', desc: 'Fast — Cloudflare Workers', url: 'https://exyo.cc.cd' },
+  { id: 'workers', label: 'Workers Proxy', desc: 'Fast — Cloudflare Workers', url: 'https://exyo-proxy.exyo.workers.dev' },
   { id: 'vercel', label: 'Vercel Proxy', desc: 'Recommended', url: 'https://exyo.vercel.app/api/proxy' },
   { id: 'direct', label: 'Direct', desc: 'No proxy', url: '' },
 ];
 
 const ADDON_OPTIONS = [
+  { id: 'cinepro', label: 'CinePro', desc: 'High-quality streams (4K/HD)', url: 'https://cinepro-core-bt64.onrender.com/stremio' },
+  { id: 'tmdb', label: 'TMDB Addon', desc: 'Rich metadata & catalogs from TMDB', url: 'https://94c8cb9f702d-tmdb-addon.baby-beamup.club' },
+  { id: 'cinemeta', label: 'Cinemeta', desc: 'Stremio official metadata & catalogs', url: 'https://v3-cinemeta.strem.io' },
   { id: 'torrentio', label: 'Torrentio', desc: '4K HDR/DV torrents from 10+ providers (debrid required)', url: 'https://torrentio.strem.fun' },
   { id: 'mediafusion', label: 'MediaFusion', desc: 'Universal addon: movies, series, live TV, sports (50+ languages)', url: 'https://mediafusion.elfhosted.com' },
   { id: 'comet', label: 'Comet', desc: 'Fastest torrent/debrid/usenet search addon', url: 'https://comet.elfhosted.com' },
   { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams (4K/HD)', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
-  { id: 'nuvio', label: 'Nuvio Streams', desc: 'Multi-provider HTTP streams (4K/HD/HDR)', url: 'https://nuviostreams.hayd.uk' },
   { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
-  { id: 'flix', label: 'Flix-Streams', desc: 'Movies, series & live TV', url: 'https://free.flixnest.app' },
-  { id: 'notorrent', label: 'NoTorrent', desc: 'Movies & series streams (free + premium)', url: 'https://addon.notorrent2.workers.dev' },
-  { id: 'webstreamr', label: 'WebStreamrMBG', desc: '20+ sources — 4KHDHub, CineHDPlus, Frembed & more', url: 'https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club' },
-  { id: 'showbox', label: 'Showbox', desc: '4K/1080p direct HTTP streams (needs config)', url: 'https://showbox.codiv.dpdns.org' },
-  { id: 'stremverse', label: 'StremVerse', desc: 'Live events, movies & series streams', url: 'https://stremverse.onrender.com' },
-  { id: 'aiocatalogs', label: 'AIOCatalogs', desc: 'Additional movie catalogs', url: 'https://aio.pantelx.com' },
 ];
 
 function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: boolean }) {
@@ -69,7 +65,7 @@ function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: bo
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['pengu', 'nuvio', 'anime', 'flix', 'notorrent', 'webstreamr', 'showbox', 'stremverse', 'aiocatalogs', 'torrentio', 'mediafusion', 'comet']);
+  const [addons, setAddons] = useState(['cinepro', 'tmdb', 'cinemeta', 'pengu', 'anime', 'torrentio', 'mediafusion', 'comet']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');

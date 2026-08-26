@@ -3,14 +3,7 @@ const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-67
 const ADDON_MAP: Record<string, string> = {
   cinepro: 'https://cinepro-core-bt64.onrender.com/stremio',
   pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D',
-  nuvio: 'https://nuviostreams.hayd.uk',
   anime: 'https://animestream-addon.keypop3750.workers.dev',
-  flix: 'https://free.flixnest.app',
-  notorrent: 'https://addon.notorrent2.workers.dev',
-  webstreamr: 'https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club',
-  showbox: 'https://showbox.codiv.dpdns.org',
-  stremverse: 'https://stremverse.onrender.com',
-  aiocatalogs: 'https://aio.pantelx.com',
   torrentio: 'https://torrentio.strem.fun',
   mediafusion: 'https://mediafusion.elfhosted.com',
   comet: 'https://comet.elfhosted.com',
@@ -79,6 +72,7 @@ export interface ContentStreamsResult {
     audioCodec?: string;
     codec?: string;
     addon?: string;
+    infoHash?: string;
     behaviorHints?: Record<string, unknown>;
     addonName?: string;
     addonUrl?: string;
@@ -252,7 +246,7 @@ export const contentApi = {
           description: v.description || '',
           runtime: v.runtime,
           rating: v.imdbRating ? Number(v.imdbRating) : undefined,
-          stillUrl: v.poster || v.thumb,
+          stillUrl: v.still || v.stillUrl || v.thumbnail || v.image || v.poster || v.thumb,
         }));
     }
     return result;
@@ -275,6 +269,7 @@ export const contentApi = {
           audioCodec: item.audioCodec,
           codec: item.codec,
           addon: item.addon,
+          infoHash: item.infoHash,
           addonName: item.addonName,
           addonUrl: item.addonUrl,
           description: item.description,
@@ -299,6 +294,7 @@ export const contentApi = {
           audioCodec: item.audioCodec,
           codec: item.codec,
           addon: item.addon,
+          infoHash: item.infoHash,
           addonName: item.addonName,
           addonUrl: item.addonUrl,
           description: item.description,

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { usePlayer, type PlayerStream } from '../hooks/usePlayer';
+import { useTorrentPlayer } from '../hooks/useTorrentPlayer';
 import PlayerControls from '../components/player/PlayerControls';
 import StreamSelector from '../components/player/StreamSelector';
 import SubtitleRenderer from '../components/player/SubtitleRenderer';
@@ -11,6 +12,7 @@ import PlayerSettings from '../components/player/PlayerSettings';
 import NextEpisodePopup from '../components/player/NextEpisodePopup';
 import type { EpisodeInfo } from '../components/player/NextEpisodePopup';
 import StreamStatsOverlay from '../components/player/StreamStatsOverlay';
+import TorrentStatsOverlay from '../components/player/TorrentStatsOverlay';
 import { contentApi } from '../api/content.api';
 import { ELogo } from '../components/Logo';
 import { useAuthStore } from '../stores/authStore';
@@ -62,10 +64,12 @@ export default function Watch() {
           title: s.name || s.title,
           quality: s.quality,
           codec: s.videoCodec || s.codec,
+          infoHash: s.infoHash,
           addon: s.addon,
           addonName: s.addonName,
           addonUrl: s.addonUrl,
           behaviorHints: s.behaviorHints as any,
+          isTorrent: !!s.infoHash && (!s.url || s.url.startsWith('magnet:')),
         }))
       : [];
 
@@ -112,8 +116,11 @@ export default function Watch() {
       : undefined,
   });
 
+  const torrent = useTorrentPlayer();
   const [showStats, setShowStats] = useState(false);
   const [showNextEpisode, setShowNextEpisode] = useState(false);
+  const isTorrentStreamRef = useRef(false);
+  const torrentResolvingRef = useRef(false);
 
   // --- RESUME FROM LAST POSITION ---
   const [showResumePrompt, setShowResumePrompt] = useState(false);
@@ -175,6 +182,37 @@ export default function Watch() {
     }
   }, [subtitleTracks, player]);
 
+  // ─── Torrent stream resolution ──────────────────────────────
+  // When the selected stream is a torrent (infoHash, no playable URL),
+  // use WebTorrent to stream directly to the video element.
+  useEffect(() => {
+    const stream = player.selectedStream;
+    if (!stream || !player.videoRef.current) return;
+
+    const isTorrent = !!stream.infoHash && (!stream.url || stream.url.startsWith('magnet:'));
+
+    if (isTorrent) {
+      isTorrentStreamRef.current = true;
+      if (!torrentResolvingRef.current) {
+        torrentResolvingRef.current = true;
+        torrent.resolveTorrent(stream.infoHash!, player.videoRef.current);
+      }
+    } else {
+      isTorrentStreamRef.current = false;
+      torrentResolvingRef.current = false;
+      if (torrent.status !== 'idle') {
+        torrent.cleanup();
+      }
+    }
+  }, [player.selectedStream, torrent]);
+
+  // Clean up torrent on unmount
+  useEffect(() => {
+    return () => {
+      torrent.cleanup();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const nextEpisode = useMemo<EpisodeInfo | null>(() => {
     if (!isTv || !episodes || currentEpisodeIndex === undefined) return null;
     const nextIdx = currentEpisodeIndex + 1;
@@ -200,12 +238,13 @@ export default function Watch() {
     navigate(`/watch/${slugName}?id=${nextEpisode.id}`, {
       state: {
         title: nextEpisode.title,
+        backdropUrl,
         episodes,
         episodeIndex: (currentEpisodeIndex ?? 0) + 1,
         contentType: streamType,
       },
     });
-  }, [nextEpisode, navigate, episodes, currentEpisodeIndex, streamType]);
+  }, [nextEpisode, navigate, episodes, currentEpisodeIndex, streamType, backdropUrl]);
 
   const handleBack = useCallback(() => {
     if (id) {
@@ -532,11 +571,23 @@ export default function Watch() {
         />
       )}
 
-      {player.isBuffering && (
+      {(player.isBuffering || (isTorrentStreamRef.current && torrent.status === 'loading')) && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="flex flex-col items-center gap-3">
             <ELogo size={48} animate />
-            <p className="text-white/40 text-sm font-medium">Loading stream...</p>
+            <p className="text-white/40 text-sm font-medium">
+              {isTorrentStreamRef.current && torrent.status === 'loading'
+                ? `Connecting to peers... ${torrent.peers > 0 ? `(${torrent.peers} peers)` : ''}`
+                : 'Loading stream...'}
+            </p>
+            {isTorrentStreamRef.current && torrent.status === 'loading' && torrent.progress > 0 && (
+              <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red rounded-full transition-all duration-1000"
+                  style={{ width: `${Math.min(torrent.progress, 100)}%` }}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -547,6 +598,43 @@ export default function Watch() {
             <p className="text-white font-bold text-lg mb-2">Playback Error</p>
             <p className="text-white/40 text-sm mb-6">{player.videoError}</p>
             <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={(e) => { e.stopPropagation(); player.clearErrorAndOpenSelector(); }}
+                className="px-6 py-3 rounded-xl bg-white/[0.08] text-white text-sm font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
+              >
+                Try Another Stream
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleBack(); }}
+                className="px-6 py-3 rounded-xl bg-white/[0.08] text-white/50 text-sm font-medium hover:bg-white/[0.14] transition-all"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Torrent error */}
+      {isTorrentStreamRef.current && torrent.status === 'error' && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/80 backdrop-blur-sm">
+          <div className="glass glass-border rounded-3xl p-10 text-center max-w-md">
+            <p className="text-white font-bold text-lg mb-2">Torrent Error</p>
+            <p className="text-white/40 text-sm mb-6">{torrent.error || 'Failed to connect to torrent swarm'}</p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (player.selectedStream?.infoHash && player.videoRef.current) {
+                    torrentResolvingRef.current = false;
+                    torrent.cleanup();
+                    torrent.resolveTorrent(player.selectedStream.infoHash, player.videoRef.current);
+                  }
+                }}
+                className="px-6 py-3 rounded-xl bg-white/[0.08] text-white text-sm font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
+              >
+                Retry
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); player.clearErrorAndOpenSelector(); }}
                 className="px-6 py-3 rounded-xl bg-white/[0.08] text-white text-sm font-medium hover:bg-white/[0.14] transition-all border border-white/[0.08]"
@@ -633,6 +721,18 @@ export default function Watch() {
       <StreamStatsOverlay
         videoRef={player.videoRef}
         visible={showStats}
+      />
+
+      <TorrentStatsOverlay
+        stats={isTorrentStreamRef.current ? {
+          peers: torrent.peers,
+          downloadSpeed: torrent.downloadSpeed,
+          uploadSpeed: torrent.uploadSpeed,
+          progress: torrent.progress,
+          downloaded: torrent.downloaded,
+          uploaded: torrent.uploaded,
+        } : null}
+        visible={showStats && isTorrentStreamRef.current && torrent.status !== 'idle'}
       />
 
       {player.showStreamSelector && (

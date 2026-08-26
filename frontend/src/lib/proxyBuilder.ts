@@ -1,4 +1,4 @@
-const WORKERS_PROXY_ORIGIN = 'https://exyo.cc.cd';
+const WORKERS_PROXY_ORIGIN = 'https://exyo-proxy.exyo.workers.dev';
 
 function encodeToken(target: string, referer: string): string {
   return btoa(JSON.stringify({ u: target, r: referer }))

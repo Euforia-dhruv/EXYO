@@ -156,5 +156,6 @@ export interface SourceConfig {
   enabled: boolean;
   priority: number;
   auth?: string;
+  authType?: "cookie" | "bearer";
   timeout?: number;
 }

@@ -52,7 +52,6 @@ export const syncUser = mutation({
     const defaultAddons = [
       { url: "https://v3-cinemeta.strem.io/manifest.json", name: "Cinemeta" },
       { url: "https://torrentio.strem.fun/manifest.json", name: "Torrentio" },
-      { url: "https://addon.notorrent2.workers.dev/manifest.json", name: "NoTorrent" },
       { url: "https://watchhub.strem.io/manifest.json", name: "WatchHub" },
       { url: "https://opensubtitles-v3.strem.io/manifest.json", name: "OpenSubtitles v3" },
       { url: "https://opensubtitles.strem.io/stremio/v1", name: "OpenSubtitles" },

@@ -7,6 +7,16 @@ import type { SourceConfig } from "./types";
 // ─────────────────────────────────────────────────────────────
 const BUILTIN_ADDONS: SourceConfig[] = [
   {
+    id: "debridnest",
+    name: "DebridNest",
+    baseUrl: "https://delivering-marina-ongoing-verde.trycloudflare.com",
+    type: "stremio",
+    enabled: true,
+    priority: 12,
+    auth: "f65e793ff65c80cfd07739f403fdc32bae6106e5750b93120b8c65fe4956a77a",
+    authType: "bearer" as const,
+  },
+  {
     id: "cinepro",
     name: "CinePro",
     baseUrl: "https://cinepro-core-bt64.onrender.com/stremio",
@@ -31,12 +41,36 @@ const BUILTIN_ADDONS: SourceConfig[] = [
     priority: 9,
   },
   {
+    id: "torrentio",
+    name: "Torrentio",
+    baseUrl: "https://torrentio.strem.fun",
+    type: "stremio",
+    enabled: true,
+    priority: 8,
+  },
+  {
+    id: "mediafusion",
+    name: "MediaFusion",
+    baseUrl: "https://mediafusion.elfhosted.com",
+    type: "stremio",
+    enabled: true,
+    priority: 7,
+  },
+  {
+    id: "comet",
+    name: "Comet",
+    baseUrl: "https://comet.elfhosted.com",
+    type: "stremio",
+    enabled: true,
+    priority: 6,
+  },
+  {
     id: "pengu",
     name: "PenguPlay",
     baseUrl: "https://pengu.uk",
     type: "stremio",
     enabled: true,
-    priority: 7,
+    priority: 5,
     auth: "Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0",
   },
   {
@@ -45,63 +79,7 @@ const BUILTIN_ADDONS: SourceConfig[] = [
     baseUrl: "https://animestream-addon.keypop3750.workers.dev",
     type: "stremio",
     enabled: true,
-    priority: 6,
-  },
-  {
-    id: "flixnest",
-    name: "FlixNest",
-    baseUrl: "https://free.flixnest.app",
-    type: "stremio",
-    enabled: true,
-    priority: 5,
-  },
-  {
-    id: "notorrent",
-    name: "NoTorrent",
-    baseUrl: "https://addon.notorrent2.workers.dev",
-    type: "stremio",
-    enabled: true,
     priority: 4,
-  },
-  {
-    id: "webstreamr",
-    name: "WebStreamrMBG",
-    baseUrl: "https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club",
-    type: "stremio",
-    enabled: true,
-    priority: 4,
-  },
-  {
-    id: "showbox",
-    name: "Showbox",
-    baseUrl: "https://showbox.codiv.dpdns.org",
-    type: "stremio",
-    enabled: true,
-    priority: 4,
-  },
-  {
-    id: "stremverse",
-    name: "StremVerse",
-    baseUrl: "https://stremverse.onrender.com",
-    type: "stremio",
-    enabled: true,
-    priority: 3,
-  },
-  {
-    id: "nuvio",
-    name: "NuvioStreams",
-    baseUrl: "https://nuviostreams.hayd.uk",
-    type: "stremio",
-    enabled: true,
-    priority: 3,
-  },
-  {
-    id: "aiocatalogs",
-    name: "AIO Catalogs",
-    baseUrl: "https://aio.pantelx.com",
-    type: "stremio",
-    enabled: true,
-    priority: 2,
   },
 ];
 
@@ -135,6 +113,7 @@ export function getSourceManager(): SourceManager {
       enabled: config.enabled,
       priority: config.priority,
       auth: auth || undefined,
+      authType: config.authType,
     });
     _manager.addSource(source);
   }

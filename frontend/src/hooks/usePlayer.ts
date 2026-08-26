@@ -24,6 +24,7 @@ export interface PlayerStream {
   fileSize?: string;
   bitrate?: number;
   behaviorHints?: { notWebReady?: boolean; proxyHeaders?: { request?: Record<string, string> } };
+  isTorrent?: boolean;
 }
 
 export interface SubtitleTrack {
@@ -42,7 +43,7 @@ interface UsePlayerOptions {
 }
 
 const QUALITY_RANK: Record<string, number> = {
-  '2160p': 5, '4k': 5, '1080p': 4, '720p': 3, '480p': 2, '360p': 1,
+  '2160p': 6, '4k': 6, '1080p': 4, '720p': 3, '480p': 2, '360p': 1,
 };
 
 function rankQuality(q?: string): number {
@@ -125,9 +126,12 @@ export function usePlayer({
   const addonNames = Object.keys(streamsByAddon);
 
   useEffect(() => {
-    if (streams.length > 0 && !selectedStream && autoSelectBest) {
-      const best = streams.find((s) => s.url && !s.infoHash) || streams[0];
-      setSelectedStream(best);
+    if (streams.length > 0 && autoSelectBest) {
+      const isCurrentStillAvailable = selectedStream && streams.some((s) => s.url === selectedStream.url);
+      if (!selectedStream || !isCurrentStillAvailable) {
+        const best = streams.find((s) => s.url && !s.infoHash) || streams[0];
+        setSelectedStream(best);
+      }
     }
   }, [streams, selectedStream, autoSelectBest]);
 
@@ -154,6 +158,13 @@ export function usePlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !selectedStream) return;
+
+    // Torrent streams are handled by useTorrentPlayer — skip normal playback
+    if (selectedStream.infoHash && !selectedStream.url) {
+      setIsBuffering(false);
+      setIsPlaying(false);
+      return;
+    }
 
     const url = selectedStream.url;
     if (!url) {

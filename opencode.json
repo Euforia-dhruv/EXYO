@@ -1,5 +1,18 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "omni/claude-sonnet-4-20250514",
+  "small_model": "omni/gpt-4o-mini",
+  "provider": {
+    "omni": {
+      "id": "omni",
+      "name": "OmniRoute",
+      "api": "openai",
+      "options": {
+        "baseURL": "http://localhost:20128/v1",
+        "apiKey": "sk-197375ce9137c08b-9104cc-0c44c553"
+      }
+    }
+  },
   "mcp": {
     "lightpanda": {
       "type": "local",

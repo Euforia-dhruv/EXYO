@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { X, Play, Check } from 'lucide-react';
+import { X, Play, Check, Zap } from 'lucide-react';
 import type { PlayerStream } from '../../hooks/usePlayer';
 import { cn } from '../../utils/helpers';
 import { ELogo } from '../Logo';
@@ -71,7 +71,9 @@ export default function StreamSelector({ streams, currentStream, onSelect, onClo
             </div>
           ) : (
             streams.map((stream, i) => {
-              const isActive = currentStream?.url === stream.url;
+              const isActive = currentStream?.url
+                ? currentStream.url === stream.url
+                : currentStream?.infoHash === stream.infoHash;
               const qColor = QUALITY_COLORS[stream.quality?.toLowerCase() || ''] || QUALITY_COLORS['480p'];
               const codec = getCodecBadge(stream.codec || (stream as any).videoCodec);
 
@@ -117,6 +119,12 @@ export default function StreamSelector({ streams, currentStream, onSelect, onClo
                         )}
                         {stream.addonName && (
                           <span className="text-[10px] text-white/30">{stream.addonName}</span>
+                        )}
+                        {stream.infoHash && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-orange-500/15 text-orange-400 border border-orange-500/20 flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5" />
+                            P2P
+                          </span>
                         )}
                       </div>
                     </div>

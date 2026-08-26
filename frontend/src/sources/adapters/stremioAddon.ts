@@ -36,6 +36,7 @@ export class StremioAddonAdapter implements ContentSource {
   private _manifest: SourceManifest | null = null;
   private _timeoutMs: number;
   private _auth?: string;
+  private _authType?: "cookie" | "bearer";
 
   constructor(opts: {
     id: string;
@@ -45,6 +46,7 @@ export class StremioAddonAdapter implements ContentSource {
     priority?: number;
     timeout?: number;
     auth?: string;
+    authType?: "cookie" | "bearer";
   }) {
     this.id = opts.id;
     this.name = opts.name || opts.id;
@@ -53,6 +55,7 @@ export class StremioAddonAdapter implements ContentSource {
     this.priority = opts.priority ?? 0;
     this._timeoutMs = opts.timeout ?? 8000;
     this._auth = opts.auth;
+    this._authType = opts.authType;
   }
 
   // ── Manifest ──────────────────────────────────────────────
@@ -234,8 +237,16 @@ export class StremioAddonAdapter implements ContentSource {
       try {
         const url = `${this.baseUrl}/stream/${t}/${id}.json`;
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), this._timeoutMs);
-        const res = await fetch(url, { signal: controller.signal });
+        const timer = setTimeout(() => controller.abort(), this._timeoutMs * 3);
+        const headers: Record<string, string> = {};
+        if (this._auth) {
+          if (this._authType === "bearer") {
+            headers.Authorization = `Bearer ${this._auth}`;
+          } else {
+            headers.Cookie = `auth_token=${this._auth}`;
+          }
+        }
+        const res = await fetch(url, { signal: controller.signal, headers });
         clearTimeout(timer);
         if (!res.ok) continue;
         const contentType = res.headers.get("content-type") || "";
@@ -287,7 +298,11 @@ export class StremioAddonAdapter implements ContentSource {
       const timer = setTimeout(() => controller.abort(), this._timeoutMs);
       const headers: Record<string, string> = { Accept: "application/json" };
       if (this._auth) {
-        headers.Cookie = `auth_token=${this._auth}`;
+        if (this._authType === "bearer") {
+          headers.Authorization = `Bearer ${this._auth}`;
+        } else {
+          headers.Cookie = `auth_token=${this._auth}`;
+        }
       }
       const res = await fetch(url, { signal: controller.signal, headers });
       clearTimeout(timer);
