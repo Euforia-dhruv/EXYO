@@ -7,69 +7,57 @@ const PROXY_BASE_URL = "https://exyo.cc.cd";
 const CINEMETA_URL = "https://v3-cinemeta.strem.io";
 const TMDB_ADDON_URL = "https://94c8cb9f702d-tmdb-addon.baby-beamup.club";
 
-// ─────────────────────────────────────────────────────────────
-// Source definitions — ordered by priority (highest first)
-// ─────────────────────────────────────────────────────────────
 interface AddonDef {
   id: string;
   url: string;
   auth?: string;
   priority: number;
-  /** Which resource categories this addon excels at */
   categories: ("metadata" | "catalog" | "stream" | "subtitle")[];
 }
 
-const ANIME_ADDON_URL = "https://animestream-addon.keypop3750.workers.dev";
-
 const BUILTIN_ADDONS: AddonDef[] = [
-  {
-    id: "cinepro",
-    url: "https://cinepro-core-bt64.onrender.com/stremio",
-    priority: 11,
-    categories: ["stream"],
-  },
-  {
-    id: "tmdb",
-    url: TMDB_ADDON_URL,
-    priority: 10,
-    categories: ["metadata", "catalog"],
-  },
-  {
-    id: "cinemeta",
-    url: CINEMETA_URL,
-    priority: 9,
-    categories: ["metadata", "catalog"],
-  },
   {
     id: "torrentio",
     url: "https://torrentio.strem.fun",
+    priority: 10,
+    categories: ["stream"],
+  },
+  {
+    id: "hdhub",
+    url: "https://hdhub.thevolecitor.qzz.io",
+    priority: 9,
+    categories: ["stream"],
+  },
+  {
+    id: "meteor",
+    url: "https://meteorfortheweebs.midnightignite.me",
     priority: 8,
     categories: ["stream"],
   },
   {
-    id: "mediafusion",
-    url: "https://mediafusion.elfhosted.com",
+    id: "torrentsdb",
+    url: "https://torrentsdb.com",
     priority: 7,
-    categories: ["catalog", "stream", "subtitle"],
-  },
-  {
-    id: "comet",
-    url: "https://comet.elfhosted.com",
-    priority: 6,
     categories: ["stream"],
   },
   {
     id: "pengu",
     url: "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
     auth: "Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0",
-    priority: 5,
+    priority: 6,
     categories: ["stream"],
   },
   {
-    id: "animestream",
-    url: ANIME_ADDON_URL,
+    id: "tmdb",
+    url: TMDB_ADDON_URL,
+    priority: 5,
+    categories: ["metadata", "catalog"],
+  },
+  {
+    id: "cinemeta",
+    url: CINEMETA_URL,
     priority: 4,
-    categories: ["catalog", "stream", "subtitle"],
+    categories: ["metadata", "catalog"],
   },
 ];
 

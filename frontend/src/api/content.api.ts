@@ -1,12 +1,13 @@
 const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
 const ADDON_MAP: Record<string, string> = {
-  cinepro: 'https://cinepro-core-bt64.onrender.com/stremio',
-  pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D',
-  anime: 'https://animestream-addon.keypop3750.workers.dev',
   torrentio: 'https://torrentio.strem.fun',
-  mediafusion: 'https://mediafusion.elfhosted.com',
-  comet: 'https://comet.elfhosted.com',
+  hdhub: 'https://hdhub.thevolecitor.qzz.io',
+  meteor: 'https://meteorfortheweebs.midnightignite.me',
+  torrentsdb: 'https://torrentsdb.com',
+  pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D',
+  tmdb: 'https://94c8cb9f702d-tmdb-addon.baby-beamup.club',
+  cinemeta: 'https://v3-cinemeta.strem.io',
 };
 
 function getEnabledAddonUrls(): string[] {

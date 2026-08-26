@@ -12,14 +12,13 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
-  { id: 'cinepro', label: 'CinePro', desc: 'High-quality streams (4K/HD)', url: 'https://cinepro-core-bt64.onrender.com/stremio' },
-  { id: 'tmdb', label: 'TMDB Addon', desc: 'Rich metadata & catalogs from TMDB', url: 'https://94c8cb9f702d-tmdb-addon.baby-beamup.club' },
+  { id: 'torrentio', label: 'Torrentio', desc: '2K stars — torrent streams from 20+ providers (4K/HDR/REMUX)', url: 'https://torrentio.strem.fun' },
+  { id: 'hdhub', label: 'HdHub', desc: 'Movies & series streams (4K/HD), usenet + HTTP sources', url: 'https://hdhub.thevolecitor.qzz.io' },
+  { id: 'meteor', label: 'Meteor', desc: 'Franchise-aware torrent matching with quality scoring', url: 'https://meteorfortheweebs.midnightignite.me' },
+  { id: 'torrentsdb', label: 'TorrentsDB', desc: 'Torrent streams from 20+ providers (YTS, 1337x, Nyaa, etc)', url: 'https://torrentsdb.com' },
+  { id: 'pengu', label: 'PenguPlay', desc: 'Configurable provider & quality filters', url: 'https://pengu.uk' },
+  { id: 'tmdb', label: 'TMDB Addon', desc: 'Rich metadata, catalogs & search from TMDB', url: 'https://94c8cb9f702d-tmdb-addon.baby-beamup.club' },
   { id: 'cinemeta', label: 'Cinemeta', desc: 'Stremio official metadata & catalogs', url: 'https://v3-cinemeta.strem.io' },
-  { id: 'torrentio', label: 'Torrentio', desc: '4K HDR/DV torrents from 10+ providers (debrid required)', url: 'https://torrentio.strem.fun' },
-  { id: 'mediafusion', label: 'MediaFusion', desc: 'Universal addon: movies, series, live TV, sports (50+ languages)', url: 'https://mediafusion.elfhosted.com' },
-  { id: 'comet', label: 'Comet', desc: 'Fastest torrent/debrid/usenet search addon', url: 'https://comet.elfhosted.com' },
-  { id: 'pengu', label: 'PenguPlay', desc: 'Movies & TV streams (4K/HD)', url: 'https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D' },
-  { id: 'anime', label: 'AnimeStream', desc: 'Anime catalog, streams & metadata', url: 'https://animestream-addon.keypop3750.workers.dev' },
 ];
 
 function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: boolean }) {
@@ -65,7 +64,7 @@ function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: bo
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['cinepro', 'tmdb', 'cinemeta', 'pengu', 'anime', 'torrentio', 'mediafusion', 'comet']);
+  const [addons, setAddons] = useState(['torrentio', 'hdhub', 'meteor', 'torrentsdb', 'pengu', 'tmdb', 'cinemeta']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');
