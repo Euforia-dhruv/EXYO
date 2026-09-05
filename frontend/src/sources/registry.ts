@@ -39,15 +39,6 @@ const BUILTIN_ADDONS: SourceConfig[] = [
     priority: 7,
   },
   {
-    id: "pengu",
-    name: "PenguPlay",
-    baseUrl: "https://pengu.uk",
-    type: "stremio",
-    enabled: true,
-    priority: 6,
-    auth: "Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0",
-  },
-  {
     id: "tmdb",
     name: "TMDB Addon",
     baseUrl: "https://94c8cb9f702d-tmdb-addon.baby-beamup.club",

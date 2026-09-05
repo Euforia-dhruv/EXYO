@@ -16,7 +16,6 @@ const ADDON_OPTIONS = [
   { id: 'hdhub', label: 'HdHub', desc: 'Movies & series streams (4K/HD), usenet + HTTP sources', url: 'https://hdhub.thevolecitor.qzz.io' },
   { id: 'meteor', label: 'Meteor', desc: 'Franchise-aware torrent matching with quality scoring', url: 'https://meteorfortheweebs.midnightignite.me' },
   { id: 'torrentsdb', label: 'TorrentsDB', desc: 'Torrent streams from 20+ providers (YTS, 1337x, Nyaa, etc)', url: 'https://torrentsdb.com' },
-  { id: 'pengu', label: 'PenguPlay', desc: 'Configurable provider & quality filters', url: 'https://pengu.uk' },
   { id: 'tmdb', label: 'TMDB Addon', desc: 'Rich metadata, catalogs & search from TMDB', url: 'https://94c8cb9f702d-tmdb-addon.baby-beamup.club' },
   { id: 'cinemeta', label: 'Cinemeta', desc: 'Stremio official metadata & catalogs', url: 'https://v3-cinemeta.strem.io' },
 ];
@@ -64,7 +63,7 @@ function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: bo
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['torrentio', 'hdhub', 'meteor', 'torrentsdb', 'pengu', 'tmdb', 'cinemeta']);
+  const [addons, setAddons] = useState(['torrentio', 'hdhub', 'meteor', 'torrentsdb', 'tmdb', 'cinemeta']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');
@@ -179,13 +178,25 @@ export default function Streaming() {
       </div>
 
       <div className="mt-8">
-        <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Custom Addons</h3>
+        <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Your Addons</h3>
+        <p className="text-white/30 text-xs mb-3">
+          Add any Stremio addon URL. PenguPlay, Torrentio, Comet — paste the full URL with your auth token.
+        </p>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 mb-4">
+          <p className="text-white/50 text-xs font-medium mb-2">How to get your PenguPlay URL:</p>
+          <ol className="text-white/30 text-xs space-y-1 list-decimal list-inside">
+            <li>Go to <span className="text-red">pengu.uk</span> and sign up (free)</li>
+            <li>Go to Settings → Copy your addon URL with auth token</li>
+            <li>Paste it below</li>
+          </ol>
+          <p className="text-white/20 text-[10px] mt-2">Format: https://pengu.uk/{"{"}"auth_token": "YOUR_TOKEN"{"}"}</p>
+        </div>
         <div className="flex gap-2 mb-3">
           <input
             type="url"
             value={newAddonUrl}
             onChange={(e) => { setNewAddonUrl(e.target.value); setAddonError(''); }}
-            placeholder="https://example.com/manifest.json"
+            placeholder="https://pengu.uk/{&quot;auth_token&quot;:&quot;YOUR_TOKEN&quot;}"
             className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-red/30"
           />
           <button

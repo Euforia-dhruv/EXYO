@@ -110,13 +110,6 @@ const BUILTIN_ADDONS: AddonDef[] = [
     categories: ["stream"],
   },
   {
-    id: "pengu",
-    url: "https://pengu.uk/%7B%22auth_token%22%3A%22Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0%22%7D",
-    auth: "Wc0F6ReosCB1m0Hn-gzD_foLJ6S3IkFfB9TcSCHcGy0",
-    priority: 6,
-    categories: ["stream"],
-  },
-  {
     id: "tmdb",
     url: TMDB_ADDON_URL,
     priority: 5,
