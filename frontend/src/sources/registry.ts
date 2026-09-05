@@ -7,6 +7,15 @@ import type { SourceConfig } from "./types";
 // ─────────────────────────────────────────────────────────────
 const BUILTIN_ADDONS: SourceConfig[] = [
   {
+    id: "pengu",
+    name: "PenguPlay",
+    baseUrl: "https://pengu.uk",
+    type: "stremio",
+    enabled: true,
+    priority: 11,
+    auth: "eoGgDDv9Wlxk-FrZbdW17CMYZHYh_GAYZR3POz0V0lw",
+  },
+  {
     id: "torrentio",
     name: "Torrentio",
     baseUrl: "https://torrentio.strem.fun",

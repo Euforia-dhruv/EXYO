@@ -12,6 +12,7 @@ const PROXY_OPTIONS = [
 ];
 
 const ADDON_OPTIONS = [
+  { id: 'pengu', label: 'PenguPlay', desc: 'Free streaming — movies, series, anime (28+ streams per title)', url: 'https://pengu.uk' },
   { id: 'torrentio', label: 'Torrentio', desc: '2K stars — torrent streams from 20+ providers (4K/HDR/REMUX)', url: 'https://torrentio.strem.fun' },
   { id: 'hdhub', label: 'HdHub', desc: 'Movies & series streams (4K/HD), usenet + HTTP sources', url: 'https://hdhub.thevolecitor.qzz.io' },
   { id: 'meteor', label: 'Meteor', desc: 'Franchise-aware torrent matching with quality scoring', url: 'https://meteorfortheweebs.midnightignite.me' },
@@ -63,7 +64,7 @@ function AddonBadge({ manifest }: { manifest?: AddonManifest | null; enabled: bo
 
 export default function Streaming() {
   const [proxy, setProxy] = useState('vercel');
-  const [addons, setAddons] = useState(['torrentio', 'hdhub', 'meteor', 'torrentsdb', 'tmdb', 'cinemeta']);
+  const [addons, setAddons] = useState(['pengu', 'torrentio', 'hdhub', 'meteor', 'torrentsdb', 'tmdb', 'cinemeta']);
   const [customAddons, setCustomAddons] = useState<string[]>([]);
   const [newAddonUrl, setNewAddonUrl] = useState('');
   const [addonError, setAddonError] = useState('');

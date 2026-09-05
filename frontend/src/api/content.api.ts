@@ -1,6 +1,7 @@
 const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || 'https://canny-akita-674.convex.site';
 
 const ADDON_MAP: Record<string, string> = {
+  pengu: 'https://pengu.uk/%7B%22auth_token%22%3A%22eoGgDDv9Wlxk-FrZbdW17CMYZHYh_GAYZR3POz0V0lw%22%7D',
   torrentio: 'https://torrentio.strem.fun',
   hdhub: 'https://hdhub.thevolecitor.qzz.io',
   meteor: 'https://meteorfortheweebs.midnightignite.me',

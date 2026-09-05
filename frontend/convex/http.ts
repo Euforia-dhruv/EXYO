@@ -86,6 +86,13 @@ interface AddonDef {
 
 const BUILTIN_ADDONS: AddonDef[] = [
   {
+    id: "pengu",
+    url: "https://pengu.uk/%7B%22auth_token%22%3A%22eoGgDDv9Wlxk-FrZbdW17CMYZHYh_GAYZR3POz0V0lw%22%7D",
+    auth: "eoGgDDv9Wlxk-FrZbdW17CMYZHYh_GAYZR3POz0V0lw",
+    priority: 11,
+    categories: ["stream"],
+  },
+  {
     id: "torrentio",
     url: "https://torrentio.strem.fun",
     priority: 10,
